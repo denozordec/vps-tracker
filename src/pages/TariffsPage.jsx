@@ -147,7 +147,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
     let lastError = null
     for (const account of billmanagerAccounts) {
       try {
-        const result = await syncAccount(account.id)
+        const result = await syncAccount(account.id, { onlyTariffs: true })
         if (result.ok) {
           totalTariffs += result.synced?.tariffsCount ?? 0
         } else {

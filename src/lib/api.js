@@ -135,8 +135,11 @@ export async function bulkUpdateVps(ids, action, value) {
   })
 }
 
-export async function syncAccount(accountId) {
-  return fetchApi(`/api/sync/${encodeURIComponent(accountId)}`, { method: 'POST' })
+export async function syncAccount(accountId, opts = {}) {
+  return fetchApi(`/api/sync/${encodeURIComponent(accountId)}`, {
+    method: 'POST',
+    body: JSON.stringify(opts),
+  })
 }
 
 export async function fetchAccountBalance(accountId) {

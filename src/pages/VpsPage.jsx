@@ -328,7 +328,6 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     setSyncMessage(null)
     let totalVps = 0
     let totalPayments = 0
-    let totalTariffs = 0
     let lastError = null
     for (const account of billmanagerAccounts) {
       try {
@@ -336,7 +335,6 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         if (result.ok) {
           totalVps += result.synced?.vpsCount ?? 0
           totalPayments += result.synced?.paymentsCount ?? 0
-          totalTariffs += result.synced?.tariffsCount ?? 0
         } else {
           lastError = result.error
         }
@@ -344,16 +342,15 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         lastError = err.message
       }
     }
-    if (lastError && totalVps === 0 && totalPayments === 0 && totalTariffs === 0) {
+    if (lastError && totalVps === 0 && totalPayments === 0) {
       setSyncMessage(lastError)
     } else {
       const parts = []
       if (totalVps > 0) parts.push(`${totalVps} VPS`)
       if (totalPayments > 0) parts.push(`${totalPayments} платежей`)
-      if (totalTariffs > 0) parts.push(`${totalTariffs} тарифов`)
       setSyncMessage(`Синхронизировано: ${parts.join(', ')}${lastError ? `. Ошибки: ${lastError}` : ''}`)
     }
-    if (totalVps > 0 || totalPayments > 0 || totalTariffs > 0) await actions.refreshData()
+    if (totalVps > 0 || totalPayments > 0) await actions.refreshData()
     setSyncLoading(false)
   }
 

@@ -64,6 +64,7 @@ router.post('/:accountId', async (req, res) => {
   try {
     const db = getDb()
     const { accountId } = req.params
+    const { onlyTariffs = false } = req.body || {}
     const row = db.prepare('SELECT * FROM provider_accounts WHERE id = ?').get(accountId)
     if (!row) {
       return res.status(404).json({ error: 'Account not found' })
@@ -81,7 +82,8 @@ router.post('/:accountId', async (req, res) => {
       VALUES (?, ?, ?, ?)
     `).run(logId, accountId, new Date().toISOString(), 'running')
 
-    const result = await syncFromBillmanager(row, db)
+    const opts = onlyTariffs ? { skipVpsPayments: true } : { skipTariffs: true }
+    const result = await syncFromBillmanager(row, db, opts)
 
     db.prepare(`
       UPDATE sync_log SET finishedAt=?, status=?, vpsCount=?, paymentsCount=?
