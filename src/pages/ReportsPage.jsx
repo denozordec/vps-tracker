@@ -3,7 +3,6 @@ import {
   convertCurrency,
   downloadTextFile,
   formatCurrency,
-  monthKey,
   toCsv,
   vpsStatusLabel,
 } from '../lib/utils'
@@ -37,36 +36,86 @@ export function ReportsPage({ db, settings, ratesData }) {
       return `${filters.month}-${String(lastDay).padStart(2, '0')}`
     })() : '')
 
-    return db.vps
-      .filter((vps) => {
-        const byProvider = !filters.providerId || vps.providerId === filters.providerId
-        const byCountry =
-          !filters.country || vps.country?.toLowerCase().includes(filters.country.toLowerCase())
-        return byProvider && byCountry
-      })
-      .map((vps) => {
-        const provider = db.providers.find((item) => item.id === vps.providerId)
-        const payments = db.payments
-          .filter((item) => item.vpsId === vps.id && item.type !== 'provider_balance_topup')
-          .filter((item) => !dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo))
-        const debits = db.balanceLedger
-          .filter((item) => item.vpsId === vps.id && item.direction === 'debit')
-          .filter((item) => !dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo))
-        const totalPayments = payments.reduce((acc, item) => acc + Number(item.amount || 0), 0)
-        const totalDebits = debits.reduce((acc, item) => acc + Number(item.amount || 0), 0)
-        const total = totalPayments + totalDebits
-        return {
-          providerId: vps.providerId,
-          provider: provider?.name || '-',
-          vps: vps.dns || vps.ip,
-          ip: vps.ip,
-          country: vps.country || '',
-          city: vps.city || '',
-          status: vps.status,
-          expense: Number(total.toFixed(2)),
-          currency: vps.currency || 'USD',
+    const filteredVps = (db.vps || []).filter((vps) => {
+      const byProvider = !filters.providerId || vps.providerId === filters.providerId
+      const byCountry =
+        !filters.country || vps.country?.toLowerCase().includes(filters.country.toLowerCase())
+      return byProvider && byCountry
+    })
+
+    const vpsByAccount = new Map()
+    for (const v of filteredVps) {
+      const aid = v.providerAccountId || ''
+      if (!vpsByAccount.has(aid)) vpsByAccount.set(aid, [])
+      vpsByAccount.get(aid).push(v)
+    }
+
+    return filteredVps.map((vps) => {
+      const provider = db.providers.find((item) => item.id === vps.providerId)
+      const vpsIdNorm = (id) => (id == null || id === '' ? '' : String(id))
+
+      const paymentsDirect = (db.payments || []).filter(
+        (item) =>
+          vpsIdNorm(item.vpsId) === vps.id &&
+          item.type !== 'provider_balance_topup' &&
+          (!dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo)),
+      )
+      const singleVpsInAccount = (vpsByAccount.get(vps.providerAccountId || '') || []).length === 1
+      const paymentsAccountLevel = singleVpsInAccount
+        ? (db.payments || []).filter(
+            (item) =>
+              item.providerAccountId === vps.providerAccountId &&
+              vpsIdNorm(item.vpsId) === '' &&
+              item.type !== 'provider_balance_topup' &&
+              (!dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo)),
+          )
+        : []
+
+      const debitsDirect = (db.balanceLedger || []).filter(
+        (item) =>
+          vpsIdNorm(item.vpsId) === vps.id &&
+          item.direction === 'debit' &&
+          (!dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo)),
+      )
+      const debitsAccountLevel = singleVpsInAccount
+        ? (db.balanceLedger || []).filter(
+            (item) =>
+              item.providerAccountId === vps.providerAccountId &&
+              vpsIdNorm(item.vpsId) === '' &&
+              item.direction === 'debit' &&
+              (!dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo)),
+          )
+        : []
+
+      const allPayments = [...paymentsDirect, ...paymentsAccountLevel]
+      const allDebits = [...debitsDirect, ...debitsAccountLevel]
+      const totalPayments = allPayments.reduce((acc, item) => acc + Number(item.amount || 0), 0)
+      const totalDebits = allDebits.reduce((acc, item) => acc + Number(item.amount || 0), 0)
+      let total = totalPayments + totalDebits
+
+      if (total === 0 && (vps.monthlyRate != null && vps.monthlyRate > 0 || vps.dailyRate != null && vps.dailyRate > 0)) {
+        const monthly = Number(vps.monthlyRate) || 0
+        const daily = Number(vps.dailyRate) || 0
+        if (dateFrom && dateTo) {
+          const days = Math.ceil((new Date(dateTo) - new Date(dateFrom)) / (24 * 60 * 60 * 1000)) + 1
+          total = monthly > 0 ? monthly * Math.ceil(days / 30) : daily * days
+        } else {
+          total = monthly > 0 ? monthly : daily * 30
         }
-      })
+      }
+
+      return {
+        providerId: vps.providerId,
+        provider: provider?.name || '-',
+        vps: vps.dns || vps.ip,
+        ip: vps.ip,
+        country: vps.country || '',
+        city: vps.city || '',
+        status: vps.status,
+        expense: Number(total.toFixed(2)),
+        currency: vps.currency || 'USD',
+      }
+    })
   }, [db.payments, db.balanceLedger, db.providers, db.vps, filters])
 
   const baseCurrency = settings?.[0]?.baseCurrency || 'RUB'
