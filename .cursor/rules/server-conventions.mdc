@@ -1,0 +1,25 @@
+---
+description: Паттерны для Express, db, adapters
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# Server conventions
+
+## Express
+
+- Роутеры в `routes/`, подключаются в `index.js` через `app.use('/api/...', router)`
+- Ошибки: `res.status(500).json({ error: err.message })`
+- 404: `res.status(404).json({ error: 'Not found' })`
+
+## Database
+
+- Доступ через `getDb()` — обёртка с `prepare().all()`, `prepare().get()`, `run()`
+- После `run()` вызывается `saveDb()` автоматически
+- Миграции в `db/migrations.js`, добавляют колонки через ALTER TABLE
+
+## Adapters
+
+- Один провайдер = папка в `adapters/` (billmanager)
+- Разделение: client (HTTP), parsers, mappers, operations, sync
+- Публичный API через `index.js`

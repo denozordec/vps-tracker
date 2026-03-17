@@ -1,0 +1,169 @@
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--tblr-bg-surface);
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #18233a 0%, #111a2d 100%);
+  border-right: 1px solid #23314b;
+}
+
+.app-sidebar .nav-link {
+  border-radius: 8px;
+  margin-bottom: 4px;
+  color: #aebbd2;
+}
+
+.app-sidebar .nav-link:hover,
+.app-sidebar .nav-link.active {
+  background: rgba(61, 119, 255, 0.2);
+  color: #e8f0ff;
+}
+
+.page-body {
+  background: #f5f7fb;
+  min-height: calc(100vh - 56px);
+}
+
+.page-wrapper {
+  min-width: 0;
+}
+
+.mobile-nav-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-nav-scroll .nav {
+  width: max-content;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.metric-card {
+  border-left: 4px solid transparent;
+}
+
+.metric-card.metric-blue {
+  border-left-color: #206bc4;
+}
+
+.metric-card.metric-green {
+  border-left-color: #2fb344;
+}
+
+.metric-card.metric-yellow {
+  border-left-color: #f59f00;
+}
+
+.metric-card.metric-purple {
+  border-left-color: #9b5de5;
+}
+
+.metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.table-actions .btn {
+  white-space: nowrap;
+}
+
+.vps-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* VPS modal form sections */
+.vps-modal-form .vps-form-section {
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--tblr-border-color, #e6e7e9);
+}
+
+.vps-modal-form .vps-form-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.vps-form-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tblr-secondary, #656d77);
+  margin-bottom: 0.75rem;
+}
+
+/* Компактный отступ между карточками в одной колонке */
+.card-stack .card {
+  margin-bottom: 0;
+}
+.card-stack .card + .card {
+  margin-top: 1rem;
+}
+
+@media (max-width: 991.98px) {
+  .app-sidebar {
+    display: none;
+  }
+
+  .page-body .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .card .table-responsive {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+    width: calc(100% + 1.5rem);
+  }
+
+  .table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 8.5rem;
+  }
+
+  .table-actions .btn {
+    width: 100%;
+  }
+
+  .vps-header-actions {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.125rem;
+  }
+}

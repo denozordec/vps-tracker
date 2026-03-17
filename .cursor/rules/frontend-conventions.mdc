@@ -1,0 +1,23 @@
+---
+description: Паттерны для React, api, utils
+globs: src/**/*.{js,jsx}
+alwaysApply: false
+---
+
+# Frontend conventions
+
+## React
+
+- Функциональные компоненты
+- Страницы в `pages/`, общие компоненты в `components/`
+- Данные загружаются в App.jsx через `loadDataSet()`, передаются в страницы как `db` и `actions`
+
+## API
+
+- `src/lib/api.js` — fetchApi, loadDataSet, createRecord, updateRecord, deleteRecord
+- Коллекции: vps, providers, providerAccounts, payments, balanceLedger, settings
+- Дополнительно: syncAccount, fetchAccountBalance, testApiConnection
+
+## Utils
+
+- `src/lib/utils.js` — форматирование (formatCurrency), конвертация валют, лейблы (paymentTypeLabel), CSV

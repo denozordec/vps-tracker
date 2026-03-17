@@ -1,0 +1,26 @@
+---
+description: Структура проекта vps-tracker и соглашения по именованию
+alwaysApply: true
+---
+
+# Структура проекта vps-tracker
+
+## Папки
+
+- `server/` — Express backend, SQLite (sql.js)
+- `src/` — React frontend (Vite)
+- `server/adapters/` — один адаптер на провайдера API (billmanager)
+- `server/routes/` — Express роутеры по сущностям
+- `server/db/` — схема, миграции, seed
+
+## Именование
+
+- Файлы: kebab-case (provider-accounts.js, row-mappers.js)
+- Роуты: `/api/vps`, `/api/provider-accounts`, `/api/sync/:accountId`
+- ID записей: `vps-bm-{accountId}-{externalId}`, `pay-bm-{accountId}-{externalId}`
+
+## Barrel exports
+
+Модули с несколькими файлами экспортируют через `index.js`:
+- `server/adapters/billmanager/index.js` — testConnection, syncFromBillmanager, fetchDashboardInfo
+- `server/db/index.js` — initDb, getDb, saveDb
