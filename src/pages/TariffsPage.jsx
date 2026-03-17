@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { convertCurrency, faviconUrlFromWebsite, normalizeWebsiteUrl } from '../lib/utils'
+import { convertCurrency, formatCurrency, faviconUrlFromWebsite, normalizeWebsiteUrl } from '../lib/utils'
 import {
   IconArrowDown,
   IconArrowUp,
@@ -395,6 +395,9 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                     <SortHeader column="location" onSort={handleSort} sortBy={sortBy} sortDir={sortDir}>Локация</SortHeader>
                     <th>CPU</th>
                     <SortHeader column="price" onSort={handleSort} sortBy={sortBy} sortDir={sortDir}>Цена</SortHeader>
+                    <th>₽/vCPU</th>
+                    <th>₽/GB RAM</th>
+                    <th>₽/GB диск</th>
                     <th>Заказ</th>
                     <th>Панель</th>
                   </tr>
@@ -405,6 +408,14 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                     const account = db.providerAccounts.find(
                       (a) => a.id === item.providerAccountId,
                     )
+                    const { amount: priceAmount, currency: priceCurrency } = parsePrice(item.price)
+                    const priceInBase = convertCurrency(priceAmount, priceCurrency, baseCurrency, ratesData)
+                    const vcpu = Number(item.vcpu) || 0
+                    const ramGb = Number(item.ramGb) || 0
+                    const diskGb = Number(item.diskGb) || 0
+                    const pricePerVcpu = vcpu > 0 ? priceInBase / vcpu : null
+                    const pricePerRam = ramGb > 0 ? priceInBase / ramGb : null
+                    const pricePerDisk = diskGb > 0 ? priceInBase / diskGb : null
                     return (
                       <tr key={item.id}>
                         <td>
@@ -484,6 +495,27 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                           </span>
                         </td>
                         <td>
+                          <span className="text-secondary small">
+                            {pricePerVcpu != null
+                              ? formatCurrency(pricePerVcpu, baseCurrency)
+                              : '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="text-secondary small">
+                            {pricePerRam != null
+                              ? formatCurrency(pricePerRam, baseCurrency)
+                              : '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="text-secondary small">
+                            {pricePerDisk != null
+                              ? formatCurrency(pricePerDisk, baseCurrency)
+                              : '—'}
+                          </span>
+                        </td>
+                        <td>
                           <span
                             className={`badge ${
                               item.orderAvailable ? 'bg-green-lt text-green' : 'bg-secondary-lt'
@@ -516,7 +548,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                           ? 'Нет данных. Синхронизируйте тарифы из BILLmanager.'
                           : 'По фильтрам ничего не найдено'
                       }
-                      colSpan={14}
+                      colSpan={17}
                     />
                   ) : null}
                 </tbody>

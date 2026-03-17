@@ -194,4 +194,37 @@ router.delete('/:id', (req, res) => {
   }
 })
 
+router.patch('/bulk', (req, res) => {
+  try {
+    const db = getDb()
+    const { ids = [], action, value } = req.body
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids must be a non-empty array' })
+    }
+    if (action === 'status' && value) {
+      const validStatus = ['active', 'paused', 'archived']
+      if (!validStatus.includes(value)) {
+        return res.status(400).json({ error: 'value must be active, paused, or archived' })
+      }
+      const stmt = db.prepare('UPDATE vps SET status = ? WHERE id = ?')
+      for (const id of ids) {
+        stmt.run(value, id)
+      }
+      return res.json({ updated: ids.length, status: value })
+    }
+    if (action === 'delete') {
+      const stmt = db.prepare('DELETE FROM vps WHERE id = ?')
+      let deleted = 0
+      for (const id of ids) {
+        const result = stmt.run(id)
+        if (result.changes > 0) deleted++
+      }
+      return res.json({ deleted })
+    }
+    return res.status(400).json({ error: 'action must be status or delete' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 export default router

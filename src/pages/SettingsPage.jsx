@@ -8,6 +8,7 @@ const defaultSettings = {
   autoConvert: true,
   syncEnabled: false,
   syncIntervalMinutes: 60,
+  syncTariffsIntervalMinutes: 1440,
 }
 
 export function SettingsPage({ db, actions, ratesData, ratesError }) {
@@ -18,6 +19,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
     autoConvert: current.autoConvert !== false,
     syncEnabled: current.syncEnabled !== false && Boolean(current.syncEnabled),
     syncIntervalMinutes: current.syncIntervalMinutes ?? 60,
+    syncTariffsIntervalMinutes: current.syncTariffsIntervalMinutes ?? 1440,
   })
   const [newFieldLabel, setNewFieldLabel] = useState('')
   const customFields = Array.isArray(current.customFields) ? current.customFields : []
@@ -30,8 +32,9 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
       autoConvert: current.autoConvert !== false,
       syncEnabled: Boolean(current.syncEnabled),
       syncIntervalMinutes: current.syncIntervalMinutes ?? 60,
+      syncTariffsIntervalMinutes: current.syncTariffsIntervalMinutes ?? 1440,
     })
-  }, [current.baseCurrency, current.ratesUrl, current.autoConvert, current.syncEnabled, current.syncIntervalMinutes])
+  }, [current.baseCurrency, current.ratesUrl, current.autoConvert, current.syncEnabled, current.syncIntervalMinutes, current.syncTariffsIntervalMinutes])
 
   const availableCurrencies = useMemo(() => {
     const list = new Set(['RUB', 'USD', 'EUR'])
@@ -56,6 +59,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
     actions.upsertSettings({
       syncEnabled: form.syncEnabled,
       syncIntervalMinutes: Math.max(15, Number(form.syncIntervalMinutes) || 60),
+      syncTariffsIntervalMinutes: Math.max(60, Number(form.syncTariffsIntervalMinutes) || 1440),
     })
   }
 
@@ -194,7 +198,8 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
           </div>
           <div className="card-body">
             <p className="text-secondary small mb-3">
-              Периодическая синхронизация данных (VPS, платежи) из BILLmanager для аккаунтов с настроенным API.
+              Периодическая синхронизация данных из BILLmanager для аккаунтов с настроенным API.
+              Два независимых интервала: VPS и платежи обновляются чаще, тарифы — реже.
             </p>
             <form className="row g-3" onSubmit={onSyncSettingsSubmit}>
               <div className="col-12">
@@ -209,14 +214,29 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                 </label>
               </div>
               <div className="col-12 col-md-6">
-                <label className="form-label">Интервал (минуты)</label>
+                <label className="form-label">Интервал VPS и платежей (минуты)</label>
                 <input
                   type="number"
                   min="15"
                   className="form-control"
                   value={form.syncIntervalMinutes}
                   onChange={(e) => setForm((prev) => ({ ...prev, syncIntervalMinutes: e.target.value }))}
+                  placeholder="60"
                 />
+              </div>
+              <div className="col-12 col-md-6">
+                <label className="form-label">Интервал тарифов (минуты)</label>
+                <input
+                  type="number"
+                  min="60"
+                  className="form-control"
+                  value={form.syncTariffsIntervalMinutes}
+                  onChange={(e) => setForm((prev) => ({ ...prev, syncTariffsIntervalMinutes: e.target.value }))}
+                  placeholder="1440"
+                />
+                <div className="text-secondary small mt-1">
+                  Тарифы меняются редко, можно ставить 24 ч (1440) и больше
+                </div>
               </div>
               <div className="col-12 d-flex justify-content-end">
                 <button type="submit" className="btn btn-primary">

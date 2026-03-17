@@ -99,6 +99,26 @@ export const MIGRATIONS = [
     },
   },
   {
+    name: 'settings_customFields',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN customFields TEXT')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+    },
+  },
+  {
+    name: 'settings_syncTariffsInterval',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN syncTariffsIntervalMinutes INTEGER')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+    },
+  },
+  {
     name: 'active_tariffs_country_datacenter',
     run(db) {
       try {

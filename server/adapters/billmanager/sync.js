@@ -9,28 +9,33 @@ import { mapVdsToVps, mapPaymentToPayment } from './mappers.js'
  * Sync BILLmanager data into vps-tracker DB
  * @param {object} account - provider_account with apiBaseUrl, apiCredentials
  * @param {object} db - getDb() wrapper
- * @param {object} [opts] - { paymentDaysBack }
+ * @param {object} [opts] - { paymentDaysBack, skipTariffs, skipVpsPayments }
  * @returns {{ vpsCount: number, paymentsCount: number, tariffsCount: number, balance?: object }}
  */
-export async function syncFromBillmanager(account, db, _opts = {}) {
+export async function syncFromBillmanager(account, db, opts = {}) {
+  const { skipTariffs = false, skipVpsPayments = false } = opts
   const { apiBaseUrl, apiCredentials, providerId, id: accountId } = account
   if (!apiBaseUrl?.trim() || !apiCredentials?.trim()) {
     throw new Error('API URL and credentials are required')
   }
   const authinfo = apiCredentials.trim()
 
+  const fetchVpsPayments = !skipVpsPayments
+  const fetchTariffs = !skipTariffs
+
   const [vdsItems, paymentItems, dashboardInfo, tariffResult] = await Promise.all([
-    fetchVds(apiBaseUrl, authinfo),
-    fetchPayments(apiBaseUrl, authinfo, {}),
-    fetchDashboardInfo(apiBaseUrl, authinfo, { fallbackCurrency: account.currency }).catch(() => null),
-    fetchVdsOrderPricelistAllDatacenters(apiBaseUrl, authinfo).catch((err) => {
+    fetchVpsPayments ? fetchVds(apiBaseUrl, authinfo) : [],
+    fetchVpsPayments ? fetchPayments(apiBaseUrl, authinfo, {}) : [],
+    fetchVpsPayments ? fetchDashboardInfo(apiBaseUrl, authinfo, { fallbackCurrency: account.currency }).catch(() => null) : null,
+    fetchTariffs ? fetchVdsOrderPricelistAllDatacenters(apiBaseUrl, authinfo).catch((err) => {
       console.warn('fetchVdsOrderPricelistAllDatacenters failed:', err.message)
       return { tariffItems: [], slist: {} }
-    }),
+    }) : { tariffItems: [], slist: {} },
   ])
   const { tariffItems = [], slist = {} } = tariffResult || {}
 
   let vpsCount = 0
+  if (fetchVpsPayments) {
   const vpsInsertSql = `INSERT INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   const vpsUpdateSql = `UPDATE vps SET ip=?, ipv6=?, additionalIps=?, dns=?, country=?, city=?, datacenter=?, os=?, status=?, tariffType=?, currency=?, dailyRate=?, monthlyRate=?, paidUntil=?, notes=?
@@ -133,8 +138,10 @@ export async function syncFromBillmanager(account, db, _opts = {}) {
     }
     vpsCount++
   }
+  }
 
   let paymentsCount = 0
+  if (fetchVpsPayments) {
   const existingPayments = new Set(
     db.prepare('SELECT note FROM payments WHERE providerAccountId = ?').all(accountId).map((r) => r.note),
   )
@@ -151,8 +158,9 @@ export async function syncFromBillmanager(account, db, _opts = {}) {
     existingPayments.add(note)
     paymentsCount++
   }
+  }
 
-  if (dashboardInfo) {
+  if (fetchVpsPayments && dashboardInfo) {
     db.run(
       'UPDATE provider_accounts SET balance_api=?, balance_currency=?, balance_updated_at=?, enoughmoneyto=? WHERE id=?',
       dashboardInfo.balance,
@@ -164,6 +172,7 @@ export async function syncFromBillmanager(account, db, _opts = {}) {
   }
 
   let tariffsCount = 0
+  if (fetchTariffs) {
   const syncedAt = new Date().toISOString()
   db.run('DELETE FROM active_tariffs WHERE providerAccountId = ?', accountId)
   const tariffInsertSql = `INSERT INTO active_tariffs (id, providerAccountId, providerId, externalId, datacenterKey, datacenterName, name, desc, vcpu, ramGb, diskGb, diskType, virtualization, channel, location, country, cpuModel, orderAvailable, price, syncedAt)
@@ -208,6 +217,7 @@ export async function syncFromBillmanager(account, db, _opts = {}) {
       periods,
       syncedAt,
     )
+  }
   }
 
   return { vpsCount, paymentsCount, tariffsCount, balance: dashboardInfo }

@@ -138,16 +138,59 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
     (acc, row) => acc + convertCurrency(row.balance, row.currency, baseCurrency, ratesData),
     0,
   )
-  const upcoming = providerAccounts
-    .map((account) => ({
-      ...account,
-      nextDate:
-        account.billingMode === 'daily'
-          ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-          : new Date(now.getFullYear(), now.getMonth() + 1, 1),
-    }))
-    .sort((a, b) => a.nextDate - b.nextDate)
-    .slice(0, 5)
+
+  const UPCOMING_DAYS = 7
+  const getAccountBalance = (accountId) => {
+    const ledgerRows = balanceLedger.filter((row) => row.providerAccountId === accountId)
+    const credits = ledgerRows
+      .filter((row) => row.direction === 'credit')
+      .reduce((acc, row) => acc + Number(row.amount || 0), 0)
+    const debits = ledgerRows
+      .filter((row) => row.direction === 'debit')
+      .reduce((acc, row) => acc + Number(row.amount || 0), 0)
+    return credits - debits
+  }
+
+  const getPaidUntilDate = (item) => {
+    if (item.status !== 'active') return null
+    if (item.paidUntil) {
+      const d = new Date(item.paidUntil)
+      return Number.isNaN(d.getTime()) ? null : d
+    }
+    const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+    const dailyRate = Number(item.dailyRate || 0)
+    const monthlyRate = Number(item.monthlyRate || 0)
+    const burnRate = tariffType === 'daily' ? dailyRate : monthlyRate / 30
+    if (!Number.isFinite(burnRate) || burnRate <= 0) return null
+    const directPayments = payments
+      .filter((p) => p.vpsId === item.id && p.type === 'direct_vps_payment')
+      .reduce((acc, p) => acc + Number(p.amount || 0), 0)
+    const accountBalance = getAccountBalance(item.providerAccountId)
+    const activeInAccount = vps.filter(
+      (v) => v.providerAccountId === item.providerAccountId && v.status === 'active',
+    ).length
+    const allocatedBalance = activeInAccount > 0 ? Math.max(0, accountBalance) / activeInAccount : 0
+    const funds = directPayments + allocatedBalance
+    const coveredDays = Math.floor(funds / burnRate)
+    if (!Number.isFinite(coveredDays) || coveredDays <= 0) return null
+    const paidUntil = new Date()
+    paidUntil.setDate(paidUntil.getDate() + coveredDays)
+    return paidUntil
+  }
+
+  const upcoming = useMemo(() => {
+    const threshold = new Date()
+    threshold.setDate(threshold.getDate() + UPCOMING_DAYS)
+    return vps
+      .filter((item) => item.status === 'active')
+      .map((item) => {
+        const date = getPaidUntilDate(item)
+        return { vps: item, paidUntil: date }
+      })
+      .filter(({ paidUntil }) => paidUntil && paidUntil <= threshold && paidUntil >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+      .sort((a, b) => a.paidUntil - b.paidUntil)
+      .slice(0, 10)
+  }, [vps, payments, balanceLedger])
 
   return (
     <>
@@ -284,24 +327,32 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
       <div className="col-12 col-xl-5">
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Ближайшие списания</h3>
+            <h3 className="card-title">Истекающая оплата (ближайшие {UPCOMING_DAYS} дней)</h3>
           </div>
           <div className="list-group list-group-flush">
-            {upcoming.map((item) => (
-              <div key={item.id} className="list-group-item">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <div className="fw-medium">{item.name}</div>
-                    <div className="text-secondary small">{billingModeLabel(item.billingMode)}</div>
-                  </div>
-                  <div className="text-secondary">
-                    {item.nextDate.toLocaleDateString('ru-RU')}
+            {upcoming.map(({ vps: item, paidUntil }) => {
+              const provider = providers.find((p) => p.id === item.providerId)
+              const account = providerAccounts.find((a) => a.id === item.providerAccountId)
+              return (
+                <div key={item.id} className="list-group-item">
+                  <div className="d-flex justify-content-between">
+                    <div>
+                      <div className="fw-medium">{item.dns || item.ip}</div>
+                      <div className="text-secondary small">
+                        {provider?.name || '—'} / {account?.name || '—'}
+                      </div>
+                    </div>
+                    <div className="text-secondary">
+                      {paidUntil.toLocaleDateString('ru-RU')}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
             {upcoming.length === 0 ? (
-              <div className="list-group-item text-secondary text-center py-4">Списаний пока нет</div>
+              <div className="list-group-item text-secondary text-center py-4">
+                Нет VPS с истекающей оплатой в ближайшие {UPCOMING_DAYS} дней
+              </div>
             ) : null}
           </div>
         </div>

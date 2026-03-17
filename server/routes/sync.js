@@ -21,7 +21,7 @@ router.get('/status', (req, res) => {
   try {
     const db = getDb()
     const rows = db.prepare(`
-      SELECT accountId, startedAt, finishedAt, status, vpsCount, paymentsCount, error
+      SELECT id, accountId, startedAt, finishedAt, status, vpsCount, paymentsCount, error
       FROM sync_log ORDER BY startedAt DESC LIMIT 50
     `).all()
     res.json(rows)

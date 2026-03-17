@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   billingModeLabel,
   faviconUrlFromWebsite,
 } from '../lib/utils'
 import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
+import { SyncLogTable } from '../components/SyncLogTable'
 import { PageHeader } from '../components/PageHeader'
 import { ConvertedAmount } from '../components/ConvertedAmount'
-import { syncAccount, testApiConnection, fetchAccountBalance } from '../lib/api'
+import { syncAccount, testApiConnection, fetchAccountBalance, fetchSyncStatus } from '../lib/api'
 import { IconRefresh, IconPlugConnected } from '@tabler/icons-react'
 
 const emptyForm = {
@@ -33,12 +34,23 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   const [balanceLoadingId, setBalanceLoadingId] = useState(null)
   const [saveError, setSaveError] = useState(null)
 
+  const loadSyncLog = () => {
+    fetchSyncStatus()
+      .then(setSyncLog)
+      .catch(() => setSyncLog([]))
+  }
+
+  useEffect(() => {
+    loadSyncLog()
+  }, [])
+
   const billmanagerAccounts = useMemo(
     () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
     [db.providerAccounts],
   )
   const [testConnectionLoading, setTestConnectionLoading] = useState(false)
   const [testConnectionResult, setTestConnectionResult] = useState(null)
+  const [syncLog, setSyncLog] = useState([])
 
   const balances = useMemo(() => {
     return db.providerAccounts.map((account) => {
@@ -153,7 +165,10 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
     try {
       const result = await syncAccount(accountId)
       setSyncMessage(result.ok ? `Синхронизировано: ${result.synced?.vpsCount ?? 0} VPS, ${result.synced?.paymentsCount ?? 0} платежей${result.synced?.balance ? ', баланс обновлён' : ''}` : result.error || 'Ошибка')
-      if (result.ok) await actions.refreshData()
+      if (result.ok) {
+        await actions.refreshData()
+        loadSyncLog()
+      }
     } catch (err) {
       setSyncMessage(err.message || 'Ошибка синхронизации')
     } finally {
@@ -186,7 +201,10 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
     } else {
       setSyncMessage(`Синхронизировано: ${totalVps} VPS, ${totalPayments} платежей${lastError ? `. Ошибки: ${lastError}` : ''}`)
     }
-    if (totalVps > 0 || totalPayments > 0) await actions.refreshData()
+    if (totalVps > 0 || totalPayments > 0) {
+      await actions.refreshData()
+      loadSyncLog()
+    }
     setSyncLoadingAll(false)
   }
 
@@ -345,6 +363,10 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
             </table>
           </div>
         </div>
+      </div>
+
+      <div className="col-12 mt-3">
+        <SyncLogTable syncLog={syncLog} providerAccounts={db.providerAccounts} />
       </div>
     </div>
 

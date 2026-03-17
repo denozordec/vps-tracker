@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { IconEdit } from '@tabler/icons-react'
 import { paymentTypeLabel } from '../lib/utils'
 import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
@@ -17,6 +18,7 @@ const emptyForm = {
 
 export function PaymentsPage({ db, actions, settings, ratesData }) {
   const [form, setForm] = useState(emptyForm)
+  const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -42,7 +44,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
     }
     setError('')
 
-    actions.create('payments', {
+    const payload = {
       type: form.type,
       date: form.date,
       amount,
@@ -50,23 +52,44 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
       providerAccountId: form.providerAccountId,
       vpsId: form.vpsId || '',
       note: form.note,
-    })
+    }
 
-    if (form.type === 'provider_balance_topup') {
-      actions.create('balanceLedger', {
-        type: 'provider_balance_topup',
-        date: form.date,
-        amount,
-        currency: form.currency,
-        direction: 'credit',
-        providerAccountId: form.providerAccountId,
-        vpsId: '',
-        note: form.note || 'Пополнение баланса',
-      })
+    if (editingId) {
+      actions.update('payments', editingId, payload)
+    } else {
+      actions.create('payments', payload)
+      if (form.type === 'provider_balance_topup') {
+        actions.create('balanceLedger', {
+          type: 'provider_balance_topup',
+          date: form.date,
+          amount,
+          currency: form.currency,
+          direction: 'credit',
+          providerAccountId: form.providerAccountId,
+          vpsId: '',
+          note: form.note || 'Пополнение баланса',
+        })
+      }
     }
 
     setForm(emptyForm)
+    setEditingId(null)
     setIsModalOpen(false)
+  }
+
+  const onEdit = (payment) => {
+    setForm({
+      type: payment.type || 'direct_vps_payment',
+      date: payment.date || new Date().toISOString().slice(0, 10),
+      amount: payment.amount ?? '',
+      currency: payment.currency || 'USD',
+      providerAccountId: payment.providerAccountId || '',
+      vpsId: payment.vpsId || '',
+      note: payment.note || '',
+    })
+    setEditingId(payment.id)
+    setIsModalOpen(true)
+    setError('')
   }
 
   return (
@@ -78,7 +101,15 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           <div className="card-header">
             <h3 className="card-title">История платежей</h3>
             <div className="card-actions">
-              <button type="button" className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setForm(emptyForm)
+                  setEditingId(null)
+                  setIsModalOpen(true)
+                }}
+              >
                 Добавить платеж
               </button>
             </div>
@@ -120,6 +151,14 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
                         <div className="table-actions">
                           <button
                             type="button"
+                            className="btn btn-sm btn-outline-primary me-1"
+                            onClick={() => onEdit(payment)}
+                          >
+                            <IconEdit size={14} className="me-1" />
+                            Изменить
+                          </button>
+                          <button
+                            type="button"
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => actions.remove('payments', payment.id)}
                           >
@@ -142,11 +181,12 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
 
       <UiModal
         open={isModalOpen}
-        title="Новая операция платежа"
+        title={editingId ? 'Редактировать платеж' : 'Новая операция платежа'}
         onClose={() => {
           setIsModalOpen(false)
           setError('')
           setForm(emptyForm)
+          setEditingId(null)
         }}
         size="modal-md"
       >
@@ -256,7 +296,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
               Отмена
             </button>
             <button type="submit" className="btn btn-primary">
-              Сохранить
+              {editingId ? 'Сохранить' : 'Добавить'}
             </button>
           </div>
         </form>

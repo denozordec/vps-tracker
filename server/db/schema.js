@@ -100,7 +100,9 @@ CREATE TABLE IF NOT EXISTS settings (
   autoConvert INTEGER,
   ratesUpdatedAt TEXT,
   syncEnabled INTEGER,
-  syncIntervalMinutes INTEGER
+  syncIntervalMinutes INTEGER,
+  syncTariffsIntervalMinutes INTEGER,
+  customFields TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sync_log (

@@ -11,14 +11,32 @@ import { ConvertedAmount } from '../components/ConvertedAmount'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 
+function isDateInRange(dateStr, dateFrom, dateTo) {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return false
+  if (dateFrom && d < new Date(dateFrom)) return false
+  if (dateTo && d > new Date(dateTo + 'T23:59:59.999')) return false
+  return true
+}
+
 export function ReportsPage({ db, settings, ratesData }) {
   const [filters, setFilters] = useState({
     providerId: '',
     country: '',
     month: '',
+    dateFrom: '',
+    dateTo: '',
   })
 
   const rows = useMemo(() => {
+    const dateFrom = filters.dateFrom || (filters.month ? `${filters.month}-01` : '')
+    const dateTo = filters.dateTo || (filters.month ? (() => {
+      const [y, m] = filters.month.split('-').map(Number)
+      const lastDay = new Date(y, m, 0).getDate()
+      return `${filters.month}-${String(lastDay).padStart(2, '0')}`
+    })() : '')
+
     return db.vps
       .filter((vps) => {
         const byProvider = !filters.providerId || vps.providerId === filters.providerId
@@ -28,11 +46,15 @@ export function ReportsPage({ db, settings, ratesData }) {
       })
       .map((vps) => {
         const provider = db.providers.find((item) => item.id === vps.providerId)
-        const payments = db.payments.filter((item) => item.vpsId === vps.id)
-        const monthlyPayments = filters.month
-          ? payments.filter((item) => monthKey(item.date) === filters.month)
-          : payments
-        const total = monthlyPayments.reduce((acc, item) => acc + Number(item.amount || 0), 0)
+        const payments = db.payments
+          .filter((item) => item.vpsId === vps.id && item.type !== 'provider_balance_topup')
+          .filter((item) => !dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo))
+        const debits = db.balanceLedger
+          .filter((item) => item.vpsId === vps.id && item.direction === 'debit')
+          .filter((item) => !dateFrom || !dateTo || isDateInRange(item.date, dateFrom, dateTo))
+        const totalPayments = payments.reduce((acc, item) => acc + Number(item.amount || 0), 0)
+        const totalDebits = debits.reduce((acc, item) => acc + Number(item.amount || 0), 0)
+        const total = totalPayments + totalDebits
         return {
           providerId: vps.providerId,
           provider: provider?.name || '-',
@@ -45,7 +67,7 @@ export function ReportsPage({ db, settings, ratesData }) {
           currency: vps.currency || 'USD',
         }
       })
-  }, [db.payments, db.providers, db.vps, filters])
+  }, [db.payments, db.balanceLedger, db.providers, db.vps, filters])
 
   const baseCurrency = settings?.[0]?.baseCurrency || 'RUB'
   const totalExpense = rows.reduce(
@@ -88,13 +110,50 @@ export function ReportsPage({ db, settings, ratesData }) {
                   placeholder="например Германия"
                 />
               </div>
-              <div className="col-12 col-md-6 col-xl-3">
+              <div className="col-12 col-md-6 col-xl-2">
                 <label className="form-label">Период (YYYY-MM)</label>
                 <input
                   className="form-control"
                   value={filters.month}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, month: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      month: e.target.value,
+                      dateFrom: '',
+                      dateTo: '',
+                    }))
+                  }
                   placeholder="2026-03"
+                />
+              </div>
+              <div className="col-12 col-md-6 col-xl-2">
+                <label className="form-label">Дата с</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={filters.dateFrom}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      dateFrom: e.target.value,
+                      month: '',
+                    }))
+                  }
+                />
+              </div>
+              <div className="col-12 col-md-6 col-xl-2">
+                <label className="form-label">Дата по</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={filters.dateTo}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      dateTo: e.target.value,
+                      month: '',
+                    }))
+                  }
                 />
               </div>
               <div className="col-12 col-md-6 col-xl-3">

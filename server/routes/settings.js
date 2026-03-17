@@ -6,10 +6,19 @@ const router = Router()
 
 export function rowToSettings(row) {
   if (!row) return null
+  let customFields = []
+  if (row.customFields) {
+    try {
+      customFields = JSON.parse(row.customFields)
+    } catch {
+      customFields = []
+    }
+  }
   return {
     ...row,
     autoConvert: Boolean(row.autoConvert),
     syncEnabled: Boolean(row.syncEnabled),
+    customFields: Array.isArray(customFields) ? customFields : [],
   }
 }
 
@@ -23,6 +32,13 @@ router.get('/', (req, res) => {
   }
 })
 
+function serializeCustomFields(val) {
+  if (val == null) return null
+  if (Array.isArray(val)) return JSON.stringify(val)
+  if (typeof val === 'string') return val || null
+  return null
+}
+
 router.put('/:id', (req, res) => {
   try {
     const db = getDb()
@@ -31,10 +47,12 @@ router.put('/:id', (req, res) => {
     const existing = db.prepare('SELECT * FROM settings WHERE id = ?').get(id)
     const syncEnabled = r.syncEnabled !== undefined ? (r.syncEnabled ? 1 : 0) : (existing?.syncEnabled ? 1 : 0)
     const syncIntervalMinutes = r.syncIntervalMinutes !== undefined ? Math.max(15, Number(r.syncIntervalMinutes) || 60) : (existing?.syncIntervalMinutes ?? 60)
+    const syncTariffsIntervalMinutes = r.syncTariffsIntervalMinutes !== undefined ? Math.max(60, Number(r.syncTariffsIntervalMinutes) || 1440) : (existing?.syncTariffsIntervalMinutes ?? 1440)
+    const customFields = serializeCustomFields(r.customFields ?? existing?.customFields)
     if (existing) {
       db.prepare(`
         UPDATE settings SET
-          baseCurrency = ?, ratesUrl = ?, autoConvert = ?, ratesUpdatedAt = ?, syncEnabled = ?, syncIntervalMinutes = ?
+          baseCurrency = ?, ratesUrl = ?, autoConvert = ?, ratesUpdatedAt = ?, syncEnabled = ?, syncIntervalMinutes = ?, syncTariffsIntervalMinutes = ?, customFields = ?
         WHERE id = ?
       `).run(
         r.baseCurrency ?? existing.baseCurrency ?? 'RUB',
@@ -43,12 +61,14 @@ router.put('/:id', (req, res) => {
         r.ratesUpdatedAt ?? existing.ratesUpdatedAt ?? '',
         syncEnabled,
         syncIntervalMinutes,
+        syncTariffsIntervalMinutes,
+        customFields,
         id,
       )
     } else {
       db.prepare(`
-        INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes, syncTariffsIntervalMinutes, customFields)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
         r.baseCurrency ?? 'RUB',
@@ -57,6 +77,8 @@ router.put('/:id', (req, res) => {
         r.ratesUpdatedAt ?? '',
         syncEnabled,
         syncIntervalMinutes,
+        syncTariffsIntervalMinutes,
+        customFields,
       )
     }
     startScheduler()
@@ -74,9 +96,11 @@ router.post('/', (req, res) => {
     const id = r.id ?? 'settings-main'
     const syncEnabled = r.syncEnabled ? 1 : 0
     const syncIntervalMinutes = Math.max(15, Number(r.syncIntervalMinutes) || 60)
+    const syncTariffsIntervalMinutes = Math.max(60, Number(r.syncTariffsIntervalMinutes) || 1440)
+    const customFields = serializeCustomFields(r.customFields)
     db.prepare(`
-      INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes, syncTariffsIntervalMinutes, customFields)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       r.baseCurrency ?? 'RUB',
@@ -85,6 +109,8 @@ router.post('/', (req, res) => {
       r.ratesUpdatedAt ?? '',
       syncEnabled,
       syncIntervalMinutes,
+      syncTariffsIntervalMinutes,
+      customFields,
     )
     startScheduler()
     const row = db.prepare('SELECT * FROM settings WHERE id = ?').get(id)

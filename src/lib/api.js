@@ -128,6 +128,13 @@ export async function deleteRecord(collectionName, id) {
   return fetchCollection(collectionName)
 }
 
+export async function bulkUpdateVps(ids, action, value) {
+  return fetchApi('/api/vps/bulk', {
+    method: 'PATCH',
+    body: JSON.stringify({ ids, action, value }),
+  })
+}
+
 export async function syncAccount(accountId) {
   return fetchApi(`/api/sync/${encodeURIComponent(accountId)}`, { method: 'POST' })
 }
@@ -141,4 +148,8 @@ export async function testApiConnection(apiBaseUrl, apiCredentials) {
     method: 'POST',
     body: JSON.stringify({ apiBaseUrl, apiCredentials }),
   })
+}
+
+export async function fetchSyncStatus() {
+  return fetchApi('/api/sync/status')
 }

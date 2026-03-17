@@ -16,7 +16,7 @@ import {
   IconServer,
   IconTrash,
 } from '@tabler/icons-react'
-import { syncAccount } from '../lib/api'
+import { syncAccount, bulkUpdateVps } from '../lib/api'
 import { UiModal } from '../components/UiModal'
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { EmptyState } from '../components/EmptyState'
@@ -66,6 +66,8 @@ export function VpsPage({ db, actions, settings, ratesData }) {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [syncLoading, setSyncLoading] = useState(false)
   const [syncMessage, setSyncMessage] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
 
   const billmanagerAccounts = useMemo(
     () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
@@ -355,6 +357,54 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     setSyncLoading(false)
   }
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredVps.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredVps.map((v) => v.id)))
+    }
+  }
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const onBulkStatus = async (status) => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    setBulkLoading(true)
+    try {
+      await bulkUpdateVps(ids, 'status', status)
+      setSelectedIds(new Set())
+      await actions.refreshData()
+    } catch (err) {
+      setSyncMessage(err.message || 'Ошибка массового обновления')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const onBulkDelete = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    if (!window.confirm(`Удалить ${ids.length} VPS?`)) return
+    setBulkLoading(true)
+    try {
+      await bulkUpdateVps(ids, 'delete')
+      setSelectedIds(new Set())
+      await actions.refreshData()
+    } catch (err) {
+      setSyncMessage(err.message || 'Ошибка массового удаления')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
   const resetFilters = () => {
     setFilters({
       search: '',
@@ -611,6 +661,52 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">VPS список</h3>
+            {selectedIds.size > 0 ? (
+              <div className="d-flex align-items-center gap-2 me-2">
+                <span className="text-secondary small">Выбрано: {selectedIds.size}</span>
+                <div className="btn-group btn-group-sm">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => onBulkStatus('archived')}
+                    disabled={bulkLoading}
+                  >
+                    В архив
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => onBulkStatus('active')}
+                    disabled={bulkLoading}
+                  >
+                    Активен
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => onBulkStatus('paused')}
+                    disabled={bulkLoading}
+                  >
+                    Приостановлен
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger"
+                    onClick={onBulkDelete}
+                    disabled={bulkLoading}
+                  >
+                    Удалить
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Снять выбор
+                </button>
+              </div>
+            ) : null}
             {syncMessage ? (
               <div className={`alert alert-${syncMessage.startsWith('Синхронизировано') ? 'success' : 'warning'} py-2 mb-0 me-2`}>
                 {syncMessage}
@@ -673,6 +769,15 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <table className="table card-table table-vcenter">
               <thead>
                 <tr>
+                  <th style={{ width: 40 }}>
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={filteredVps.length > 0 && selectedIds.size === filteredVps.length}
+                      onChange={toggleSelectAll}
+                      title="Выбрать все на странице"
+                    />
+                  </th>
                   <th>IP / DNS</th>
                   <th>Хостер / Аккаунт</th>
                   <th>Локация</th>
@@ -720,6 +825,14 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                     !nearlyEqual(relatedPaymentSum, tariffAmount)
                   return (
                     <tr key={item.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                        />
+                      </td>
                       <td>
                         <div className="fw-medium">{item.ip}</div>
                         {Array.isArray(item.additionalIps)
@@ -876,7 +989,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 {filteredVps.length === 0 ? (
                   <EmptyState
                     message="По фильтрам ничего не найдено"
-                    colSpan={viewMode === 'extended' ? 24 + customFields.length : 8}
+                    colSpan={viewMode === 'extended' ? 25 + customFields.length : 9}
                   />
                 ) : null}
               </tbody>
