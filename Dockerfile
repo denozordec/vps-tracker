@@ -5,7 +5,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-  npm ci && npm cache clean --force
+  npm ci
 COPY index.html vite.config.js ./
 COPY public ./public
 COPY src ./src
@@ -16,7 +16,7 @@ FROM node:22-alpine AS prod
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-  npm ci --omit=dev && npm cache clean --force
+  npm ci --omit=dev
 COPY server ./server
 COPY --from=build /app/dist ./dist
 
