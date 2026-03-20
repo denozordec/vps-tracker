@@ -10,6 +10,7 @@ import paymentsRouter from './routes/payments.js'
 import balanceLedgerRouter from './routes/balance-ledger.js'
 import settingsRouter from './routes/settings.js'
 import syncRouter from './routes/sync.js'
+import projectsRouter from './routes/projects.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -29,6 +30,7 @@ app.use(express.json())
   app.use('/api/balance-ledger', balanceLedgerRouter)
   app.use('/api/settings', settingsRouter)
   app.use('/api/sync', syncRouter)
+  app.use('/api/projects', projectsRouter)
 
   const { startScheduler } = await import('./sync-scheduler.js')
   startScheduler()

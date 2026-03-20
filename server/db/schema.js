@@ -28,6 +28,15 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
   FOREIGN KEY (providerId) REFERENCES providers(id)
 );
 
+CREATE TABLE IF NOT EXISTS server_projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color TEXT,
+  sortOrder INTEGER DEFAULT 0,
+  notes TEXT,
+  createdAt TEXT
+);
+
 CREATE TABLE IF NOT EXISTS vps (
   id TEXT PRIMARY KEY,
   ip TEXT,
@@ -51,6 +60,7 @@ CREATE TABLE IF NOT EXISTS vps (
   purpose TEXT,
   environment TEXT,
   project TEXT,
+  projectId TEXT,
   monitoringEnabled INTEGER,
   backupEnabled INTEGER,
   status TEXT,
@@ -63,7 +73,8 @@ CREATE TABLE IF NOT EXISTS vps (
   notes TEXT,
   userOverrides TEXT,
   FOREIGN KEY (providerId) REFERENCES providers(id),
-  FOREIGN KEY (providerAccountId) REFERENCES provider_accounts(id)
+  FOREIGN KEY (providerAccountId) REFERENCES provider_accounts(id),
+  FOREIGN KEY (projectId) REFERENCES server_projects(id)
 );
 
 CREATE TABLE IF NOT EXISTS payments (

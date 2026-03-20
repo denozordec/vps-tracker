@@ -28,14 +28,14 @@ router.post('/', (req, res) => {
       }
     }
     if (Array.isArray(data.vps) && data.vps.length > 0) {
-      const sql = `INSERT OR REPLACE INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes, userOverrides) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const sql = `INSERT OR REPLACE INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, projectId, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes, userOverrides) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       for (const r of data.vps) {
         const v = typeof r === 'object' ? r : {}
         const additionalIps = Array.isArray(v.additionalIps) ? JSON.stringify(v.additionalIps) : '[]'
         const dailyRate = v.dailyRate === '' || v.dailyRate == null ? null : Number(v.dailyRate)
         const monthlyRate = v.monthlyRate === '' || v.monthlyRate == null ? null : Number(v.monthlyRate)
-        const userOverrides = Array.isArray(v.userOverrides) ? JSON.stringify(v.userOverrides) : (v.userOverrides ?? '')
-        db.run(sql, v.id ?? '', v.ip ?? '', v.ipv6 ?? '', additionalIps, v.dns ?? '', v.providerId ?? '', v.providerAccountId ?? '', v.country ?? '', v.city ?? '', v.datacenter ?? '', v.os ?? '', v.vcpu ?? 0, v.ramGb ?? 0, v.diskGb ?? 0, v.diskType ?? '', v.virtualization ?? '', v.bandwidthTb ?? 0, v.sshPort ?? 22, v.rootUser ?? '', v.purpose ?? '', v.environment ?? '', v.project ?? '', v.monitoringEnabled ? 1 : 0, v.backupEnabled ? 1 : 0, v.status ?? 'active', v.tariffType ?? '', v.currency ?? '', dailyRate, monthlyRate, v.createdAt ?? '', v.paidUntil ?? '', v.notes ?? '', userOverrides)
+        const userOverrides = Array.isArray(v.userOverrides) ? JSON.stringify(v.userOverrides) : (v.userOverrides ?? '[]')
+        db.run(sql, v.id ?? '', v.ip ?? '', v.ipv6 ?? '', additionalIps, v.dns ?? '', v.providerId ?? '', v.providerAccountId ?? '', v.country ?? '', v.city ?? '', v.datacenter ?? '', v.os ?? '', v.vcpu ?? 0, v.ramGb ?? 0, v.diskGb ?? 0, v.diskType ?? '', v.virtualization ?? '', v.bandwidthTb ?? 0, v.sshPort ?? 22, v.rootUser ?? '', v.purpose ?? '', v.environment ?? '', v.project ?? '', v.projectId ?? null, v.monitoringEnabled ? 1 : 0, v.backupEnabled ? 1 : 0, v.status ?? 'active', v.tariffType ?? '', v.currency ?? '', dailyRate, monthlyRate, v.createdAt ?? '', v.paidUntil ?? '', v.notes ?? '', userOverrides)
       }
     }
     if (Array.isArray(data.payments) && data.payments.length > 0) {

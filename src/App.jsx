@@ -8,6 +8,7 @@ import { AccountsPage } from './pages/AccountsPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { BalancePage } from './pages/BalancePage'
 import { ReportsPage } from './pages/ReportsPage'
+import { ResourcesPage } from './pages/ResourcesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TariffsPage } from './pages/TariffsPage'
 import {
@@ -30,6 +31,7 @@ function App() {
     settings: [],
     activeTariffs: [],
     tariffSyncOptions: [],
+    serverProjects: [],
   })
   const [ratesData, setRatesData] = useState(null)
   const [ratesError, setRatesError] = useState('')
@@ -165,6 +167,10 @@ function App() {
           <Route
             path="/reports"
             element={<ReportsPage db={db} settings={db.settings} ratesData={ratesData} />}
+          />
+          <Route
+            path="/resources"
+            element={<ResourcesPage db={db} settings={db.settings} ratesData={ratesData} />}
           />
           <Route
             path="/settings"

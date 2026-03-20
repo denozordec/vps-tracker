@@ -2,6 +2,8 @@
  * Database migrations — add columns to existing tables
  */
 
+import { randomUUID } from 'node:crypto'
+
 export const MIGRATIONS = [
   {
     name: 'provider_accounts_api',
@@ -171,6 +173,62 @@ export const MIGRATIONS = [
       } catch (e) {
         if (!e.message?.includes('duplicate column')) throw e
       }
+    },
+  },
+  {
+    name: 'server_projects',
+    run(db) {
+      db.run(
+        `CREATE TABLE IF NOT EXISTS server_projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          color TEXT,
+          sortOrder INTEGER DEFAULT 0,
+          notes TEXT,
+          createdAt TEXT
+        )`,
+      )
+      try {
+        db.run('ALTER TABLE vps ADD COLUMN projectId TEXT')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+
+      const distinctStmt = db.prepare(
+        `SELECT DISTINCT trim(project) AS n FROM vps WHERE length(trim(COALESCE(project, ''))) > 0`,
+      )
+      const seenLower = new Set()
+      const findStmt = db.prepare(
+        'SELECT id FROM server_projects WHERE LOWER(name) = LOWER(?) LIMIT 1',
+      )
+      while (distinctStmt.step()) {
+        const row = distinctStmt.getAsObject()
+        const t = String(row.n ?? '').trim()
+        if (!t) continue
+        const lk = t.toLowerCase()
+        if (seenLower.has(lk)) continue
+        seenLower.add(lk)
+
+        findStmt.bind([t])
+        const exists = Boolean(findStmt.step())
+        findStmt.reset()
+        if (!exists) {
+          const id = `proj-${randomUUID()}`
+          const now = new Date().toISOString()
+          db.run(
+            `INSERT INTO server_projects (id, name, color, sortOrder, notes, createdAt) VALUES (?, ?, NULL, 0, NULL, ?)`,
+            [id, t, now],
+          )
+        }
+      }
+      distinctStmt.free()
+      findStmt.free()
+
+      db.run(`UPDATE vps SET projectId = (
+        SELECT sp.id FROM server_projects sp
+        WHERE LOWER(sp.name) = LOWER(trim(COALESCE(vps.project, '')))
+        LIMIT 1
+      ) WHERE length(trim(COALESCE(vps.project, ''))) > 0`)
     },
   },
 ]

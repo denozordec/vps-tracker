@@ -50,7 +50,7 @@ export function seed(db, seedDir) {
     const dailyRate = r.dailyRate === '' || r.dailyRate == null ? null : Number(r.dailyRate)
     const monthlyRate = r.monthlyRate === '' || r.monthlyRate == null ? null : Number(r.monthlyRate)
     run(
-      `INSERT OR IGNORE INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR IGNORE INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, projectId, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes, userOverrides) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         r.id,
         r.ip ?? '',
@@ -74,6 +74,7 @@ export function seed(db, seedDir) {
         r.purpose ?? '',
         r.environment ?? '',
         r.project ?? '',
+        r.projectId ?? null,
         r.monitoringEnabled ? 1 : 0,
         r.backupEnabled ? 1 : 0,
         r.status ?? 'active',
@@ -84,6 +85,7 @@ export function seed(db, seedDir) {
         r.createdAt ?? '',
         r.paidUntil ?? '',
         r.notes ?? '',
+        '[]',
       ],
     )
   }

@@ -36,8 +36,8 @@ export async function syncFromBillmanager(account, db, opts = {}) {
 
   let vpsCount = 0
   if (fetchVpsPayments) {
-  const vpsInsertSql = `INSERT INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  const vpsInsertSql = `INSERT INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, projectId, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes, userOverrides)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   const vpsUpdateSql = `UPDATE vps SET ip=?, ipv6=?, additionalIps=?, dns=?, country=?, city=?, datacenter=?, os=?, status=?, tariffType=?, currency=?, dailyRate=?, monthlyRate=?, paidUntil=?, notes=?
     WHERE id=?`
 
@@ -124,6 +124,7 @@ export async function syncFromBillmanager(account, db, opts = {}) {
         vps.purpose,
         vps.environment,
         vps.project,
+        null,
         vps.monitoringEnabled ? 1 : 0,
         vps.backupEnabled ? 1 : 0,
         vps.status,
@@ -134,6 +135,7 @@ export async function syncFromBillmanager(account, db, opts = {}) {
         vps.createdAt,
         paidUntil,
         notes,
+        '[]',
       )
     }
     vpsCount++

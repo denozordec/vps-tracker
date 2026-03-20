@@ -123,6 +123,48 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
     }))
   }, [payments, balanceLedger, vps, providerAccounts, providers, baseCurrency, ratesData])
 
+  const forecastByProject = useMemo(() => {
+    const map = {}
+    for (const item of vps.filter((x) => x.status === 'active')) {
+      const key = (item.project || '').trim() || '__none__'
+      const label = key === '__none__' ? 'Без проекта' : key
+      if (!map[key]) {
+        map[key] = { key, label, count: 0, forecast: 0 }
+      }
+      map[key].count += 1
+      const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+      const amount =
+        tariffType === 'daily'
+          ? Number(item.dailyRate || 0) * 30
+          : Number(item.monthlyRate || 0)
+      map[key].forecast += convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+    }
+    return Object.values(map).sort((a, b) => {
+      if (a.key === '__none__') return 1
+      if (b.key === '__none__') return -1
+      return a.label.localeCompare(b.label, 'ru')
+    })
+  }, [vps, baseCurrency, ratesData])
+
+  const forecastByAccount = useMemo(() => {
+    return providerAccounts
+      .map((acc) => {
+        const items = vps.filter((x) => x.providerAccountId === acc.id && x.status === 'active')
+        let forecast = 0
+        for (const item of items) {
+          const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+          const amount =
+            tariffType === 'daily'
+              ? Number(item.dailyRate || 0) * 30
+              : Number(item.monthlyRate || 0)
+          forecast += convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+        }
+        return { account: acc, count: items.length, forecast }
+      })
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.forecast - a.forecast)
+  }, [vps, providerAccounts, baseCurrency, ratesData])
+
   const accountBalances = providerAccounts.map((account) => {
     if (account.balance_api != null && Number.isFinite(Number(account.balance_api))) {
       return {
@@ -315,6 +357,68 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
               baseCurrency={baseCurrency}
               formatCurrency={formatCurrency}
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12 col-xl-6">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Прогноз по проектам (активные VPS)</h3>
+          </div>
+          <div className="table-responsive">
+            <table className="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Проект / пул</th>
+                  <th className="text-end">VPS</th>
+                  <th className="text-end">Прогноз / мес</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecastByProject.map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.label}</td>
+                    <td className="text-end">{row.count}</td>
+                    <td className="text-end">{formatCurrency(row.forecast, baseCurrency)}</td>
+                  </tr>
+                ))}
+                {forecastByProject.length === 0 ? (
+                  <EmptyState message="Нет активных VPS" colSpan={3} />
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12 col-xl-6">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Прогноз по аккаунтам (активные VPS)</h3>
+          </div>
+          <div className="table-responsive">
+            <table className="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Аккаунт</th>
+                  <th className="text-end">VPS</th>
+                  <th className="text-end">Прогноз / мес</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecastByAccount.map((row) => (
+                  <tr key={row.account.id}>
+                    <td>{row.account.name}</td>
+                    <td className="text-end">{row.count}</td>
+                    <td className="text-end">{formatCurrency(row.forecast, baseCurrency)}</td>
+                  </tr>
+                ))}
+                {forecastByAccount.length === 0 ? (
+                  <EmptyState message="Нет активных VPS по аккаунтам" colSpan={3} />
+                ) : null}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

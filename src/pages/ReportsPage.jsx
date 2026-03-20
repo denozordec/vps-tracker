@@ -22,11 +22,33 @@ function isDateInRange(dateStr, dateFrom, dateTo) {
 export function ReportsPage({ db, settings, ratesData }) {
   const [filters, setFilters] = useState({
     providerId: '',
+    providerAccountId: '',
+    project: '',
     country: '',
     month: '',
     dateFrom: '',
     dateTo: '',
   })
+
+  const projectNameOptions = useMemo(() => {
+    const names = new Set()
+    for (const p of db.serverProjects || []) {
+      if ((p.name || '').trim()) names.add(p.name.trim())
+    }
+    for (const v of db.vps || []) {
+      const p = (v.project || '').trim()
+      if (p) names.add(p)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru'))
+  }, [db.serverProjects, db.vps])
+
+  const accountFilterOptions = useMemo(
+    () =>
+      (db.providerAccounts || []).filter(
+        (account) => !filters.providerId || account.providerId === filters.providerId,
+      ),
+    [db.providerAccounts, filters.providerId],
+  )
 
   const rows = useMemo(() => {
     const dateFrom = filters.dateFrom || (filters.month ? `${filters.month}-01` : '')
@@ -38,9 +60,15 @@ export function ReportsPage({ db, settings, ratesData }) {
 
     const filteredVps = (db.vps || []).filter((vps) => {
       const byProvider = !filters.providerId || vps.providerId === filters.providerId
+      const byAccount =
+        !filters.providerAccountId || vps.providerAccountId === filters.providerAccountId
+      const proj = (vps.project || '').trim()
+      const byProject =
+        !filters.project ||
+        (filters.project === '__none__' ? !proj : proj === filters.project)
       const byCountry =
         !filters.country || vps.country?.toLowerCase().includes(filters.country.toLowerCase())
-      return byProvider && byCountry
+      return byProvider && byAccount && byProject && byCountry
     })
 
     const vpsByAccount = new Map()
@@ -52,6 +80,7 @@ export function ReportsPage({ db, settings, ratesData }) {
 
     return filteredVps.map((vps) => {
       const provider = db.providers.find((item) => item.id === vps.providerId)
+      const account = db.providerAccounts?.find((a) => a.id === vps.providerAccountId)
       const vpsIdNorm = (id) => (id == null || id === '' ? '' : String(id))
 
       const paymentsDirect = (db.payments || []).filter(
@@ -96,6 +125,8 @@ export function ReportsPage({ db, settings, ratesData }) {
       return {
         providerId: vps.providerId,
         provider: provider?.name || '-',
+        account: account?.name || '-',
+        project: (vps.project || '').trim() || '—',
         vps: vps.dns || vps.ip,
         ip: vps.ip,
         country: vps.country || '',
@@ -105,7 +136,7 @@ export function ReportsPage({ db, settings, ratesData }) {
         currency: vps.currency || 'USD',
       }
     })
-  }, [db.payments, db.balanceLedger, db.providers, db.vps, filters])
+  }, [db.payments, db.balanceLedger, db.providers, db.providerAccounts, db.vps, filters])
 
   const baseCurrency = settings?.[0]?.baseCurrency || 'RUB'
   const totalExpense = rows.reduce(
@@ -129,12 +160,51 @@ export function ReportsPage({ db, settings, ratesData }) {
                 <select
                   className="form-select"
                   value={filters.providerId}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, providerId: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      providerId: e.target.value,
+                      providerAccountId: '',
+                    }))
+                  }
                 >
                   <option value="">Все хостеры</option>
                   {db.providers.map((provider) => (
                     <option key={provider.id} value={provider.id}>
                       {provider.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-12 col-md-6 col-xl-3">
+                <label className="form-label">Аккаунт</label>
+                <select
+                  className="form-select"
+                  value={filters.providerAccountId}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, providerAccountId: e.target.value }))
+                  }
+                >
+                  <option value="">Все аккаунты</option>
+                  {accountFilterOptions.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-12 col-md-6 col-xl-3">
+                <label className="form-label">Проект / пул</label>
+                <select
+                  className="form-select"
+                  value={filters.project}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, project: e.target.value }))}
+                >
+                  <option value="">Все проекты</option>
+                  <option value="__none__">Без проекта</option>
+                  {projectNameOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
                     </option>
                   ))}
                 </select>
@@ -238,6 +308,8 @@ export function ReportsPage({ db, settings, ratesData }) {
               <thead>
                 <tr>
                   <th>Хостер</th>
+                  <th>Аккаунт</th>
+                  <th>Проект</th>
                   <th>VPS</th>
                   <th>Локация</th>
                   <th>Статус</th>
@@ -248,6 +320,8 @@ export function ReportsPage({ db, settings, ratesData }) {
                 {rows.map((row) => (
                   <tr key={`${row.ip}-${row.vps}`}>
                     <td>{row.provider}</td>
+                    <td>{row.account}</td>
+                    <td>{row.project}</td>
                     <td>
                       <div>{row.vps}</div>
                       <div className="text-secondary">{row.ip}</div>
@@ -268,7 +342,7 @@ export function ReportsPage({ db, settings, ratesData }) {
                   </tr>
                 ))}
                 {rows.length === 0 ? (
-                  <EmptyState message="Нет данных под фильтр" colSpan={5} />
+                  <EmptyState message="Нет данных под фильтр" colSpan={7} />
                 ) : null}
               </tbody>
             </table>

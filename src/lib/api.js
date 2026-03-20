@@ -98,7 +98,15 @@ export async function loadDataSet() {
     [COLLECTIONS.settings]: data.settings ?? [],
     activeTariffs: data.activeTariffs ?? [],
     tariffSyncOptions: data.tariffSyncOptions ?? [],
+    serverProjects: data.serverProjects ?? [],
   }
+}
+
+export async function fetchProjectSuggestions(q = '', limit = 25) {
+  const params = new URLSearchParams()
+  if (q) params.set('q', q)
+  params.set('limit', String(limit))
+  return fetchApi(`/api/projects/suggest?${params.toString()}`)
 }
 
 async function fetchCollection(collectionName) {

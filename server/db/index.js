@@ -51,6 +51,9 @@ export async function initDb() {
   }
 
   dbInstance = db
+  if (existsSync(DB_PATH)) {
+    saveDb()
+  }
   return db
 }
 

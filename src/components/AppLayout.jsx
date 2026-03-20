@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   IconBuildingSkyscraper,
+  IconChartBar,
   IconChartHistogram,
   IconCoin,
   IconCreditCardPay,
@@ -20,6 +21,7 @@ const menuItems = [
   { to: '/payments', label: 'Платежи', icon: IconCreditCardPay },
   { to: '/balance', label: 'Баланс и списания', icon: IconCoin },
   { to: '/reports', label: 'Отчёты', icon: IconChartHistogram },
+  { to: '/resources', label: 'Ресурсы', icon: IconChartBar },
   { to: '/settings', label: 'Настройки', icon: IconSettings },
 ]
 

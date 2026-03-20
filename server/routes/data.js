@@ -17,9 +17,18 @@ router.get('/', (req, res) => {
     const settingsRows = db.prepare('SELECT * FROM settings ORDER BY id').all()
     const activeTariffs = db.prepare('SELECT * FROM active_tariffs ORDER BY name').all()
     const tariffSyncOptions = db.prepare('SELECT * FROM tariff_sync_options').all()
+    let serverProjects = []
+    try {
+      serverProjects = db
+        .prepare('SELECT id, name, color, sortOrder, notes, createdAt FROM server_projects ORDER BY name')
+        .all()
+    } catch {
+      serverProjects = []
+    }
 
     res.json({
       vps: vps.map(rowToVps),
+      serverProjects,
       providers,
       providerAccounts: providerAccounts.map(sanitizeAccount),
       payments,

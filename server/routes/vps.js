@@ -1,7 +1,16 @@
 import { Router } from 'express'
 import { getDb } from '../db.js'
+import { resolveOrCreateProject } from '../projects-service.js'
 
 const router = Router()
+
+function projectColumnsForSave(db, projectInput) {
+  const resolved = resolveOrCreateProject(db, projectInput)
+  if (!resolved.id) {
+    return { project: '', projectId: '' }
+  }
+  return { project: resolved.name, projectId: resolved.id }
+}
 
 export function rowToVps(row) {
   if (!row) return null
@@ -21,6 +30,7 @@ export function rowToVps(row) {
     ...row,
     additionalIps,
     userOverrides,
+    projectId: row.projectId ?? '',
     monitoringEnabled: Boolean(row.monitoringEnabled),
     backupEnabled: Boolean(row.backupEnabled),
     dailyRate: row.dailyRate != null ? row.dailyRate : '',
@@ -46,14 +56,15 @@ router.post('/', (req, res) => {
     const additionalIps = Array.isArray(r.additionalIps) ? JSON.stringify(r.additionalIps) : '[]'
     const dailyRate = r.dailyRate === '' || r.dailyRate == null ? null : Number(r.dailyRate)
     const monthlyRate = r.monthlyRate === '' || r.monthlyRate == null ? null : Number(r.monthlyRate)
+    const { project, projectId } = projectColumnsForSave(db, r.project)
 
     db.prepare(`
       INSERT INTO vps (
         id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter,
         os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser,
-        purpose, environment, project, monitoringEnabled, backupEnabled, status, tariffType,
+        purpose, environment, project, projectId, monitoringEnabled, backupEnabled, status, tariffType,
         currency, dailyRate, monthlyRate, createdAt, paidUntil, notes, userOverrides
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       r.ip ?? '',
@@ -76,7 +87,8 @@ router.post('/', (req, res) => {
       r.rootUser ?? '',
       r.purpose ?? '',
       r.environment ?? '',
-      r.project ?? '',
+      project,
+      projectId || null,
       r.monitoringEnabled ? 1 : 0,
       r.backupEnabled ? 1 : 0,
       r.status ?? 'active',
@@ -112,10 +124,44 @@ router.put('/:id', (req, res) => {
     } catch {
       userOverrides = []
     }
-    if (r.userOverrides === 'clear' || (Array.isArray(r.userOverrides) && r.userOverrides.length === 0)) {
+    const clearOverrides =
+      r.userOverrides === 'clear' || (Array.isArray(r.userOverrides) && r.userOverrides.length === 0)
+    if (clearOverrides) {
       userOverrides = []
-    } else {
+    }
+
+    const additionalIps = Array.isArray(r.additionalIps) ? JSON.stringify(r.additionalIps) : '[]'
+    const dailyRate = r.dailyRate === '' || r.dailyRate == null ? null : Number(r.dailyRate)
+    const monthlyRate = r.monthlyRate === '' || r.monthlyRate == null ? null : Number(r.monthlyRate)
+
+    let projectOut = existing.project ?? ''
+    let projectIdOut = existing.projectId ?? ''
+    if (r.project !== undefined) {
+      const resolved = projectColumnsForSave(db, r.project)
+      projectOut = resolved.project
+      projectIdOut = resolved.projectId
+    } else if (r.projectId !== undefined) {
+      if (!r.projectId) {
+        projectOut = ''
+        projectIdOut = ''
+      } else {
+        const prow = db.prepare('SELECT name FROM server_projects WHERE id = ?').get(r.projectId)
+        projectOut = prow?.name ?? ''
+        projectIdOut = r.projectId
+      }
+    }
+
+    if (!clearOverrides) {
       for (const f of USER_OVERRIDABLE_FIELDS) {
+        if (f === 'project') {
+          const projectChanged =
+            String(projectOut ?? '') !== String(existing.project ?? '') ||
+            String(projectIdOut ?? '') !== String(existing.projectId ?? '')
+          if (projectChanged && !userOverrides.includes('project')) {
+            userOverrides.push('project')
+          }
+          continue
+        }
         const newVal = r[f]
         const oldVal = existing[f]
         const changed = String(newVal ?? '') !== String(oldVal ?? '')
@@ -126,16 +172,12 @@ router.put('/:id', (req, res) => {
     }
     const userOverridesJson = JSON.stringify([...new Set(userOverrides)])
 
-    const additionalIps = Array.isArray(r.additionalIps) ? JSON.stringify(r.additionalIps) : '[]'
-    const dailyRate = r.dailyRate === '' || r.dailyRate == null ? null : Number(r.dailyRate)
-    const monthlyRate = r.monthlyRate === '' || r.monthlyRate == null ? null : Number(r.monthlyRate)
-
     db.prepare(`
       UPDATE vps SET
         ip = ?, ipv6 = ?, additionalIps = ?, dns = ?, providerId = ?, providerAccountId = ?,
         country = ?, city = ?, datacenter = ?, os = ?, vcpu = ?, ramGb = ?, diskGb = ?, diskType = ?,
         virtualization = ?, bandwidthTb = ?, sshPort = ?, rootUser = ?, purpose = ?, environment = ?,
-        project = ?, monitoringEnabled = ?, backupEnabled = ?, status = ?, tariffType = ?,
+        project = ?, projectId = ?, monitoringEnabled = ?, backupEnabled = ?, status = ?, tariffType = ?,
         currency = ?, dailyRate = ?, monthlyRate = ?, createdAt = ?, paidUntil = ?, notes = ?,
         userOverrides = ?
       WHERE id = ?
@@ -160,7 +202,8 @@ router.put('/:id', (req, res) => {
       r.rootUser ?? '',
       r.purpose ?? '',
       r.environment ?? '',
-      r.project ?? '',
+      projectOut,
+      projectIdOut || null,
       r.monitoringEnabled ? 1 : 0,
       r.backupEnabled ? 1 : 0,
       r.status ?? 'active',
@@ -221,7 +264,38 @@ router.patch('/bulk', (req, res) => {
       }
       return res.json({ deleted })
     }
-    return res.status(400).json({ error: 'action must be status or delete' })
+    if (action === 'project') {
+      const projectValue = value == null ? '' : String(value)
+      const { project: projName, projectId: projId } = projectColumnsForSave(db, projectValue)
+      const getStmt = db.prepare('SELECT * FROM vps WHERE id = ?')
+      const updStmt = db.prepare(
+        'UPDATE vps SET project = ?, projectId = ?, userOverrides = ? WHERE id = ?',
+      )
+      let updated = 0
+      for (const id of ids) {
+        const existing = getStmt.get(id)
+        if (!existing) continue
+        if (
+          String(existing.project ?? '') === projName &&
+          String(existing.projectId ?? '') === String(projId ?? '')
+        ) {
+          continue
+        }
+        let userOverrides = []
+        try {
+          userOverrides = existing.userOverrides ? JSON.parse(existing.userOverrides) : []
+        } catch {
+          userOverrides = []
+        }
+        if (!userOverrides.includes('project')) {
+          userOverrides.push('project')
+        }
+        updStmt.run(projName, projId || null, JSON.stringify([...new Set(userOverrides)]), id)
+        updated++
+      }
+      return res.json({ updated, project: projName, projectId: projId })
+    }
+    return res.status(400).json({ error: 'action must be status, delete, or project' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

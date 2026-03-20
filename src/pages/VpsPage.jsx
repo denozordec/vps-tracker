@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
+  convertCurrency,
   faviconUrlFromWebsite,
+  formatCurrency,
   getCountryFlagEmoji,
   normalizeWebsiteUrl,
   tariffTypeLabel,
@@ -21,6 +23,7 @@ import { UiModal } from '../components/UiModal'
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
+import { ProjectSuggestInput } from '../components/ProjectSuggestInput'
 
 const emptyForm = {
   ip: '',
@@ -57,6 +60,55 @@ const emptyForm = {
   resetToApi: false,
 }
 
+const VPS_FILTER_PRESETS_KEY = 'vps-tracker:vps-filter-presets'
+
+function loadFilterPresets() {
+  try {
+    const raw = localStorage.getItem(VPS_FILTER_PRESETS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData) {
+  if (item.status !== 'active') return 0
+  const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+  const amount =
+    tariffType === 'daily'
+      ? Number(item.dailyRate || 0) * 30
+      : Number(item.monthlyRate || 0)
+  return convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+}
+
+function buildDefaultVpsFilters(customFields) {
+  return {
+    search: '',
+    providerId: '',
+    providerAccountId: '',
+    country: '',
+    city: '',
+    datacenter: '',
+    status: 'all',
+    environment: 'all',
+    tariffType: 'all',
+    monitoring: 'all',
+    backup: 'all',
+    minVcpu: '',
+    minRamGb: '',
+    minDiskGb: '',
+    project: '',
+    groupByProject: false,
+    tableCompact: false,
+    ...customFields.reduce((acc, f) => {
+      acc[f.key] = ''
+      return acc
+    }, {}),
+  }
+}
+
 export function VpsPage({ db, actions, settings, ratesData }) {
   const customFields = Array.isArray(settings?.[0]?.customFields) ? settings[0].customFields : []
   const [form, setForm] = useState(emptyForm)
@@ -68,6 +120,10 @@ export function VpsPage({ db, actions, settings, ratesData }) {
   const [syncMessage, setSyncMessage] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
+  const [bulkProjectValue, setBulkProjectValue] = useState('')
+  const [filterPresets, setFilterPresets] = useState(loadFilterPresets)
+
+  const baseCurrency = settings?.[0]?.baseCurrency || 'RUB'
 
   const billmanagerAccounts = useMemo(
     () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
@@ -88,6 +144,9 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     minVcpu: '',
     minRamGb: '',
     minDiskGb: '',
+    project: '',
+    groupByProject: false,
+    tableCompact: false,
   })
 
   const filteredVps = useMemo(() => {
@@ -128,6 +187,10 @@ export function VpsPage({ db, actions, settings, ratesData }) {
       const byCpu = !minVcpu || Number(item.vcpu || 0) >= minVcpu
       const byRam = !minRamGb || Number(item.ramGb || 0) >= minRamGb
       const byDisk = !minDiskGb || Number(item.diskGb || 0) >= minDiskGb
+      const proj = (item.project || '').trim()
+      const byProject =
+        !filters.project ||
+        (filters.project === '__none__' ? !proj : proj === filters.project)
       const byCustomFields = customFields.every((f) => {
         const filterVal = (filters[f.key] || '').trim().toLowerCase()
         if (!filterVal) return true
@@ -149,10 +212,67 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         byCustomFields &&
         byCpu &&
         byRam &&
-        byDisk
+        byDisk &&
+        byProject
       )
     })
   }, [db.vps, filters, customFields])
+
+  const projectNameOptions = useMemo(() => {
+    const names = new Set()
+    for (const p of db.serverProjects || []) {
+      if ((p.name || '').trim()) names.add(p.name.trim())
+    }
+    for (const v of db.vps) {
+      const p = (v.project || '').trim()
+      if (p) names.add(p)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru'))
+  }, [db.serverProjects, db.vps])
+
+  const tableSections = useMemo(() => {
+    if (!filters.groupByProject) {
+      return [
+        {
+          key: '_flat',
+          label: null,
+          items: filteredVps,
+          count: filteredVps.length,
+          forecast: filteredVps.reduce(
+            (acc, item) => acc + vpsMonthlyEstimateInBase(item, baseCurrency, ratesData),
+            0,
+          ),
+        },
+      ]
+    }
+    const map = new Map()
+    for (const item of filteredVps) {
+      const key = (item.project || '').trim() || '__none__'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push(item)
+    }
+    const keys = [...map.keys()].sort((a, b) => {
+      if (a === '__none__') return 1
+      if (b === '__none__') return -1
+      return a.localeCompare(b, 'ru')
+    })
+    return keys.map((key) => {
+      const items = map.get(key)
+      const forecast = items.reduce(
+        (acc, item) => acc + vpsMonthlyEstimateInBase(item, baseCurrency, ratesData),
+        0,
+      )
+      return {
+        key,
+        label: key === '__none__' ? 'Без проекта' : key,
+        items,
+        count: items.length,
+        forecast,
+      }
+    })
+  }, [filteredVps, filters.groupByProject, baseCurrency, ratesData])
+
+  const tableColCount = 8 + (viewMode === 'extended' ? 16 + customFields.length : 0)
 
   const accountFilterOptions = useMemo(
     () =>
@@ -172,6 +292,12 @@ export function VpsPage({ db, actions, settings, ratesData }) {
       }
       if (customFields.some((f) => f.key === key)) {
         return Boolean(value)
+      }
+      if (key === 'project') {
+        return Boolean(value)
+      }
+      if (key === 'groupByProject' || key === 'tableCompact') {
+        return false
       }
       return Boolean(value)
     }).length
@@ -423,27 +549,49 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     }
   }
 
+  const onBulkProject = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    setBulkLoading(true)
+    try {
+      await bulkUpdateVps(ids, 'project', bulkProjectValue)
+      setBulkProjectValue('')
+      setSelectedIds(new Set())
+      await actions.refreshData()
+    } catch (err) {
+      setSyncMessage(err.message || 'Ошибка назначения проекта')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
   const resetFilters = () => {
-    setFilters({
-      search: '',
-      providerId: '',
-      providerAccountId: '',
-      country: '',
-      city: '',
-      datacenter: '',
-      status: 'all',
-      environment: 'all',
-      tariffType: 'all',
-      monitoring: 'all',
-      backup: 'all',
-      minVcpu: '',
-      minRamGb: '',
-      minDiskGb: '',
-      ...customFields.reduce((acc, f) => {
-        acc[f.key] = ''
-        return acc
-      }, {}),
-    })
+    setFilters(buildDefaultVpsFilters(customFields))
+  }
+
+  const persistFilterPresets = (next) => {
+    setFilterPresets(next)
+    localStorage.setItem(VPS_FILTER_PRESETS_KEY, JSON.stringify(next))
+  }
+
+  const applyFilterPreset = (preset) => {
+    if (!preset?.filters) return
+    setFilters({ ...buildDefaultVpsFilters(customFields), ...preset.filters })
+  }
+
+  const saveCurrentFilterPreset = () => {
+    const name = window.prompt('Имя пресета фильтров')
+    if (!name?.trim()) return
+    const trimmed = name.trim()
+    const next = [...filterPresets.filter((p) => p.name !== trimmed), { name: trimmed, filters: { ...filters } }]
+    persistFilterPresets(next)
+  }
+
+  const deleteFilterPresetByName = () => {
+    const name = window.prompt('Имя пресета для удаления')
+    if (!name?.trim()) return
+    const trimmed = name.trim()
+    persistFilterPresets(filterPresets.filter((p) => p.name !== trimmed))
   }
 
   return (
@@ -486,6 +634,22 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                     }
                   />
                 </div>
+              </div>
+              <div className="col-xl-2 col-lg-4 col-md-6">
+                <select
+                  className="form-select"
+                  value={filters.project}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, project: e.target.value }))}
+                  aria-label="Фильтр по проекту"
+                >
+                  <option value="">Все проекты</option>
+                  <option value="__none__">Без проекта</option>
+                  {projectNameOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
               </div>
               {showAdvancedFilters ? (
                 <>
@@ -673,43 +837,137 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </>
               ) : null}
             </div>
+            <div className="row g-2 mt-2 align-items-center flex-wrap">
+              <div className="col-12 col-sm-auto">
+                <label className="form-check mb-0">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={filters.groupByProject}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, groupByProject: e.target.checked }))
+                    }
+                  />
+                  <span className="form-check-label">Группировать по проекту</span>
+                </label>
+              </div>
+              <div className="col-12 col-sm-auto">
+                <label className="form-check mb-0">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={filters.tableCompact}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, tableCompact: e.target.checked }))
+                    }
+                  />
+                  <span className="form-check-label">Компактная таблица</span>
+                </label>
+              </div>
+              <div className="col-12 col-sm-auto">
+                <select
+                  className="form-select form-select-sm"
+                  style={{ minWidth: '11rem' }}
+                  defaultValue=""
+                  onChange={(e) => {
+                    const name = e.target.value
+                    const preset = filterPresets.find((p) => p.name === name)
+                    if (preset) applyFilterPreset(preset)
+                    e.target.value = ''
+                  }}
+                  aria-label="Применить пресет фильтров"
+                >
+                  <option value="">Пресет фильтров…</option>
+                  {filterPresets.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-12 col-sm-auto d-flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={saveCurrentFilterPreset}
+                >
+                  Сохранить пресет
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={deleteFilterPresetByName}
+                  disabled={filterPresets.length === 0}
+                >
+                  Удалить пресет
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">VPS список</h3>
+            <h3 className="card-title">
+              VPS список
+              <span className="text-secondary fw-normal ms-2 small">
+                Показано {filteredVps.length} из {db.vps.length}
+              </span>
+            </h3>
             {selectedIds.size > 0 ? (
-              <div className="d-flex align-items-center gap-2 me-2">
+              <div className="d-flex align-items-center flex-wrap gap-2 me-2">
                 <span className="text-secondary small">Выбрано: {selectedIds.size}</span>
-                <div className="btn-group btn-group-sm">
+                <div className="d-flex flex-wrap align-items-center gap-1">
+                  <div className="btn-group btn-group-sm">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => onBulkStatus('archived')}
+                      disabled={bulkLoading}
+                    >
+                      В архив
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => onBulkStatus('active')}
+                      disabled={bulkLoading}
+                    >
+                      Активен
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => onBulkStatus('paused')}
+                      disabled={bulkLoading}
+                    >
+                      Приостановлен
+                    </button>
+                  </div>
+                  <div style={{ width: '11rem' }}>
+                    <ProjectSuggestInput
+                      id="vps-bulk-project"
+                      className="form-control form-control-sm"
+                      serverProjects={db.serverProjects}
+                      value={bulkProjectValue}
+                      onChange={setBulkProjectValue}
+                      placeholder="Проект / пул"
+                      disabled={bulkLoading}
+                      aria-label="Проект для массового назначения"
+                    />
+                  </div>
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => onBulkStatus('archived')}
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={onBulkProject}
                     disabled={bulkLoading}
+                    title="Назначить проект выбранным VPS"
                   >
-                    В архив
+                    В проект
                   </button>
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => onBulkStatus('active')}
-                    disabled={bulkLoading}
-                  >
-                    Активен
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => onBulkStatus('paused')}
-                    disabled={bulkLoading}
-                  >
-                    Приостановлен
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger"
+                    className="btn btn-sm btn-outline-danger"
                     onClick={onBulkDelete}
                     disabled={bulkLoading}
                   >
@@ -784,7 +1042,9 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             </div>
           </div>
           <div className="table-responsive">
-            <table className="table card-table table-vcenter">
+            <table
+              className={`table card-table table-vcenter${filters.tableCompact ? ' table-sm' : ''}`}
+            >
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>
@@ -829,7 +1089,22 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredVps.map((item) => {
+                {tableSections.map((section) => (
+                  <Fragment key={section.key}>
+                    {filters.groupByProject && section.label ? (
+                      <tr className="table-active">
+                        <td colSpan={tableColCount}>
+                          <div className="d-flex flex-wrap align-items-center gap-2">
+                            <span>{section.label}</span>
+                            <span className="badge bg-secondary-lt">{section.count} VPS</span>
+                            <span className="text-secondary small">
+                              Прогноз / мес: {formatCurrency(section.forecast, baseCurrency)}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                    {section.items.map((item) => {
                   const provider = db.providers.find((providerRow) => providerRow.id === item.providerId)
                   const account = db.providerAccounts.find(
                     (accountRow) => accountRow.id === item.providerAccountId,
@@ -1003,11 +1278,13 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                       </td>
                     </tr>
                   )
-                })}
+                    })}
+                  </Fragment>
+                ))}
                 {filteredVps.length === 0 ? (
                   <EmptyState
                     message="По фильтрам ничего не найдено"
-                    colSpan={viewMode === 'extended' ? 25 + customFields.length : 9}
+                    colSpan={tableColCount}
                   />
                 ) : null}
               </tbody>
@@ -1280,13 +1557,18 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-12 col-sm-6">
-                <label className="form-label">Проект</label>
-                <input
-                  className="form-control"
+                <label className="form-label">Проект / пул</label>
+                <ProjectSuggestInput
+                  id="vps-form-project"
+                  serverProjects={db.serverProjects}
                   value={form.project}
-                  onChange={(e) => setForm((prev) => ({ ...prev, project: e.target.value }))}
-                  placeholder="my-project"
+                  onChange={(v) => setForm((prev) => ({ ...prev, project: v }))}
+                  placeholder="Умный дом, прокси…"
+                  aria-label="Проект или пул"
                 />
+                <div className="text-secondary small mt-1">
+                  Подсказки — уже созданные группы; новое имя создастся при сохранении.
+                </div>
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Назначение</label>
