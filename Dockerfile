@@ -27,10 +27,11 @@ COPY --from=prod /app/node_modules ./node_modules
 COPY --from=prod /app/server ./server
 COPY --from=prod /app/dist ./dist
 
-# Минимальный runtime (см. https://github.com/GoogleContainerTools/distroless/blob/main/nodejs/README.md)
-FROM gcr.io/distroless/nodejs22-debian13:nonroot
+# Финал на Alpine: у базы меньше слоёв, чем у distroless Debian (history выглядит «легче»).
+# Тяжёлый фронт в образ не попадает — только express/cors/sql.js (стадия prod).
+FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=bundle --chown=nonroot:nonroot /out/ .
+COPY --from=bundle /out/ .
 EXPOSE 3001
-CMD ["server/index.js"]
+CMD ["node", "server/index.js"]
