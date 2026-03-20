@@ -64,17 +64,15 @@ docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" vps-tracker:local
 После push в ветку `main` workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) собирает образ и публикует его в GHCR.
 
 1. На GitHub: **Packages** → пакет образа для этого репозитория (при необходимости сделайте пакет **public**, чтобы не требовалась авторизация для `docker pull`).
-2. Имя образа: `ghcr.io/<владелец>/<репозиторий>:latest` (в GHCR имя образа задаётся в **нижнем** регистре).
-
-Пример (замените `OWNER` и `REPO`):
+2. Имя образа в GHCR: **`ghcr.io/denozordec/vps-tracker`** (теги `latest` и SHA коммита).
 
 ```powershell
-docker pull ghcr.io/OWNER/REPO:latest
+docker pull ghcr.io/denozordec/vps-tracker:latest
 New-Item -ItemType Directory -Force -Path .\data | Out-Null
-docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" ghcr.io/OWNER/REPO:latest
+docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" ghcr.io/denozordec/vps-tracker:latest
 ```
 
-Обновление: снова `docker pull ...:latest` и перезапуск контейнера.
+Обновление: снова `docker pull ghcr.io/denozordec/vps-tracker:latest` и перезапуск контейнера.
 
 ### CI/CD (кратко)
 
