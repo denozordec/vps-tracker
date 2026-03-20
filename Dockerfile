@@ -23,9 +23,10 @@ RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev && \
     \) -delete && \
     find node_modules -type d -empty -delete
 
-# Stage 3: Минимальный runtime (без npm/yarn/corepack)
+# Stage 3: Минимальный runtime — только бинарник node (без apk, npm, yarn)
 FROM alpine:3.21
-RUN apk add --no-cache nodejs
+RUN apk add --no-cache libstdc++ libgcc
+COPY --from=node:22-alpine /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
