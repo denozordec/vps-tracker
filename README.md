@@ -121,6 +121,22 @@ cd vps-tracker
 docker compose up -d
 ```
 
+**То же через Docker CLI** (без Compose) — эквивалент [docker-compose.yml](docker-compose.yml): том `./data`, порт **3001**, переменная **PORT=3001**.
+
+```bash
+mkdir -p ./data
+docker pull ghcr.io/denozordec/vps-tracker:latest
+docker run -d \
+  --name vps-tracker \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -e PORT=3001 \
+  -v "$(pwd)/data:/app/data" \
+  ghcr.io/denozordec/vps-tracker:latest
+```
+
+В PowerShell из каталога проекта подставьте путь к данным так: `-v "${PWD}/data:/app/data"`.
+
 Данные по умолчанию сохраняются в папку `data` внутри каталога проекта на диске.
 
 Остановка:
