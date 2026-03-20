@@ -17,6 +17,7 @@ import {
 } from '@tabler/icons-react'
 
 export function DashboardPage({ db = {}, settings, ratesData }) {
+  const [dashTab, setDashTab] = useState('overview')
   const vps = Array.isArray(db.vps) ? db.vps : []
   const providerAccounts = Array.isArray(db.providerAccounts) ? db.providerAccounts : []
   const balanceLedger = Array.isArray(db.balanceLedger) ? db.balanceLedger : []
@@ -234,85 +235,37 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
     .sort((a, b) => a.paidUntil - b.paidUntil)
     .slice(0, 10)
 
+  const healthIssuesCount = inventoryIssues.reduce((n, i) => n + (i.count || 0), 0)
+
   return (
     <>
       <PageHeader pretitle="Обзор" title="Дашборд" />
-      <div className="row row-cards">
-      {inventoryIssues.length > 0 ? (
-        <div className="col-12">
-          <div className="card border-warning">
-            <div className="card-header">
-              <h3 className="card-title">Здоровье инвентаря</h3>
-            </div>
-            <div className="card-body">
-              <div className="row g-2">
-                {inventoryIssues.map((issue) => (
-                  <div className="col-md-6 col-xl-4" key={issue.key}>
-                    <Link className="card card-link" to={issue.to}>
-                      <div className="card-body py-2 px-3">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className="fw-medium">{issue.title}</span>
-                          <span className="badge bg-orange-lt text-orange">{issue.count}</span>
-                        </div>
-                        {issue.hint ? <div className="text-secondary small mt-1">{issue.hint}</div> : null}
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="col-12">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Последние синхронизации</h3>
-            <div className="card-actions">
-              <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
-                Аккаунты
-              </Link>
-            </div>
-          </div>
-          <div className="list-group list-group-flush">
-            {recentSyncFeed.map((row) => {
-              const acc = providerAccounts.find((a) => a.id === row.accountId)
-              const line = formatSyncSummaryLine(row.summary)
-              return (
-                <div key={row.id} className="list-group-item">
-                  <div className="d-flex justify-content-between align-items-start gap-2">
-                    <div>
-                      <div className="fw-medium">{acc?.name || row.accountId}</div>
-                      <div className="text-secondary small">
-                        {row.status === 'error' ? (
-                          <span className="text-danger">{row.error || line}</span>
-                        ) : (
-                          line || 'OK'
-                        )}
-                      </div>
-                    </div>
-                    <span className={`badge ${row.status === 'ok' ? 'bg-green-lt text-green' : 'bg-red-lt text-red'}`}>
-                      {row.status === 'ok' ? 'OK' : 'Ошибка'}
-                    </span>
-                  </div>
-                  <div className="text-secondary small mt-1">
-                    {row.finishedAt
-                      ? new Date(row.finishedAt).toLocaleString('ru-RU')
-                      : '—'}
-                  </div>
-                </div>
-              )
-            })}
-            {recentSyncFeed.length === 0 ? (
-              <div className="list-group-item text-secondary text-center py-4">
-                Запустите синхронизацию на странице аккаунтов — здесь появится краткий итог
-              </div>
+      <ul className="nav nav-tabs mb-3" role="tablist">
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link ${dashTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setDashTab('overview')}
+          >
+            Обзор
+          </button>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            type="button"
+            className={`nav-link ${dashTab === 'health' ? 'active' : ''}`}
+            onClick={() => setDashTab('health')}
+          >
+            Health Check
+            {inventoryIssues.length > 0 ? (
+              <span className="badge bg-orange-lt text-orange ms-2">{healthIssuesCount}</span>
             ) : null}
-          </div>
-        </div>
-      </div>
+          </button>
+        </li>
+      </ul>
 
+      {dashTab === 'overview' ? (
+      <div className="row row-cards">
       <div className="col-sm-6 col-lg-3">
         <div className="card metric-card metric-blue h-100">
           <div className="card-body">
@@ -368,6 +321,79 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
               </span>
             </div>
             <div className="stat-value">{formatCurrency(totalBalance, baseCurrency)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12 col-xl-8">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Остатки по аккаунтам хостеров</h3>
+          </div>
+          <div className="table-responsive">
+            <table className="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Аккаунт</th>
+                  <th>Валюта</th>
+                  <th>Баланс</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accountBalances.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{item.currency}</td>
+                    <td>
+                      <ConvertedAmount
+                        amount={item.balance}
+                        currency={item.currency}
+                        provider={db.providers.find((provider) => provider.id === item.providerId)}
+                        settings={settings}
+                        ratesData={ratesData}
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {accountBalances.length === 0 ? (
+                  <EmptyState message="Пока нет аккаунтов" colSpan={3} />
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12 col-xl-4">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Истекающая оплата (ближайшие {UPCOMING_DAYS} дней)</h3>
+          </div>
+          <div className="list-group list-group-flush">
+            {upcoming.map(({ vps: item, paidUntil }) => {
+              const provider = providers.find((p) => p.id === item.providerId)
+              const account = providerAccounts.find((a) => a.id === item.providerAccountId)
+              return (
+                <div key={item.id} className="list-group-item">
+                  <div className="d-flex justify-content-between">
+                    <div>
+                      <div className="fw-medium">{item.dns || item.ip}</div>
+                      <div className="text-secondary small">
+                        {provider?.name || '—'} / {account?.name || '—'}
+                      </div>
+                    </div>
+                    <div className="text-secondary">
+                      {paidUntil.toLocaleDateString('ru-RU')}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {upcoming.length === 0 ? (
+              <div className="list-group-item text-secondary text-center py-4">
+                Нет VPS с истекающей оплатой в ближайшие {UPCOMING_DAYS} дней
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -463,80 +489,91 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
           </div>
         </div>
       </div>
+    </div>
+      ) : null}
 
-      <div className="col-12 col-xl-7">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Остатки по аккаунтам хостеров</h3>
-          </div>
-          <div className="table-responsive">
-            <table className="table card-table table-vcenter">
-              <thead>
-                <tr>
-                  <th>Аккаунт</th>
-                  <th>Валюта</th>
-                  <th>Баланс</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accountBalances.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>{item.currency}</td>
-                    <td>
-                      <ConvertedAmount
-                        amount={item.balance}
-                        currency={item.currency}
-                        provider={db.providers.find((provider) => provider.id === item.providerId)}
-                        settings={settings}
-                        ratesData={ratesData}
-                      />
-                    </td>
-                  </tr>
-                ))}
-                {accountBalances.length === 0 ? (
-                  <EmptyState message="Пока нет аккаунтов" colSpan={3} />
-                ) : null}
-              </tbody>
-            </table>
+      {dashTab === 'health' ? (
+      <div className="row row-cards">
+        <div className="col-12">
+          <div className={`card ${inventoryIssues.length > 0 ? 'border-warning' : ''}`}>
+            <div className="card-header">
+              <h3 className="card-title">Health Check</h3>
+            </div>
+            <div className="card-body">
+              {inventoryIssues.length > 0 ? (
+                <div className="row g-2">
+                  {inventoryIssues.map((issue) => (
+                    <div className="col-md-6 col-xl-4" key={issue.key}>
+                      <Link className="card card-link" to={issue.to}>
+                        <div className="card-body py-2 px-3">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className="fw-medium">{issue.title}</span>
+                            <span className="badge bg-orange-lt text-orange">{issue.count}</span>
+                          </div>
+                          {issue.hint ? <div className="text-secondary small mt-1">{issue.hint}</div> : null}
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-secondary text-center py-4">
+                  Замечаний по инвентарю нет. При появлении проблем они отобразятся здесь со ссылками на списки.
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="col-12 col-xl-5">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Истекающая оплата (ближайшие {UPCOMING_DAYS} дней)</h3>
-          </div>
-          <div className="list-group list-group-flush">
-            {upcoming.map(({ vps: item, paidUntil }) => {
-              const provider = providers.find((p) => p.id === item.providerId)
-              const account = providerAccounts.find((a) => a.id === item.providerAccountId)
-              return (
-                <div key={item.id} className="list-group-item">
-                  <div className="d-flex justify-content-between">
-                    <div>
-                      <div className="fw-medium">{item.dns || item.ip}</div>
-                      <div className="text-secondary small">
-                        {provider?.name || '—'} / {account?.name || '—'}
+        <div className="col-12">
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">Последние синхронизации</h3>
+              <div className="card-actions">
+                <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
+                  Аккаунты
+                </Link>
+              </div>
+            </div>
+            <div className="list-group list-group-flush">
+              {recentSyncFeed.map((row) => {
+                const acc = providerAccounts.find((a) => a.id === row.accountId)
+                const line = formatSyncSummaryLine(row.summary)
+                return (
+                  <div key={row.id} className="list-group-item">
+                    <div className="d-flex justify-content-between align-items-start gap-2">
+                      <div>
+                        <div className="fw-medium">{acc?.name || row.accountId}</div>
+                        <div className="text-secondary small">
+                          {row.status === 'error' ? (
+                            <span className="text-danger">{row.error || line}</span>
+                          ) : (
+                            line || 'OK'
+                          )}
+                        </div>
                       </div>
+                      <span className={`badge ${row.status === 'ok' ? 'bg-green-lt text-green' : 'bg-red-lt text-red'}`}>
+                        {row.status === 'ok' ? 'OK' : 'Ошибка'}
+                      </span>
                     </div>
-                    <div className="text-secondary">
-                      {paidUntil.toLocaleDateString('ru-RU')}
+                    <div className="text-secondary small mt-1">
+                      {row.finishedAt
+                        ? new Date(row.finishedAt).toLocaleString('ru-RU')
+                        : '—'}
                     </div>
                   </div>
+                )
+              })}
+              {recentSyncFeed.length === 0 ? (
+                <div className="list-group-item text-secondary text-center py-4">
+                  Запустите синхронизацию на странице аккаунтов — здесь появится краткий итог
                 </div>
-              )
-            })}
-            {upcoming.length === 0 ? (
-              <div className="list-group-item text-secondary text-center py-4">
-                Нет VPS с истекающей оплатой в ближайшие {UPCOMING_DAYS} дней
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      ) : null}
     </>
   )
 }
