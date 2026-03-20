@@ -2,12 +2,15 @@ import { getPaidUntilDate } from './paid-until'
 
 const STALE_SYNC_HOURS = 48
 
-function ledgerBalanceInCurrency(account, balanceLedger) {
+function ledgerRowsInAccountCurrency(account, balanceLedger) {
   const cur = (account.balance_currency || account.currency || '').trim()
   const rows = balanceLedger.filter((row) => row.providerAccountId === account.id)
-  const filtered = cur
-    ? rows.filter((row) => !row.currency || row.currency === cur)
-    : rows
+  if (!cur) return rows
+  return rows.filter((row) => !row.currency || row.currency === cur)
+}
+
+function ledgerBalanceInCurrency(account, balanceLedger) {
+  const filtered = ledgerRowsInAccountCurrency(account, balanceLedger)
   const credits = filtered
     .filter((row) => row.direction === 'credit')
     .reduce((acc, row) => acc + Number(row.amount || 0), 0)
@@ -15,6 +18,23 @@ function ledgerBalanceInCurrency(account, balanceLedger) {
     .filter((row) => row.direction === 'debit')
     .reduce((acc, row) => acc + Number(row.amount || 0), 0)
   return credits - debits
+}
+
+/**
+ * Сравниваем баланс из API с суммой по balance_ledger.
+ * Если в ledger нет ни одной строки по аккаунту (в валюте баланса) — не считаем расхождением:
+ * пользователь видит только API, а «0 из ledger» — не противоречие, а отсутствие учёта.
+ */
+export function accountHasApiLedgerMismatch(account, balanceLedger) {
+  if (account.balance_api == null || !Number.isFinite(Number(account.balance_api))) return false
+  const rows = ledgerRowsInAccountCurrency(account, balanceLedger)
+  if (rows.length === 0) return false
+  const ledger = ledgerBalanceInCurrency(account, balanceLedger)
+  if (!Number.isFinite(ledger)) return false
+  const api = Number(account.balance_api)
+  const diff = Math.abs(api - ledger)
+  const tol = Math.max(10, Math.abs(api) * 0.05)
+  return diff > tol
 }
 
 export function lastOkSyncFinishedAt(accountId, syncLog) {
@@ -108,21 +128,14 @@ export function computeInventoryHealth(input) {
     })
   }
 
-  const mismatchAccounts = providerAccounts.filter((a) => {
-    if (a.balance_api == null || !Number.isFinite(Number(a.balance_api))) return false
-    const ledger = ledgerBalanceInCurrency(a, balanceLedger)
-    if (!Number.isFinite(ledger)) return false
-    const api = Number(a.balance_api)
-    const diff = Math.abs(api - ledger)
-    const tol = Math.max(10, Math.abs(api) * 0.05)
-    return diff > tol
-  })
+  const mismatchAccounts = providerAccounts.filter((a) => accountHasApiLedgerMismatch(a, balanceLedger))
   if (mismatchAccounts.length) {
     issues.push({
       key: 'balance-mismatch',
       title: 'Баланс API и ledger расходятся',
       count: mismatchAccounts.length,
       to: '/accounts?health=balance-mismatch',
+      hint: 'Считается только если в журнале «Баланс и списания» есть движения по аккаунту',
     })
   }
 
@@ -152,17 +165,7 @@ export function getStaleSyncAccountIds(providerAccounts, syncLog, now = new Date
  * @param {object[]} balanceLedger
  */
 export function getBalanceMismatchAccountIds(providerAccounts, balanceLedger) {
-  return providerAccounts
-    .filter((a) => {
-      if (a.balance_api == null || !Number.isFinite(Number(a.balance_api))) return false
-      const ledger = ledgerBalanceInCurrency(a, balanceLedger)
-      if (!Number.isFinite(ledger)) return false
-      const api = Number(a.balance_api)
-      const diff = Math.abs(api - ledger)
-      const tol = Math.max(10, Math.abs(api) * 0.05)
-      return diff > tol
-    })
-    .map((a) => a.id)
+  return providerAccounts.filter((a) => accountHasApiLedgerMismatch(a, balanceLedger)).map((a) => a.id)
 }
 
 /**

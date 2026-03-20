@@ -262,7 +262,9 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
         highlightAccountIds?.size ? (
           <div className="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2">
             <span>
-              Подсвечены аккаунты, где баланс API заметно расходится с суммой по ledger (та же валюта).
+              В колонке «Баланс» для BILLmanager показывается сумма из API (в двух строках — с конвертацией и в валюте аккаунта).
+              Здесь же сверяется с <strong>журналом на странице «Баланс и списания»</strong> (те же движения в валюте баланса).
+              Подсветка только если в журнале уже есть записи по аккаунту, но итог заметно не совпадает с API.
             </span>
             <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
               Сбросить фильтр
