@@ -76,6 +76,14 @@ function loadFilterPresets() {
   }
 }
 
+/** Подпись аккаунта в select: при фильтре по одному хостеру — только имя, иначе «хостер / аккаунт». */
+function accountSelectLabel(account, providerById, scopedProviderId) {
+  const name = account.name?.trim() || '—'
+  if (scopedProviderId) return name
+  const providerName = providerById.get(account.providerId)?.name ?? '—'
+  return `${providerName} / ${name}`
+}
+
 function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData) {
   if (item.status !== 'active') return 0
   const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
@@ -134,6 +142,11 @@ export function VpsPage({ db, actions, settings, ratesData }) {
   const billmanagerAccounts = useMemo(
     () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
     [db.providerAccounts],
+  )
+
+  const providerById = useMemo(
+    () => new Map(db.providers.map((p) => [p.id, p])),
+    [db.providers],
   )
   const [filters, setFilters] = useState({
     search: '',
@@ -742,7 +755,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <option value="">Все аккаунты</option>
                   {accountFilterOptions.map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.name}
+                      {accountSelectLabel(account, providerById, filters.providerId)}
                     </option>
                   ))}
                 </select>
@@ -1452,7 +1465,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <option value="">— Выберите —</option>
                   {accountOptions.map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.name}
+                      {accountSelectLabel(account, providerById, form.providerId)}
                     </option>
                   ))}
                 </select>
