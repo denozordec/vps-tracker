@@ -17,7 +17,7 @@ import {
   accountBillmanagerUiReady,
   accountUsesBillmanagerBalanceApi,
 } from '../lib/billmanager-ui'
-import { RefreshCw, PlugZap } from 'lucide-react'
+import { IconRefresh, IconPlugConnected } from '@tabler/icons-react'
 
 const emptyForm = {
   providerId: '',
@@ -314,7 +314,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                   {syncLoadingAll ? (
                     <span className="spinner-border spinner-border-sm me-1" role="status" />
                   ) : (
-                    <RefreshCw size={16} className="me-1" />
+                    <IconRefresh size={16} className="me-1" />
                   )}
                   Синхронизировать VPS
                 </button>
@@ -400,7 +400,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                                 {balanceLoadingId === account.id ? (
                                   <span className="spinner-border spinner-border-sm me-1" role="status" />
                                 ) : (
-                                  <RefreshCw size={14} className="me-1" />
+                                  <IconRefresh size={14} className="me-1" />
                                 )}
                                 Баланс
                               </button>
@@ -414,7 +414,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                                 {syncLoadingId === account.id ? (
                                   <span className="spinner-border spinner-border-sm me-1" role="status" />
                                 ) : (
-                                  <RefreshCw size={14} className="me-1" />
+                                  <IconRefresh size={14} className="me-1" />
                                 )}
                                 Синхронизировать
                               </button>
@@ -568,7 +568,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                   {testConnectionLoading ? (
                     <span className="spinner-border spinner-border-sm me-1" role="status" />
                   ) : (
-                    <PlugZap size={14} className="me-1" />
+                    <IconPlugConnected size={14} className="me-1" />
                   )}
                   Проверить соединение
                 </button>
