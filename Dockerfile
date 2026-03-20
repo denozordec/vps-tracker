@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# Сборка фронта (devDependencies только здесь)
+# Сборка фронта (все devDependencies + UI)
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -11,7 +11,7 @@ COPY public ./public
 COPY src ./src
 RUN npm run build
 
-# Production node_modules + server + dist
+# Только runtime-deps: express, cors, sql.js (+ транзитивные)
 FROM node:22-alpine AS prod
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -20,17 +20,17 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY server ./server
 COPY --from=build /app/dist ./dist
 
-# Слой приложения одним COPY в финальный образ (меньше слоёв в image)
+# Артефакты без package.json / lock — не нужны для node server/index.js
 FROM node:22-alpine AS bundle
 WORKDIR /out
 COPY --from=prod /app/node_modules ./node_modules
 COPY --from=prod /app/server ./server
 COPY --from=prod /app/dist ./dist
-COPY --from=prod /app/package.json ./package.json
 
-FROM node:22-alpine
+# Минимальный runtime (см. https://github.com/GoogleContainerTools/distroless/blob/main/nodejs/README.md)
+FROM gcr.io/distroless/nodejs22-debian13:nonroot
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=bundle /out/ .
+COPY --from=bundle --chown=nonroot:nonroot /out/ .
 EXPOSE 3001
-CMD ["node", "server/index.js"]
+CMD ["server/index.js"]

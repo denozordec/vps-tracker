@@ -11,26 +11,26 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tabler/core": "^1.4.0",
-    "@tabler/icons-react": "^3.40.0",
-    "chart.js": "^4.5.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.13.1",
-    "sql.js": "^1.14.0",
     "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "sql.js": "^1.14.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@tabler/core": "^1.4.0",
+    "@tabler/icons-react": "^3.40.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "chart.js": "^4.5.1",
+    "concurrently": "^9.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
-    "concurrently": "^9.1.0",
     "globals": "^16.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.1",
     "vite": "^7.3.1"
   }
 }
