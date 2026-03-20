@@ -1,0 +1,10 @@
+# VPS Tracker: приложение + SQLite в ./data (создайте каталог или он появится при первом запуске)
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+    volumes:
+      - ./data:/app/data

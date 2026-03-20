@@ -1,16 +1,101 @@
-# React + Vite
+# VPS Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Приложение для учёта виртуальных серверов (VPS), провайдеров, аккаунтов, платежей и балансов. Поддерживается синхронизация с BILLmanager 6 API.
 
-Currently, two official plugins are available:
+Ниже — основной сценарий запуска **в Docker**. Разработка без контейнера описана кратко в конце. Подробности по коду и доменам — в [AGENTS.md](AGENTS.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Запуск в Docker
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Требования
 
-## Expanding the ESLint configuration
+- [Docker](https://docs.docker.com/get-docker/) и [Docker Compose](https://docs.docker.com/compose/) v2 (`docker compose`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Важно: база данных
+
+SQLite хранится в файле `data/vps-tracker.db` **внутри рабочей директории приложения** (`/app/data` в контейнере). Без **тома** (volume) при удалении или пересборке контейнера база пропадёт. Для постоянного хранения всегда монтируйте каталог на хосте в `/app/data`.
+
+### Вариант 1: Docker Compose (рекомендуется)
+
+В корне репозитория:
+
+```powershell
+docker compose up --build
+```
+
+Откройте в браузере: **http://localhost:3001** (и API на том же хосте, префикс `/api/...`).
+
+Данные БД по умолчанию пишутся в `./data` на хосте (см. [docker-compose.yml](docker-compose.yml)). Каталог `data` можно создать заранее или он появится при первом запуске.
+
+Остановка: `Ctrl+C` или в другом окне:
+
+```powershell
+docker compose down
+```
+
+### Вариант 2: только Docker (без Compose)
+
+Сборка образа:
+
+```powershell
+docker build -t vps-tracker:local .
+```
+
+Запуск с томом для БД (пример для PowerShell — подставьте свой путь):
+
+```powershell
+New-Item -ItemType Directory -Force -Path .\data | Out-Null
+docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" vps-tracker:local
+```
+
+Снова открывайте **http://localhost:3001**.
+
+### Переменные окружения
+
+| Переменная | Описание | По умолчанию |
+|------------|----------|--------------|
+| `PORT` | Порт HTTP внутри контейнера | `3001` |
+
+При смене `PORT` пробросьте тот же порт наружу, например `-p 8080:8080` и `-e PORT=8080`.
+
+### Образ из GitHub Container Registry (GHCR)
+
+После push в ветку `main` workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) собирает образ и публикует его в GHCR.
+
+1. На GitHub: **Packages** → пакет образа для этого репозитория (при необходимости сделайте пакет **public**, чтобы не требовалась авторизация для `docker pull`).
+2. Имя образа: `ghcr.io/<владелец>/<репозиторий>:latest` (в GHCR имя образа задаётся в **нижнем** регистре).
+
+Пример (замените `OWNER` и `REPO`):
+
+```powershell
+docker pull ghcr.io/OWNER/REPO:latest
+New-Item -ItemType Directory -Force -Path .\data | Out-Null
+docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" ghcr.io/OWNER/REPO:latest
+```
+
+Обновление: снова `docker pull ...:latest` и перезапуск контейнера.
+
+### CI/CD (кратко)
+
+- **Pull request** в `main`: в GitHub Actions выполняется только **сборка** образа (проверка, что Dockerfile валиден).
+- **Push** в `main`: сборка и **push** в GHCR с тегами `latest` и SHA коммита.
+
+---
+
+## Локальная разработка (без Docker)
+
+```powershell
+npm install
+npm run dev
+```
+
+Поднимаются Vite (фронт) и Express (API); API по умолчанию на порту **3001**, прокси настроен в [vite.config.js](vite.config.js).
+
+Сборка фронта отдельно: `npm run build`. Для проверки production-сборки на одном порту: после `npm run build` запустите `npm run server` — сервер отдаст статику из `dist`, если каталог существует.
+
+---
+
+## Документация для разработчиков
+
+- [AGENTS.md](AGENTS.md) — структура репозитория, сущности, где искать sync, тарифы, API.

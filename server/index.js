@@ -1,6 +1,12 @@
 import express from 'express'
 import cors from 'cors'
+import { existsSync } from 'fs'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
 import { initDb } from './db.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const distPath = join(__dirname, '..', 'dist')
 import dataRouter from './routes/data.js'
 import migrateRouter from './routes/migrate.js'
 import vpsRouter from './routes/vps.js'
@@ -33,6 +39,14 @@ app.use(express.json({ limit: '50mb' }))
   app.use('/api/sync', syncRouter)
   app.use('/api/projects', projectsRouter)
   app.use('/api/backup', backupRouter)
+
+  if (existsSync(distPath)) {
+    app.use(express.static(distPath))
+    app.get(/.*/, (req, res, next) => {
+      if (req.path.startsWith('/api')) return next()
+      res.sendFile(join(distPath, 'index.html'), (err) => (err ? next(err) : undefined))
+    })
+  }
 
   const { startScheduler } = await import('./sync-scheduler.js')
   startScheduler()
