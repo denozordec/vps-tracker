@@ -2,7 +2,7 @@ import { Router } from 'express'
 import express from 'express'
 import { readFileSync, existsSync } from 'node:fs'
 import { getDb, saveDb, DB_PATH, reloadDatabaseFromBuffer } from '../db.js'
-import { consolidateProviderApiFromAccounts } from '../db/migrations.js'
+import { consolidateAllProviderApiSources } from '../db/migrations.js'
 import { rowToVps } from './vps.js'
 import { rowToActiveTariff, rowToTariffSyncOptions } from '../utils/row-mappers.js'
 
@@ -162,7 +162,7 @@ function importJsonSnapshot(data) {
     )
   }
 
-  consolidateProviderApiFromAccounts(db)
+  consolidateAllProviderApiSources(db)
 
   const settingsList = Array.isArray(data.settings) ? data.settings : data.settings ? [data.settings] : []
   for (const s of settingsList) {

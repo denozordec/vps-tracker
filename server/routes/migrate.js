@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { getDb, saveDb } from '../db.js'
-import { consolidateProviderApiFromAccounts } from '../db/migrations.js'
+import { consolidateAllProviderApiSources } from '../db/migrations.js'
 
 const router = Router()
 
@@ -72,7 +72,7 @@ router.post('/', (req, res) => {
         db.run(sql, s.id ?? 'settings-main', s.baseCurrency ?? 'RUB', s.ratesUrl ?? '', s.autoConvert !== false ? 1 : 0, s.ratesUpdatedAt ?? '', s.syncEnabled ? 1 : 0, s.syncIntervalMinutes ?? 60)
       }
     }
-    consolidateProviderApiFromAccounts(db)
+    consolidateAllProviderApiSources(db)
     saveDb()
 
     res.json({ ok: true })

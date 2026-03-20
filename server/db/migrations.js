@@ -35,8 +35,11 @@ export function consolidateProviderApiFromAccounts(db) {
       db,
       `SELECT apiBaseUrl FROM provider_accounts
        WHERE providerId = ?
-         AND lower(trim(COALESCE(apiType, ''))) = 'billmanager'
          AND length(trim(COALESCE(apiBaseUrl, ''))) > 0
+         AND (
+           lower(trim(COALESCE(apiType, ''))) = 'billmanager'
+           OR instr(lower(trim(COALESCE(apiBaseUrl, ''))), 'billmgr') > 0
+         )
        ORDER BY id`,
       [pid],
     )
@@ -51,11 +54,57 @@ export function consolidateProviderApiFromAccounts(db) {
     db.run(`UPDATE providers SET apiType = ?, apiBaseUrl = ? WHERE id = ?`, 'billmanager', apiBaseUrl, pid)
     db.run(
       `UPDATE provider_accounts SET apiType = '', apiBaseUrl = ''
-       WHERE providerId = ? AND lower(trim(COALESCE(apiType, ''))) = 'billmanager'
-         AND length(trim(COALESCE(apiBaseUrl, ''))) > 0`,
+       WHERE providerId = ?
+         AND length(trim(COALESCE(apiBaseUrl, ''))) > 0
+         AND (
+           lower(trim(COALESCE(apiType, ''))) = 'billmanager'
+           OR instr(lower(trim(COALESCE(apiBaseUrl, ''))), 'billmgr') > 0
+         )`,
       pid,
     )
   }
+}
+
+/**
+ * Раньше URL BILLmanager часто указывали в «Сайт» хостера или в panelUrl аккаунта, без apiType/apiBaseUrl.
+ */
+export function heuristicBillmanagerProviderApi(db) {
+  const tryBillmgrUrl = (raw) => {
+    const t = String(raw || '').trim()
+    if (!t) return ''
+    if (!/^https?:\/\//i.test(t)) return ''
+    if (!/billmgr/i.test(t)) return ''
+    return t.replace(/\/+$/, '')
+  }
+
+  const provRows = selectAllObjects(db, 'SELECT id, website, apiType, apiBaseUrl FROM providers')
+  for (const prov of provRows) {
+    if (String(prov.apiType || '').trim() || String(prov.apiBaseUrl || '').trim()) continue
+
+    let url = tryBillmgrUrl(prov.website)
+    if (!url) {
+      const accRows = selectAllObjects(
+        db,
+        `SELECT panelUrl FROM provider_accounts
+         WHERE providerId = ? AND length(trim(COALESCE(panelUrl, ''))) > 0
+         ORDER BY id`,
+        [prov.id],
+      )
+      for (const row of accRows) {
+        url = tryBillmgrUrl(row.panelUrl)
+        if (url) break
+      }
+    }
+    if (url) {
+      db.run(`UPDATE providers SET apiType = ?, apiBaseUrl = ? WHERE id = ?`, 'billmanager', url, prov.id)
+    }
+  }
+}
+
+/** Перенос API на хостера: с аккаунтов + эвристика по website/panelUrl. */
+export function consolidateAllProviderApiSources(db) {
+  consolidateProviderApiFromAccounts(db)
+  heuristicBillmanagerProviderApi(db)
 }
 
 export const MIGRATIONS = [
@@ -333,7 +382,7 @@ export const MIGRATIONS = [
       } catch (e) {
         if (!String(e.message || e).includes('duplicate column')) throw e
       }
-      consolidateProviderApiFromAccounts(db)
+      consolidateAllProviderApiSources(db)
     },
   },
 ]
