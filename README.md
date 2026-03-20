@@ -1,99 +1,218 @@
 # VPS Tracker
 
-Приложение для учёта виртуальных серверов (VPS), провайдеров, аккаунтов, платежей и балансов. Поддерживается синхронизация с BILLmanager 6 API.
+**VPS Tracker** — это веб-приложение для учёта виртуальных серверов, хостинг-провайдеров, счетов и балансов. Всё работает в браузере: данные хранятся у вас на компьютере или сервере, можно подключить синхронизацию с BILLmanager.
 
-Ниже — основной сценарий запуска **в Docker**. Разработка без контейнера описана кратко в конце. Подробности по коду и доменам — в [AGENTS.md](AGENTS.md).
+Ниже описано, как **запустить готовую программу в Linux** с помощью Docker. Отдельно устанавливать Node.js не нужно.
 
 ---
 
-## Запуск в Docker
+## Содержание
 
-### Требования
+1. [Что понадобится](#req)
+2. [Самый простой способ: готовый образ](#quick)
+3. [Запуск через Docker Compose](#compose)
+4. [Сборка образа у себя](#build-local)
+5. [Сохранение данных и резервная копия](#data)
+6. [Другой порт и доступ по сети](#port)
+7. [Обновление программы](#update)
+8. [Для разработчиков](#dev)
 
-- [Docker](https://docs.docker.com/get-docker/) и [Docker Compose](https://docs.docker.com/compose/) v2 (`docker compose`).
+---
 
-### Важно: база данных
+<span id="req"></span>
 
-SQLite хранится в файле `data/vps-tracker.db` **внутри рабочей директории приложения** (`/app/data` в контейнере). Без **тома** (volume) при удалении или пересборке контейнера база пропадёт. Для постоянного хранения всегда монтируйте каталог на хосте в `/app/data`.
+## Что понадобится
 
-### Вариант 1: Docker Compose (рекомендуется)
+- Компьютер или сервер с **Linux** (подойдут Ubuntu, Debian, Fedora и другие дистрибутивы).
+- Установленные **Docker** и плагин **Compose**. Официальные инструкции: [Установка Docker Engine](https://docs.docker.com/engine/install/) и обзор [Compose](https://docs.docker.com/compose/).
 
-В корне репозитория:
+Проверка в терминале:
 
-```powershell
-docker compose up --build
+```bash
+docker --version
+docker compose version
 ```
 
-Откройте в браузере: **http://localhost:3001** (и API на том же хосте, префикс `/api/...`).
+---
 
-Данные БД по умолчанию пишутся в `./data` на хосте (см. [docker-compose.yml](docker-compose.yml)). Каталог `data` можно создать заранее или он появится при первом запуске.
+<span id="quick"></span>
 
-Остановка: `Ctrl+C` или в другом окне:
+## Самый простой способ: готовый образ
 
-```powershell
+Подойдёт, если у вас есть только терминал и вы хотите быстро поднять сервис.
+
+### Шаг 1. Скачать образ
+
+```bash
+docker pull ghcr.io/denozordec/vps-tracker:latest
+```
+
+> **Если запросили логин:** пакет на GitHub может быть закрытым. Войдите в аккаунт GitHub и создайте [Personal Access Token](https://github.com/settings/tokens) с правом `read:packages`, затем выполните:
+>
+> ```bash
+> echo ВАШ_ТОКЕН | docker login ghcr.io -u ВАШ_ЛОГИН_GITHUB --password-stdin
+> ```
+>
+> Либо откройте на GitHub страницу пакета **vps-tracker** → **Package settings** и сделайте пакет **public** — тогда `docker pull` без входа.
+
+### Шаг 2. Папка для данных
+
+Все записи приложения лежат в одном файле базы. Его нужно хранить **вне** контейнера, иначе при удалении контейнера данные пропадут.
+
+```bash
+mkdir -p ~/vps-tracker-data
+```
+
+Можно выбрать любой каталог вместо `~/vps-tracker-data` — главное, запомнить путь для команды ниже.
+
+### Шаг 3. Запуск
+
+**Вариант А — в фоне** (удобно на сервере, контейнер переживёт закрытие терминала):
+
+```bash
+docker run -d \
+  --name vps-tracker \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -v ~/vps-tracker-data:/app/data \
+  ghcr.io/denozordec/vps-tracker:latest
+```
+
+**Вариант Б — в переднем плане** (логи видны в терминале, остановка — `Ctrl+C`):
+
+```bash
+docker run --rm \
+  -p 3001:3001 \
+  -v ~/vps-tracker-data:/app/data \
+  ghcr.io/denozordec/vps-tracker:latest
+```
+
+### Шаг 4. Открыть в браузере
+
+На той же машине откройте:
+
+**http://localhost:3001**
+
+Если заходите с другого компьютера в сети — подставьте IP сервера: `http://192.168.1.10:3001` (ваш адрес может отличаться). На сервере может понадобиться открыть порт в брандмауэре, например для Ubuntu с UFW:
+
+```bash
+sudo ufw allow 3001/tcp
+sudo ufw reload
+```
+
+Остановка фонового контейнера:
+
+```bash
+docker stop vps-tracker
+docker rm vps-tracker
+```
+
+---
+
+<span id="compose"></span>
+
+## Запуск через Docker Compose
+
+Имеет смысл, если вы **склонировали этот репозиторий** и хотите собирать или менять конфигурацию через файл [docker-compose.yml](docker-compose.yml).
+
+```bash
+git clone https://github.com/denozordec/vps-tracker.git
+cd vps-tracker
+docker compose up -d --build
+```
+
+Данные по умолчанию сохраняются в папку `data` внутри каталога проекта на диске.
+
+Остановка:
+
+```bash
 docker compose down
 ```
 
-### Вариант 2: только Docker (без Compose)
+---
 
-Сборка образа:
+<span id="build-local"></span>
 
-```powershell
+## Сборка образа у себя
+
+Если нужен свой образ из исходников (после `git clone`):
+
+```bash
+cd vps-tracker
 docker build -t vps-tracker:local .
+mkdir -p ./data
+docker run -d \
+  --name vps-tracker \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -v "$(pwd)/data:/app/data" \
+  vps-tracker:local
 ```
 
-Запуск с томом для БД (пример для PowerShell — подставьте свой путь):
+---
 
-```powershell
-New-Item -ItemType Directory -Force -Path .\data | Out-Null
-docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" vps-tracker:local
+<span id="data"></span>
+
+## Сохранение данных и резервная копия
+
+Файл базы в примерах выше лежит на хосте:
+
+| Способ запуска | Где лежит база на диске |
+|----------------|-------------------------|
+| `docker run` с `-v ~/vps-tracker-data:/app/data` | `~/vps-tracker-data/vps-tracker.db` |
+| Docker Compose из репозитория | `./data/vps-tracker.db` в папке проекта |
+
+Скопируйте файл `vps-tracker.db` в безопасное место — это и есть резервная копия. Пока приложение не запущено, можно просто скопировать файл обратно для восстановления.
+
+---
+
+<span id="port"></span>
+
+## Другой порт и доступ по сети
+
+Внутри контейнера приложение слушает порт **3001**. Сменить внешний порт (например, **8080** снаружи, 3001 внутри):
+
+```bash
+docker run -d \
+  --name vps-tracker \
+  --restart unless-stopped \
+  -p 8080:3001 \
+  -v ~/vps-tracker-data:/app/data \
+  ghcr.io/denozordec/vps-tracker:latest
 ```
 
-Снова открывайте **http://localhost:3001**.
+Тогда в браузере: **http://localhost:8080**
 
-### Переменные окружения
+Чтобы сменить и внутренний порт (редко нужно), добавьте `-e PORT=8080` и согласуйте с `-p`, например `-p 8080:8080` и `-e PORT=8080`.
 
-| Переменная | Описание | По умолчанию |
-|------------|----------|--------------|
-| `PORT` | Порт HTTP внутри контейнера | `3001` |
+---
 
-При смене `PORT` пробросьте тот же порт наружу, например `-p 8080:8080` и `-e PORT=8080`.
+<span id="update"></span>
 
-### Образ из GitHub Container Registry (GHCR)
+## Обновление программы
 
-После push в ветку `main` workflow [.github/workflows/docker.yml](.github/workflows/docker.yml) собирает образ и публикует его в GHCR.
+Если используете образ с GitHub:
 
-1. На GitHub: **Packages** → пакет образа для этого репозитория (при необходимости сделайте пакет **public**, чтобы не требовалась авторизация для `docker pull`).
-2. Имя образа в GHCR: **`ghcr.io/denozordec/vps-tracker`** (теги `latest` и SHA коммита).
-
-```powershell
+```bash
 docker pull ghcr.io/denozordec/vps-tracker:latest
-New-Item -ItemType Directory -Force -Path .\data | Out-Null
-docker run --rm -p 3001:3001 -v "${PWD}\data:/app/data" ghcr.io/denozordec/vps-tracker:latest
+docker stop vps-tracker
+docker rm vps-tracker
 ```
 
-Обновление: снова `docker pull ghcr.io/denozordec/vps-tracker:latest` и перезапуск контейнера.
+Затем снова выполните команду `docker run` из раздела [«Самый простой способ»](#quick) (том `-v ...:/app/data` оставьте тот же — данные сохранятся).
 
-### CI/CD (кратко)
+При Docker Compose из репозитория:
 
-- **Pull request** в `main`: в GitHub Actions выполняется только **сборка** образа (проверка, что Dockerfile валиден).
-- **Push** в `main`: сборка и **push** в GHCR с тегами `latest` и SHA коммита.
+```bash
+cd vps-tracker
+git pull
+docker compose up -d --build
+```
 
 ---
 
-## Локальная разработка (без Docker)
+<span id="dev"></span>
 
-```powershell
-npm install
-npm run dev
-```
+## Для разработчиков
 
-Поднимаются Vite (фронт) и Express (API); API по умолчанию на порту **3001**, прокси настроен в [vite.config.js](vite.config.js).
-
-Сборка фронта отдельно: `npm run build`. Для проверки production-сборки на одном порту: после `npm run build` запустите `npm run server` — сервер отдаст статику из `dist`, если каталог существует.
-
----
-
-## Документация для разработчиков
-
-- [AGENTS.md](AGENTS.md) — структура репозитория, сущности, где искать sync, тарифы, API.
+Локальный запуск без Docker: `npm install` и `npm run dev`. Подробности по коду, API и синхронизации — в [AGENTS.md](AGENTS.md).
