@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { IconFolder } from '@tabler/icons-react'
+import { Folder } from 'lucide-react'
 import { fetchProjectSuggestions } from '../lib/api'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
@@ -184,7 +184,7 @@ export function ProjectSuggestInput({
                   onMouseEnter={() => setActiveIndex(idx)}
                 >
                   <span className="text-secondary project-suggest-folder">
-                    <IconFolder size={18} stroke={1.5} />
+                    <Folder size={18} strokeWidth={1.5} />
                   </span>
                   <span className="text-truncate">{highlightMatch(name, value)}</span>
                 </button>

@@ -1,13 +1,6 @@
 import { useMemo, useState } from 'react'
 import { convertCurrency, formatCurrency, faviconUrlFromWebsite, normalizeWebsiteUrl } from '../lib/utils'
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconMapPin,
-  IconRefresh,
-  IconSearch,
-  IconServer,
-} from '@tabler/icons-react'
+import { ArrowDown, ArrowUp, MapPin, RefreshCw, Search, Server } from 'lucide-react'
 import { syncAccount } from '../lib/api'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
@@ -26,7 +19,7 @@ function SortHeader({ column, children, onSort, sortBy, sortDir }) {
       style={SORT_COLUMNS.includes(column) ? { cursor: 'pointer', userSelect: 'none' } : undefined}
     >
       {children}
-      {sortBy === column && (sortDir === 'asc' ? <IconArrowUp size={14} className="ms-1" /> : <IconArrowDown size={14} className="ms-1" />)}
+      {sortBy === column && (sortDir === 'asc' ? <ArrowUp size={14} className="ms-1" /> : <ArrowDown size={14} className="ms-1" />)}
     </th>
   )
 }
@@ -201,7 +194,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
             <div className="card">
               <div className="card-header">
                 <h3 className="card-title">
-                  <IconMapPin size={18} className="me-1" />
+                  <MapPin size={18} className="me-1" />
                   Доступные датацентры и страны
                 </h3>
               </div>
@@ -249,7 +242,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                 <div className="col-xl-3 col-lg-4 col-md-6">
                   <div className="input-icon">
                     <span className="input-icon-addon">
-                      <IconSearch size={16} />
+                      <Search size={16} />
                     </span>
                     <input {...noBrowserSuggestProps}
                       className="form-control"
@@ -370,7 +363,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                     {syncLoading ? (
                       <span className="spinner-border spinner-border-sm me-1" role="status" />
                     ) : (
-                      <IconRefresh size={16} className="me-1" />
+                      <RefreshCw size={16} className="me-1" />
                     )}
                     Синхронизировать
                   </button>
@@ -423,7 +416,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                         <td>
                           <div className="d-flex align-items-center gap-2">
                             <span className="avatar avatar-sm bg-blue-lt">
-                              <IconServer size={16} />
+                              <Server size={16} />
                             </span>
                             <div>
                               <div className="fw-medium">{item.name || '—'}</div>

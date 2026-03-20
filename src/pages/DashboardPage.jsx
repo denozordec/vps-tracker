@@ -9,12 +9,7 @@ import { EmptyState } from '../components/EmptyState'
 import { ExpenseChart } from '../components/ExpenseChart'
 import { PageHeader } from '../components/PageHeader'
 import { ProviderPieChart } from '../components/ProviderPieChart'
-import {
-  IconCash,
-  IconClockHour4,
-  IconServer,
-  IconWallet,
-} from '@tabler/icons-react'
+import { Banknote, Clock4, Server, Wallet } from 'lucide-react'
 
 export function DashboardPage({ db = {}, settings, ratesData }) {
   const [dashTab, setDashTab] = useState('overview')
@@ -273,7 +268,7 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
             <div className="d-flex align-items-center justify-content-between">
               <div className="text-secondary">Активные VPS</div>
               <span className="metric-icon bg-blue-lt text-blue">
-                <IconServer size={18} />
+                <Server size={18} />
               </span>
             </div>
             <div className="stat-value">{activeVpsCount}</div>
@@ -286,7 +281,7 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
             <div className="d-flex align-items-center justify-content-between">
               <div className="text-secondary">Расходы за месяц</div>
               <span className="metric-icon bg-green-lt text-green">
-                <IconCash size={18} />
+                <Banknote size={18} />
               </span>
             </div>
             <div className="stat-value">{formatCurrency(monthExpenses, baseCurrency)}</div>
@@ -305,7 +300,7 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
             <div className="d-flex align-items-center justify-content-between">
               <div className="text-secondary">Аккаунтов хостеров</div>
               <span className="metric-icon bg-yellow-lt text-yellow">
-                <IconClockHour4 size={18} />
+                <Clock4 size={18} />
               </span>
             </div>
             <div className="stat-value">{providerAccounts.length}</div>
@@ -318,7 +313,7 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
             <div className="d-flex align-items-center justify-content-between">
               <div className="text-secondary">Суммарный баланс</div>
               <span className="metric-icon bg-purple-lt text-purple">
-                <IconWallet size={18} />
+                <Wallet size={18} />
               </span>
             </div>
             <div className="stat-value">{formatCurrency(totalBalance, baseCurrency)}</div>

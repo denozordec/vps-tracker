@@ -9,16 +9,7 @@ import {
   tariffTypeLabel,
   vpsStatusLabel,
 } from '../lib/utils'
-import {
-  IconEdit,
-  IconFilter,
-  IconMapPin,
-  IconPlus,
-  IconRefresh,
-  IconSearch,
-  IconServer,
-  IconTrash,
-} from '@tabler/icons-react'
+import { Pencil, Filter, MapPin, Plus, RefreshCw, Search, Server, Trash2 } from 'lucide-react'
 import { syncAccount, bulkUpdateVps } from '../lib/api'
 import { UiModal } from '../components/UiModal'
 import { ConvertedAmount } from '../components/ConvertedAmount'
@@ -689,7 +680,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               <div className="col-xl-3 col-lg-4 col-md-6">
                 <div className="input-icon">
                   <span className="input-icon-addon">
-                    <IconSearch size={16} />
+                    <Search size={16} />
                   </span>
                   <input {...noBrowserSuggestProps}
                     className="form-control"
@@ -822,7 +813,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               <div className="col-xl-2 col-lg-4 col-md-6">
                 <div className="input-icon">
                   <span className="input-icon-addon">
-                    <IconFilter size={16} />
+                    <Filter size={16} />
                   </span>
                   <input {...noBrowserSuggestProps}
                     className="form-control"
@@ -840,7 +831,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               <div className="col-xl-2 col-lg-4 col-md-6">
                 <div className="input-icon">
                   <span className="input-icon-addon">
-                    <IconMapPin size={16} />
+                    <MapPin size={16} />
                   </span>
                   <input {...noBrowserSuggestProps}
                     className="form-control"
@@ -1086,7 +1077,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                     {syncLoading ? (
                       <span className="spinner-border spinner-border-sm me-1" role="status" />
                     ) : (
-                      <IconRefresh size={16} className="me-1" />
+                      <RefreshCw size={16} className="me-1" />
                     )}
                     Синхронизировать
                   </button>
@@ -1104,7 +1095,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                     setIsModalOpen(true)
                   }}
                 >
-                  <IconPlus size={16} className="me-1" />
+                  <Plus size={16} className="me-1" />
                   Добавить VPS
                 </button>
               </div>
@@ -1332,7 +1323,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                             className="btn btn-sm btn-outline-primary"
                             onClick={() => onEdit(item)}
                           >
-                            <IconEdit size={14} className="me-1" />
+                            <Pencil size={14} className="me-1" />
                             Изменить
                           </button>
                           <button
@@ -1340,7 +1331,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => actions.remove('vps', item.id)}
                           >
-                            <IconTrash size={14} className="me-1" />
+                            <Trash2 size={14} className="me-1" />
                             Удалить
                           </button>
                         </div>
@@ -1379,7 +1370,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               Отмена
             </button>
             <button type="submit" form="vps-form" className="btn btn-primary">
-              <IconPlus size={16} className="me-1" />
+              <Plus size={16} className="me-1" />
               {editingId ? 'Сохранить' : 'Добавить'}
             </button>
           </div>

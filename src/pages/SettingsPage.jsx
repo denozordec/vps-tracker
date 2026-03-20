@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
+import { Plus, Send, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import {
   downloadBackupDatabaseBlob,
@@ -231,7 +231,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                 className="btn btn-primary"
                 onClick={addCustomField}
               >
-                <IconPlus size={16} />
+                <Plus size={16} />
               </button>
             </div>
             {customFields.length > 0 ? (
@@ -244,7 +244,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                       className="btn btn-sm btn-outline-danger"
                       onClick={() => removeCustomField(f.key)}
                     >
-                      <IconTrash size={14} />
+                      <Trash2 size={14} />
                     </button>
                   </li>
                 ))}
@@ -422,7 +422,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                     </>
                   ) : (
                     <>
-                      <IconSend size={16} className="me-1" />
+                      <Send size={16} className="me-1" />
                       Тестовое уведомление
                     </>
                   )}

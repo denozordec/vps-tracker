@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { IconEdit } from '@tabler/icons-react'
+import { Pencil } from 'lucide-react'
 import { paymentTypeLabel } from '../lib/utils'
 import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
@@ -155,7 +155,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
                             className="btn btn-sm btn-outline-primary me-1"
                             onClick={() => onEdit(payment)}
                           >
-                            <IconEdit size={14} className="me-1" />
+                            <Pencil size={14} className="me-1" />
                             Изменить
                           </button>
                           <button

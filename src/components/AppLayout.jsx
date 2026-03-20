@@ -1,28 +1,28 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  IconBuildingSkyscraper,
-  IconChartBar,
-  IconChartHistogram,
-  IconCoin,
-  IconCreditCardPay,
-  IconLayoutDashboard,
-  IconSettings,
-  IconServer,
-  IconServer2,
-  IconWallet,
-} from '@tabler/icons-react'
+  Building2,
+  BarChart,
+  BarChart2,
+  Coins,
+  CreditCard,
+  LayoutDashboard,
+  Settings,
+  Server,
+  ServerCog,
+  Wallet,
+} from 'lucide-react'
 
 const menuItems = [
-  { to: '/dashboard', label: 'Дашборд', icon: IconLayoutDashboard },
-  { to: '/vps', label: 'VPS', icon: IconServer },
-  { to: '/tariffs', label: 'Активные тарифы', icon: IconServer2 },
-  { to: '/providers', label: 'Хостеры', icon: IconBuildingSkyscraper },
-  { to: '/accounts', label: 'Аккаунты хостеров', icon: IconWallet },
-  { to: '/payments', label: 'Платежи', icon: IconCreditCardPay },
-  { to: '/balance', label: 'Баланс и списания', icon: IconCoin },
-  { to: '/reports', label: 'Отчёты', icon: IconChartHistogram },
-  { to: '/resources', label: 'Ресурсы', icon: IconChartBar },
-  { to: '/settings', label: 'Настройки', icon: IconSettings },
+  { to: '/dashboard', label: 'Дашборд', icon: LayoutDashboard },
+  { to: '/vps', label: 'VPS', icon: Server },
+  { to: '/tariffs', label: 'Активные тарифы', icon: ServerCog },
+  { to: '/providers', label: 'Хостеры', icon: Building2 },
+  { to: '/accounts', label: 'Аккаунты хостеров', icon: Wallet },
+  { to: '/payments', label: 'Платежи', icon: CreditCard },
+  { to: '/balance', label: 'Баланс и списания', icon: Coins },
+  { to: '/reports', label: 'Отчёты', icon: BarChart2 },
+  { to: '/resources', label: 'Ресурсы', icon: BarChart },
+  { to: '/settings', label: 'Настройки', icon: Settings },
 ]
 
 export function AppLayout({ children }) {
@@ -44,7 +44,7 @@ export function AppLayout({ children }) {
                     }`}
                   >
                     <span className="nav-link-icon d-md-none d-lg-inline-block">
-                      <item.icon size={18} stroke={1.75} />
+                      <item.icon size={18} strokeWidth={1.75} />
                     </span>
                     <span className="nav-link-title">{item.label}</span>
                   </NavLink>
