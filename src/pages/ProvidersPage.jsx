@@ -3,6 +3,7 @@ import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { faviconUrlFromWebsite } from '../lib/utils'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 const emptyForm = {
   name: '',
@@ -146,10 +147,10 @@ export function ProvidersPage({ db, actions }) {
         }}
         size="modal-md"
       >
-        <form onSubmit={onSubmit} className="row g-3">
+        <form autoComplete="off" onSubmit={onSubmit} className="row g-3">
           <div className="col-12">
             <label className="form-label">Название</label>
-            <input
+            <input {...noBrowserSuggestProps}
               className="form-control"
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -158,7 +159,7 @@ export function ProvidersPage({ db, actions }) {
           </div>
           <div className="col-12">
             <label className="form-label">Сайт</label>
-            <input
+            <input {...noBrowserSuggestProps}
               className="form-control"
               value={form.website}
               onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
@@ -166,7 +167,7 @@ export function ProvidersPage({ db, actions }) {
           </div>
           <div className="col-12">
             <label className="form-label">Контакт</label>
-            <input
+            <input {...noBrowserSuggestProps}
               className="form-control"
               value={form.contact}
               onChange={(e) => setForm((prev) => ({ ...prev, contact: e.target.value }))}
@@ -174,7 +175,7 @@ export function ProvidersPage({ db, actions }) {
           </div>
           <div className="col-12 col-sm-4">
             <label className="form-label">Валюта приёма платежей</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.baseCurrency}
               onChange={(e) => setForm((prev) => ({ ...prev, baseCurrency: e.target.value }))}
@@ -187,7 +188,7 @@ export function ProvidersPage({ db, actions }) {
           </div>
           <div className="col-12 col-sm-4">
             <label className="form-label">Курс USD</label>
-            <input
+            <input {...noBrowserSuggestProps}
               type="number"
               min="0"
               step="0.0001"
@@ -199,7 +200,7 @@ export function ProvidersPage({ db, actions }) {
           </div>
           <div className="col-12 col-sm-4">
             <label className="form-label">Курс EUR</label>
-            <input
+            <input {...noBrowserSuggestProps}
               type="number"
               min="0"
               step="0.0001"
@@ -211,7 +212,7 @@ export function ProvidersPage({ db, actions }) {
           </div>
           <div className="col-12">
             <label className="form-label">Заметки</label>
-            <textarea
+            <textarea {...noBrowserSuggestProps}
               className="form-control"
               value={form.notes}
               onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}

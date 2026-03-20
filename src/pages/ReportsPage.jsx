@@ -9,6 +9,7 @@ import {
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 function isDateInRange(dateStr, dateFrom, dateTo) {
   if (!dateStr) return false
@@ -157,7 +158,7 @@ export function ReportsPage({ db, settings, ratesData }) {
             <div className="row g-2 align-items-end">
               <div className="col-12 col-md-6 col-xl-3">
                 <label className="form-label">Хостер</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.providerId}
                   onChange={(e) =>
@@ -178,7 +179,7 @@ export function ReportsPage({ db, settings, ratesData }) {
               </div>
               <div className="col-12 col-md-6 col-xl-3">
                 <label className="form-label">Аккаунт</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.providerAccountId}
                   onChange={(e) =>
@@ -195,7 +196,7 @@ export function ReportsPage({ db, settings, ratesData }) {
               </div>
               <div className="col-12 col-md-6 col-xl-3">
                 <label className="form-label">Проект / пул</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.project}
                   onChange={(e) => setFilters((prev) => ({ ...prev, project: e.target.value }))}
@@ -211,7 +212,7 @@ export function ReportsPage({ db, settings, ratesData }) {
               </div>
               <div className="col-12 col-md-6 col-xl-3">
                 <label className="form-label">Страна</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={filters.country}
                   onChange={(e) => setFilters((prev) => ({ ...prev, country: e.target.value }))}
@@ -220,7 +221,7 @@ export function ReportsPage({ db, settings, ratesData }) {
               </div>
               <div className="col-12 col-md-6 col-xl-2">
                 <label className="form-label">Период (YYYY-MM)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={filters.month}
                   onChange={(e) =>
@@ -236,7 +237,7 @@ export function ReportsPage({ db, settings, ratesData }) {
               </div>
               <div className="col-12 col-md-6 col-xl-2">
                 <label className="form-label">Дата с</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="date"
                   className="form-control"
                   value={filters.dateFrom}
@@ -251,7 +252,7 @@ export function ReportsPage({ db, settings, ratesData }) {
               </div>
               <div className="col-12 col-md-6 col-xl-2">
                 <label className="form-label">Дата по</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="date"
                   className="form-control"
                   value={filters.dateTo}

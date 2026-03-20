@@ -24,6 +24,7 @@ import { ConvertedAmount } from '../components/ConvertedAmount'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { ProjectSuggestInput } from '../components/ProjectSuggestInput'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 const emptyForm = {
   ip: '',
@@ -622,7 +623,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <span className="input-icon-addon">
                     <IconSearch size={16} />
                   </span>
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-control"
                     placeholder="Поиск IP / DNS"
                     value={filters.search}
@@ -636,7 +637,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </div>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.project}
                   onChange={(e) => setFilters((prev) => ({ ...prev, project: e.target.value }))}
@@ -654,7 +655,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               {showAdvancedFilters ? (
                 <>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.providerId}
                   onChange={(e) =>
@@ -674,7 +675,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.providerAccountId}
                   onChange={(e) =>
@@ -693,7 +694,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.status}
                   onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
@@ -705,7 +706,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-xl-3 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.environment}
                   onChange={(e) => setFilters((prev) => ({ ...prev, environment: e.target.value }))}
@@ -718,7 +719,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.tariffType}
                   onChange={(e) => setFilters((prev) => ({ ...prev, tariffType: e.target.value }))}
@@ -729,7 +730,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.monitoring}
                   onChange={(e) => setFilters((prev) => ({ ...prev, monitoring: e.target.value }))}
@@ -740,7 +741,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </select>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={filters.backup}
                   onChange={(e) => setFilters((prev) => ({ ...prev, backup: e.target.value }))}
@@ -755,7 +756,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <span className="input-icon-addon">
                     <IconFilter size={16} />
                   </span>
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-control"
                     placeholder="Страна"
                     value={filters.country}
@@ -773,7 +774,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <span className="input-icon-addon">
                     <IconMapPin size={16} />
                   </span>
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-control"
                     placeholder="Город"
                     value={filters.city}
@@ -787,7 +788,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </div>
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   placeholder="ДЦ"
                   value={filters.datacenter}
@@ -795,7 +796,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 />
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="0"
                   className="form-control"
@@ -805,7 +806,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 />
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="0"
                   className="form-control"
@@ -815,7 +816,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 />
               </div>
               <div className="col-xl-2 col-lg-4 col-md-6">
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="0"
                   className="form-control"
@@ -826,7 +827,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               {customFields.map((f) => (
                 <div key={f.key} className="col-xl-2 col-lg-4 col-md-6">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-control"
                     placeholder={f.label}
                     value={filters[f.key] ?? ''}
@@ -840,7 +841,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <div className="row g-2 mt-2 align-items-center flex-wrap">
               <div className="col-12 col-sm-auto">
                 <label className="form-check mb-0">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     type="checkbox"
                     className="form-check-input"
                     checked={filters.groupByProject}
@@ -853,7 +854,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-auto">
                 <label className="form-check mb-0">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     type="checkbox"
                     className="form-check-input"
                     checked={filters.tableCompact}
@@ -865,7 +866,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 </label>
               </div>
               <div className="col-12 col-sm-auto">
-                <select
+                <select autoComplete="off"
                   className="form-select form-select-sm"
                   style={{ minWidth: '11rem' }}
                   defaultValue=""
@@ -1048,7 +1049,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>
-                    <input
+                    <input {...noBrowserSuggestProps}
                       type="checkbox"
                       className="form-check-input"
                       checked={filteredVps.length > 0 && selectedIds.size === filteredVps.length}
@@ -1119,7 +1120,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   return (
                     <tr key={item.id}>
                       <td>
-                        <input
+                        <input {...noBrowserSuggestProps}
                           type="checkbox"
                           className="form-check-input"
                           checked={selectedIds.has(item.id)}
@@ -1316,13 +1317,13 @@ export function VpsPage({ db, actions, settings, ratesData }) {
           </div>
         }
       >
-        <form id="vps-form" onSubmit={onSubmit} className="vps-modal-form">
+        <form id="vps-form" autoComplete="off" onSubmit={onSubmit} className="vps-modal-form">
           <section className="vps-form-section">
             <h6 className="vps-form-section-title">Сеть</h6>
             <div className="row g-3">
               <div className="col-12 col-sm-6">
                 <label className="form-label">IP</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.ip}
                   onChange={(e) => setForm((prev) => ({ ...prev, ip: e.target.value }))}
@@ -1332,7 +1333,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">DNS</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.dns}
                   onChange={(e) => setForm((prev) => ({ ...prev, dns: e.target.value }))}
@@ -1341,7 +1342,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">IPv6</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.ipv6}
                   onChange={(e) => setForm((prev) => ({ ...prev, ipv6: e.target.value }))}
@@ -1350,7 +1351,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Дополнительные IP</label>
-                <textarea
+                <textarea {...noBrowserSuggestProps}
                   className="form-control"
                   rows={2}
                   value={form.additionalIpsText}
@@ -1366,7 +1367,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <div className="row g-3">
               <div className="col-12 col-sm-6">
                 <label className="form-label">Хостер</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.providerId}
                   onChange={(e) =>
@@ -1388,7 +1389,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Аккаунт хостера</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.providerAccountId}
                   onChange={(e) => setForm((prev) => ({ ...prev, providerAccountId: e.target.value }))}
@@ -1404,7 +1405,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Страна</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.country}
                   onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
@@ -1413,7 +1414,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Город</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.city}
                   onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
@@ -1422,7 +1423,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">ДЦ / зона</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.datacenter}
                   onChange={(e) => setForm((prev) => ({ ...prev, datacenter: e.target.value }))}
@@ -1431,7 +1432,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">ОС</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.os}
                   onChange={(e) => setForm((prev) => ({ ...prev, os: e.target.value }))}
@@ -1446,7 +1447,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <div className="row g-3">
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">vCPU</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="1"
                   step="1"
@@ -1458,7 +1459,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">RAM (GB)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="1"
                   step="1"
@@ -1470,7 +1471,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Диск (GB)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="1"
                   step="1"
@@ -1482,7 +1483,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Тип диска</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.diskType}
                   onChange={(e) => setForm((prev) => ({ ...prev, diskType: e.target.value }))}
@@ -1494,7 +1495,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Виртуализация</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.virtualization}
                   onChange={(e) => setForm((prev) => ({ ...prev, virtualization: e.target.value }))}
@@ -1508,7 +1509,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Трафик (TB)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="0"
                   step="0.1"
@@ -1526,7 +1527,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <div className="row g-3">
               <div className="col-12 col-sm-6">
                 <label className="form-label">Пользователь SSH</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.rootUser}
                   onChange={(e) => setForm((prev) => ({ ...prev, rootUser: e.target.value }))}
@@ -1534,7 +1535,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">SSH порт</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="1"
                   max="65535"
@@ -1545,7 +1546,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Окружение</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.environment}
                   onChange={(e) => setForm((prev) => ({ ...prev, environment: e.target.value }))}
@@ -1572,7 +1573,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Назначение</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.purpose}
                   onChange={(e) => setForm((prev) => ({ ...prev, purpose: e.target.value }))}
@@ -1581,7 +1582,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 d-flex align-items-end gap-3 pt-2">
                 <label className="form-check mb-0">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-check-input"
                     type="checkbox"
                     checked={form.monitoringEnabled}
@@ -1590,7 +1591,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <span className="form-check-label">Мониторинг</span>
                 </label>
                 <label className="form-check mb-0">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-check-input"
                     type="checkbox"
                     checked={form.backupEnabled}
@@ -1607,7 +1608,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <div className="row g-3">
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Статус</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.status}
                   onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
@@ -1619,7 +1620,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Тип тарифа</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.tariffType}
                   onChange={(e) =>
@@ -1639,7 +1640,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 <label className="form-label">
                   {form.tariffType === 'daily' ? 'Суточный тариф' : 'Месячный тариф'}
                 </label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   step="0.01"
                   min="0"
@@ -1657,7 +1658,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Дата создания</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="date"
                   className="form-control"
                   value={form.createdAt}
@@ -1666,7 +1667,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Оплачено до</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="date"
                   className="form-control"
                   value={form.paidUntil}
@@ -1681,7 +1682,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
             <h6 className="vps-form-section-title">Заметки</h6>
             <div className="row g-3">
               <div className="col-12">
-                <textarea
+                <textarea {...noBrowserSuggestProps}
                   className="form-control"
                   rows={3}
                   value={form.notes}
@@ -1692,7 +1693,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
               {editingId && (form.notes?.includes('bm-') || (db.vps.find((v) => v.id === editingId)?.userOverrides?.length ?? 0) > 0) ? (
                 <div className="col-12">
                   <label className="form-check">
-                    <input
+                    <input {...noBrowserSuggestProps}
                       type="checkbox"
                       className="form-check-input"
                       checked={form.resetToApi}
@@ -1712,7 +1713,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 {customFields.map((f) => (
                   <div key={f.key} className="col-12 col-sm-6">
                     <label className="form-label">{f.label}</label>
-                    <input
+                    <input {...noBrowserSuggestProps}
                       type="text"
                       className="form-control"
                       value={form[f.key] ?? ''}

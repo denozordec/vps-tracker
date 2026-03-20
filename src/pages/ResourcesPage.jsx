@@ -5,6 +5,7 @@ import {
 } from '../lib/utils'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData) {
   if (item.status !== 'active') return 0
@@ -188,7 +189,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
               <div className="row g-2">
                 <div className="col-12 col-md-6 col-xl-3">
                   <label className="form-label">Группировать по</label>
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={groupBy}
                     onChange={(e) => setGroupBy(e.target.value)}
@@ -201,7 +202,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
                 </div>
                 <div className="col-12 col-md-6 col-xl-3">
                   <label className="form-label">Хостер</label>
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.providerId}
                     onChange={(e) =>
@@ -222,7 +223,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
                 </div>
                 <div className="col-12 col-md-6 col-xl-3">
                   <label className="form-label">Аккаунт</label>
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.providerAccountId}
                     onChange={(e) =>
@@ -239,7 +240,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
                 </div>
                 <div className="col-12 col-md-6 col-xl-3">
                   <label className="form-label">Проект (фильтр)</label>
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.project}
                     onChange={(e) => setFilters((prev) => ({ ...prev, project: e.target.value }))}
@@ -255,7 +256,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
                 </div>
                 <div className="col-12 col-md-6 col-xl-3">
                   <label className="form-label">Страна</label>
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-control"
                     value={filters.country}
                     onChange={(e) => setFilters((prev) => ({ ...prev, country: e.target.value }))}
@@ -264,7 +265,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
                 </div>
                 <div className="col-12 col-md-6 col-xl-3">
                   <label className="form-label">Датацентр</label>
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-control"
                     value={filters.datacenter}
                     onChange={(e) =>
@@ -276,7 +277,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
                 {customFields.map((f) => (
                   <div key={f.key} className="col-12 col-md-6 col-xl-3">
                     <label className="form-label">{f.label}</label>
-                    <input
+                    <input {...noBrowserSuggestProps}
                       className="form-control"
                       value={filters[f.key] ?? ''}
                       onChange={(e) =>

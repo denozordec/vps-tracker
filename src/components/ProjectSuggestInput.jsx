@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IconFolder } from '@tabler/icons-react'
 import { fetchProjectSuggestions } from '../lib/api'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 function highlightMatch(text, query) {
   const q = (query || '').trim().toLowerCase()
@@ -141,6 +142,7 @@ export function ProjectSuggestInput({
   return (
     <div ref={wrapRef} className="position-relative project-suggest-wrap">
       <input
+        {...noBrowserSuggestProps}
         id={id}
         type="text"
         className={className}
@@ -153,7 +155,6 @@ export function ProjectSuggestInput({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         disabled={disabled}
-        autoComplete="off"
         spellCheck={false}
         aria-label={ariaLabel}
         aria-expanded={showPanel}

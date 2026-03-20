@@ -9,6 +9,7 @@ import { SyncLogTable } from '../components/SyncLogTable'
 import { PageHeader } from '../components/PageHeader'
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { syncAccount, testApiConnection, fetchAccountBalance, fetchSyncStatus } from '../lib/api'
+import { noBrowserSuggestProps, passwordCredentialInputProps } from '../lib/noBrowserSuggestProps'
 import { IconRefresh, IconPlugConnected } from '@tabler/icons-react'
 
 const emptyForm = {
@@ -382,10 +383,10 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
         }}
         size="modal-md"
       >
-        <form onSubmit={onSubmit} className="row g-3">
+        <form autoComplete="off" onSubmit={onSubmit} className="row g-3">
           <div className="col-12">
             <label className="form-label">Хостер</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.providerId}
               onChange={(e) => setForm((prev) => ({ ...prev, providerId: e.target.value }))}
@@ -401,7 +402,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Имя / Псевдоним аккаунта</label>
-            <input
+            <input {...noBrowserSuggestProps}
               className="form-control"
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -410,7 +411,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Ссылка на панель управления</label>
-            <input
+            <input {...noBrowserSuggestProps}
               className="form-control"
               placeholder="https://..."
               value={form.panelUrl}
@@ -419,7 +420,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12 col-sm-6">
             <label className="form-label">Валюта</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.currency}
               onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
@@ -431,7 +432,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12 col-sm-6">
             <label className="form-label">Режим списания</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.billingMode}
               onChange={(e) => setForm((prev) => ({ ...prev, billingMode: e.target.value }))}
@@ -446,7 +447,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Тип API</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.apiType}
               onChange={(e) => setForm((prev) => ({ ...prev, apiType: e.target.value, apiBaseUrl: '', apiLogin: '', apiPassword: '' }))}
@@ -459,7 +460,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
             <>
               <div className="col-12">
                 <label className="form-label">URL API BILLmanager</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   placeholder="https://bill.example.com:1500/billmgr"
                   value={form.apiBaseUrl}
@@ -468,7 +469,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Логин</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   placeholder="admin"
                   value={form.apiLogin}
@@ -477,7 +478,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Пароль</label>
-                <input
+                <input {...passwordCredentialInputProps}
                   type="password"
                   className="form-control"
                   placeholder={editingAccount?.apiCredentialsSet ? 'Оставьте пустым, чтобы не менять' : ''}
@@ -511,7 +512,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           ) : null}
           <div className="col-12">
             <label className="form-label">Комментарий</label>
-            <textarea
+            <textarea {...noBrowserSuggestProps}
               className="form-control"
               value={form.notes}
               onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}

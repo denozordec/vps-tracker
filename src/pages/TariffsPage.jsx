@@ -11,6 +11,7 @@ import {
 import { syncAccount } from '../lib/api'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 const SORT_COLUMNS = ['name', 'vcpu', 'ramGb', 'diskGb', 'diskType', 'virtualization', 'channel', 'country', 'location', 'price']
 
@@ -249,7 +250,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                     <span className="input-icon-addon">
                       <IconSearch size={16} />
                     </span>
-                    <input
+                    <input {...noBrowserSuggestProps}
                       className="form-control"
                       placeholder="Поиск по названию, ресурсам..."
                       value={filters.search}
@@ -260,7 +261,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                   </div>
                 </div>
                 <div className="col-xl-2 col-lg-4 col-md-6">
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.providerId}
                     onChange={(e) =>
@@ -280,7 +281,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                   </select>
                 </div>
                 <div className="col-xl-2 col-lg-4 col-md-6">
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.providerAccountId}
                     onChange={(e) =>
@@ -299,7 +300,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                   </select>
                 </div>
                 <div className="col-xl-2 col-lg-4 col-md-6">
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.country}
                     onChange={(e) =>
@@ -315,7 +316,7 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
                   </select>
                 </div>
                 <div className="col-xl-2 col-lg-4 col-md-6">
-                  <select
+                  <select autoComplete="off"
                     className="form-select"
                     value={filters.orderAvailable}
                     onChange={(e) =>

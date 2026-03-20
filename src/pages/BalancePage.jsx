@@ -7,6 +7,7 @@ import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { ConvertedAmount } from '../components/ConvertedAmount'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 const emptyForm = {
   type: 'daily_debit',
@@ -191,10 +192,10 @@ export function BalancePage({ db, actions, settings, ratesData }) {
         }}
         size="modal-md"
       >
-        <form className="row g-3" onSubmit={onSubmit}>
+        <form className="row g-3" autoComplete="off" onSubmit={onSubmit}>
           <div className="col-12">
             <label className="form-label">Тип списания</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.type}
               onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
@@ -205,7 +206,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Аккаунт</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.providerAccountId}
               onChange={(e) =>
@@ -222,7 +223,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">VPS (необязательно)</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.vpsId}
               onChange={(e) => setForm((prev) => ({ ...prev, vpsId: e.target.value }))}
@@ -237,7 +238,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12 col-sm-6">
             <label className="form-label">Дата</label>
-            <input
+            <input {...noBrowserSuggestProps}
               className="form-control"
               type="date"
               value={form.date}
@@ -246,7 +247,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12 col-sm-6">
             <label className="form-label">Валюта</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.currency}
               onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
@@ -258,7 +259,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Сумма</label>
-            <input
+            <input {...noBrowserSuggestProps}
               type="number"
               min="0.01"
               step="0.01"
@@ -269,7 +270,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Комментарий</label>
-            <textarea
+            <textarea {...noBrowserSuggestProps}
               className="form-control"
               value={form.note}
               onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}

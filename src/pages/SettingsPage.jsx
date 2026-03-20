@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
 import { sendTelegramTestNotification } from '../lib/api'
+import { noBrowserSuggestProps, passwordCredentialInputProps } from '../lib/noBrowserSuggestProps'
 
 const defaultSettings = {
   baseCurrency: 'RUB',
@@ -139,10 +140,10 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
             <h3 className="card-title">Настройки валют</h3>
           </div>
           <div className="card-body">
-            <form className="row g-3" onSubmit={onSubmit}>
+            <form className="row g-3" autoComplete="off" onSubmit={onSubmit}>
               <div className="col-12 col-md-6">
                 <label className="form-label">Валюта отображения</label>
-                <select
+                <select autoComplete="off"
                   className="form-select"
                   value={form.baseCurrency}
                   onChange={(e) => setForm((prev) => ({ ...prev, baseCurrency: e.target.value }))}
@@ -157,7 +158,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               <div className="col-12 col-md-6">
                 <label className="form-label">Автоконвертация</label>
                 <label className="form-check">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-check-input"
                     type="checkbox"
                     checked={form.autoConvert}
@@ -168,7 +169,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               </div>
               <div className="col-12">
                 <label className="form-label">Ссылка на курсы валют</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   className="form-control"
                   value={form.ratesUrl}
                   onChange={(e) => setForm((prev) => ({ ...prev, ratesUrl: e.target.value }))}
@@ -201,7 +202,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               Текстовые поля для расширенного режима просмотра списка VPS. Отображаются как колонки в таблице и в форме редактирования.
             </p>
             <div className="d-flex gap-2 mb-3">
-              <input
+              <input {...noBrowserSuggestProps}
                 type="text"
                 className="form-control"
                 placeholder="Название поля (например: Контакт, ID заказа)"
@@ -249,10 +250,10 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               Периодическая синхронизация данных из BILLmanager для аккаунтов с настроенным API.
               Два независимых интервала: VPS и платежи обновляются чаще, тарифы — реже.
             </p>
-            <form className="row g-3" onSubmit={onSyncSettingsSubmit}>
+            <form className="row g-3" autoComplete="off" onSubmit={onSyncSettingsSubmit}>
               <div className="col-12">
                 <label className="form-check">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-check-input"
                     type="checkbox"
                     checked={form.syncEnabled}
@@ -263,7 +264,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               </div>
               <div className="col-12 col-md-6">
                 <label className="form-label">Интервал VPS и платежей (минуты)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="15"
                   className="form-control"
@@ -274,7 +275,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               </div>
               <div className="col-12 col-md-6">
                 <label className="form-label">Интервал тарифов (минуты)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="number"
                   min="60"
                   className="form-control"
@@ -305,10 +306,10 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
             <p className="text-secondary small mb-3">
               Уведомления отправляются в Telegram при периодической синхронизации. Каждый тип можно включить или отключить отдельно.
             </p>
-            <form className="row g-3" onSubmit={onTelegramSubmit}>
+            <form className="row g-3" autoComplete="off" onSubmit={onTelegramSubmit}>
               <div className="col-12">
                 <label className="form-label">Токен бота</label>
-                <input
+                <input {...passwordCredentialInputProps}
                   type="password"
                   className="form-control"
                   value={form.telegramBotToken}
@@ -317,12 +318,11 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                     setTelegramTokenEdited(true)
                   }}
                   placeholder={current.telegramBotTokenSet ? '••••••••' : 'Токен от @BotFather'}
-                  autoComplete="off"
                 />
               </div>
               <div className="col-12">
                 <label className="form-label">Chat ID (SuperGroup)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="text"
                   className="form-control"
                   value={form.telegramChatId}
@@ -335,7 +335,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               </div>
               <div className="col-12">
                 <label className="form-label">ID топика (цепочки сообщений)</label>
-                <input
+                <input {...noBrowserSuggestProps}
                   type="text"
                   className="form-control"
                   value={form.telegramMessageThreadId}
@@ -348,7 +348,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               </div>
               <div className="col-12">
                 <label className="form-check">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-check-input"
                     type="checkbox"
                     checked={form.notifyPaymentExpiryEnabled}
@@ -359,7 +359,7 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
               </div>
               <div className="col-12">
                 <label className="form-check">
-                  <input
+                  <input {...noBrowserSuggestProps}
                     className="form-check-input"
                     type="checkbox"
                     checked={form.notifyNewTariffsEnabled}

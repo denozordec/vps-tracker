@@ -5,6 +5,7 @@ import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { ConvertedAmount } from '../components/ConvertedAmount'
+import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
 const emptyForm = {
   type: 'direct_vps_payment',
@@ -190,10 +191,10 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
         }}
         size="modal-md"
       >
-        <form className="row g-3" onSubmit={onSubmit}>
+        <form className="row g-3" autoComplete="off" onSubmit={onSubmit}>
           <div className="col-12">
             <label className="form-label">Тип</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.type}
               onChange={(e) =>
@@ -210,7 +211,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Аккаунт хостера</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.providerAccountId}
               onChange={(e) =>
@@ -233,7 +234,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           {form.type === 'direct_vps_payment' ? (
             <div className="col-12">
               <label className="form-label">VPS</label>
-              <select
+              <select autoComplete="off"
                 className="form-select"
                 value={form.vpsId}
                 onChange={(e) => setForm((prev) => ({ ...prev, vpsId: e.target.value }))}
@@ -250,7 +251,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           ) : null}
           <div className="col-12 col-sm-6">
             <label className="form-label">Дата</label>
-            <input
+            <input {...noBrowserSuggestProps}
               type="date"
               className="form-control"
               value={form.date}
@@ -260,7 +261,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12 col-sm-6">
             <label className="form-label">Валюта</label>
-            <select
+            <select autoComplete="off"
               className="form-select"
               value={form.currency}
               onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
@@ -272,7 +273,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Сумма</label>
-            <input
+            <input {...noBrowserSuggestProps}
               type="number"
               step="0.01"
               min="0.01"
@@ -284,7 +285,7 @@ export function PaymentsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <label className="form-label">Комментарий</label>
-            <textarea
+            <textarea {...noBrowserSuggestProps}
               className="form-control"
               value={form.note}
               onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
