@@ -37,8 +37,8 @@ vps-tracker/
 
 | Сущность | Описание |
 |----------|----------|
-| **providers** | Хостинг-провайдеры (Selectel, Firstbyte и т.д.) |
-| **provider_accounts** | Аккаунты у провайдера, могут иметь apiType=billmanager для синка |
+| **providers** | Хостинг-провайдеры; для BILLmanager: **apiType**, **apiBaseUrl** (один URL на хостера) |
+| **provider_accounts** | Аккаунты у провайдера; **apiCredentials** (логин:пароль API) для синка с BILLmanager |
 | **vps** | Виртуальные серверы (ip, ram, disk, tariffType, paidUntil) |
 | **payments** | Платежи (пополнение баланса, оплата VPS) |
 | **balance_ledger** | Движения по балансу |

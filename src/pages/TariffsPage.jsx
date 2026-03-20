@@ -12,6 +12,7 @@ import { syncAccount } from '../lib/api'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
+import { billmanagerSyncableAccounts } from '../lib/billmanager-ui'
 
 const SORT_COLUMNS = ['name', 'vcpu', 'ramGb', 'diskGb', 'diskType', 'virtualization', 'channel', 'country', 'location', 'price']
 
@@ -61,8 +62,8 @@ export function TariffsPage({ db, actions, settings, ratesData }) {
   const baseCurrency = (settings?.[0]?.baseCurrency || 'RUB').toUpperCase()
 
   const billmanagerAccounts = useMemo(
-    () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
-    [db.providerAccounts],
+    () => billmanagerSyncableAccounts(db.providerAccounts, db.providers),
+    [db.providerAccounts, db.providers],
   )
 
   const filteredAndSortedTariffs = useMemo(() => {

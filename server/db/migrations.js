@@ -4,6 +4,60 @@
 
 import { randomUUID } from 'node:crypto'
 
+/**
+ * Перенос apiType/apiBaseUrl с аккаунтов на хостера (idempotent).
+ * Вызывается из миграции и после импорта бэкапа / старого migrate API.
+ * @param {import('sql.js').Database} db
+ */
+function selectAllObjects(db, sql, params = []) {
+  const prepared = db.prepare(sql)
+  if (typeof prepared.all === 'function') {
+    return prepared.all(...params)
+  }
+  const stmt = prepared
+  stmt.bind(params)
+  const rows = []
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject())
+  }
+  stmt.free()
+  return rows
+}
+
+export function consolidateProviderApiFromAccounts(db) {
+  const provRows = selectAllObjects(db, 'SELECT id, apiType, apiBaseUrl FROM providers')
+  for (const prov of provRows) {
+    const pid = prov.id
+    if (String(prov.apiType || '').trim() || String(prov.apiBaseUrl || '').trim()) {
+      continue
+    }
+    const accRows = selectAllObjects(
+      db,
+      `SELECT apiBaseUrl FROM provider_accounts
+       WHERE providerId = ?
+         AND lower(trim(COALESCE(apiType, ''))) = 'billmanager'
+         AND length(trim(COALESCE(apiBaseUrl, ''))) > 0
+       ORDER BY id`,
+      [pid],
+    )
+    if (!accRows.length) continue
+    const urls = [...new Set(accRows.map((r) => String(r.apiBaseUrl || '').trim()).filter(Boolean))]
+    if (urls.length > 1) {
+      console.warn(
+        `[vps-tracker] У хостера ${pid} у нескольких аккаунтов разный URL BILLmanager — в настройках хостера взят первый.`,
+      )
+    }
+    const apiBaseUrl = urls[0]
+    db.run(`UPDATE providers SET apiType = ?, apiBaseUrl = ? WHERE id = ?`, 'billmanager', apiBaseUrl, pid)
+    db.run(
+      `UPDATE provider_accounts SET apiType = '', apiBaseUrl = ''
+       WHERE providerId = ? AND lower(trim(COALESCE(apiType, ''))) = 'billmanager'
+         AND length(trim(COALESCE(apiBaseUrl, ''))) > 0`,
+      pid,
+    )
+  }
+}
+
 export const MIGRATIONS = [
   {
     name: 'provider_accounts_api',
@@ -264,6 +318,22 @@ export const MIGRATIONS = [
       } catch (e) {
         if (!String(e.message || e).includes('duplicate column')) throw e
       }
+    },
+  },
+  {
+    name: 'providers_api_integration',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE providers ADD COLUMN apiType TEXT')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+      try {
+        db.exec('ALTER TABLE providers ADD COLUMN apiBaseUrl TEXT')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+      consolidateProviderApiFromAccounts(db)
     },
   },
 ]

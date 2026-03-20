@@ -204,11 +204,12 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
       computeInventoryHealth({
         vps,
         providerAccounts,
+        providers,
         payments,
         balanceLedger,
         syncLog: syncLogRows,
       }),
-    [vps, providerAccounts, payments, balanceLedger, syncLogRows],
+    [vps, providerAccounts, providers, payments, balanceLedger, syncLogRows],
   )
 
   const recentSyncFeed = useMemo(() => {

@@ -30,7 +30,7 @@ router.post('/', (req, res) => {
         : null
     db.prepare(`
       INSERT INTO provider_accounts (id, providerId, name, panelUrl, currency, billingMode, notes, apiType, apiBaseUrl, apiCredentials, balance_alert_below)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)
     `).run(
       id,
       r.providerId ?? '',
@@ -39,8 +39,6 @@ router.post('/', (req, res) => {
       r.currency ?? '',
       r.billingMode ?? '',
       r.notes ?? '',
-      r.apiType ?? '',
-      r.apiBaseUrl ?? '',
       r.apiCredentials ?? '',
       Number.isFinite(alertBelow) ? alertBelow : null,
     )
@@ -58,8 +56,6 @@ router.put('/:id', (req, res) => {
     const r = req.body
     const existing = db.prepare('SELECT * FROM provider_accounts WHERE id = ?').get(id)
     if (!existing) return res.status(404).json({ error: 'Not found' })
-    const apiType = r.apiType !== undefined ? String(r.apiType || '') : (existing.apiType || '')
-    const apiBaseUrl = r.apiBaseUrl !== undefined ? String(r.apiBaseUrl || '') : (existing.apiBaseUrl || '')
     const apiCredentials = r.apiCredentials !== undefined ? String(r.apiCredentials || '') : (existing.apiCredentials || '')
     let balanceAlertBelow = existing.balance_alert_below
     if (r.balance_alert_below !== undefined) {
@@ -73,7 +69,8 @@ router.put('/:id', (req, res) => {
     }
     db.prepare(`
       UPDATE provider_accounts SET
-        providerId = ?, name = ?, panelUrl = ?, currency = ?, billingMode = ?, notes = ?, apiType = ?, apiBaseUrl = ?, apiCredentials = ?, balance_alert_below = ?
+        providerId = ?, name = ?, panelUrl = ?, currency = ?, billingMode = ?, notes = ?,
+        apiType = '', apiBaseUrl = '', apiCredentials = ?, balance_alert_below = ?
       WHERE id = ?
     `).run(
       r.providerId ?? existing.providerId ?? '',
@@ -82,8 +79,6 @@ router.put('/:id', (req, res) => {
       r.currency ?? existing.currency ?? '',
       r.billingMode ?? existing.billingMode ?? '',
       r.notes ?? existing.notes ?? '',
-      apiType,
-      apiBaseUrl,
       apiCredentials,
       balanceAlertBelow,
       id,

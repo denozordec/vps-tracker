@@ -31,17 +31,37 @@ export function seed(db, seedDir) {
   const run = db.run.bind(db)
   for (const r of providers) {
     run(
-      'INSERT OR IGNORE INTO providers (id, name, website, contact, baseCurrency, usdRate, eurRate, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [r.id, r.name ?? '', r.website ?? '', r.contact ?? '', r.baseCurrency ?? '', r.usdRate ?? '', r.eurRate ?? '', r.notes ?? ''],
+      'INSERT OR IGNORE INTO providers (id, name, website, contact, baseCurrency, usdRate, eurRate, notes, apiType, apiBaseUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        r.id,
+        r.name ?? '',
+        r.website ?? '',
+        r.contact ?? '',
+        r.baseCurrency ?? '',
+        r.usdRate ?? '',
+        r.eurRate ?? '',
+        r.notes ?? '',
+        r.apiType ?? '',
+        r.apiBaseUrl ?? '',
+      ],
     )
   }
 
   const providerAccounts = loadJson(join(seedDir, 'provider-accounts.json'))
   for (const r of providerAccounts) {
+    const legacyType = r.apiType ?? ''
+    const legacyUrl = r.apiBaseUrl ?? ''
     run(
       'INSERT OR IGNORE INTO provider_accounts (id, providerId, name, panelUrl, currency, billingMode, notes, apiType, apiBaseUrl, apiCredentials) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [r.id, r.providerId ?? '', r.name ?? '', r.panelUrl ?? '', r.currency ?? '', r.billingMode ?? '', r.notes ?? '', r.apiType ?? '', r.apiBaseUrl ?? '', r.apiCredentials ?? ''],
+      [r.id, r.providerId ?? '', r.name ?? '', r.panelUrl ?? '', r.currency ?? '', r.billingMode ?? '', r.notes ?? '', '', '', r.apiCredentials ?? ''],
     )
+    if (legacyType === 'billmanager' && String(legacyUrl).trim()) {
+      run(
+        `UPDATE providers SET apiType = 'billmanager', apiBaseUrl = ? WHERE id = ? AND length(trim(COALESCE(apiBaseUrl,''))) = 0`,
+        String(legacyUrl).trim(),
+        r.providerId ?? '',
+      )
+    }
   }
 
   const vpsList = loadJson(join(seedDir, 'vps.json'))

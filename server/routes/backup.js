@@ -2,6 +2,7 @@ import { Router } from 'express'
 import express from 'express'
 import { readFileSync, existsSync } from 'node:fs'
 import { getDb, saveDb, DB_PATH, reloadDatabaseFromBuffer } from '../db.js'
+import { consolidateProviderApiFromAccounts } from '../db/migrations.js'
 import { rowToVps } from './vps.js'
 import { rowToActiveTariff, rowToTariffSyncOptions } from '../utils/row-mappers.js'
 
@@ -111,7 +112,7 @@ function importJsonSnapshot(data) {
   const providers = Array.isArray(data.providers) ? data.providers : []
   for (const p of providers) {
     run(
-      `INSERT OR REPLACE INTO providers (id, name, website, contact, baseCurrency, usdRate, eurRate, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO providers (id, name, website, contact, baseCurrency, usdRate, eurRate, notes, apiType, apiBaseUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       p.id ?? '',
       p.name ?? '',
       p.website ?? '',
@@ -120,6 +121,8 @@ function importJsonSnapshot(data) {
       p.usdRate ?? '',
       p.eurRate ?? '',
       p.notes ?? '',
+      p.apiType ?? '',
+      p.apiBaseUrl ?? '',
     )
   }
 
@@ -158,6 +161,8 @@ function importJsonSnapshot(data) {
       acc.balance_alert_below != null && acc.balance_alert_below !== '' ? Number(acc.balance_alert_below) : null,
     )
   }
+
+  consolidateProviderApiFromAccounts(db)
 
   const settingsList = Array.isArray(data.settings) ? data.settings : data.settings ? [data.settings] : []
   for (const s of settingsList) {

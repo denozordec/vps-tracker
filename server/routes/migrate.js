@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { getDb, saveDb } from '../db.js'
+import { consolidateProviderApiFromAccounts } from '../db/migrations.js'
 
 const router = Router()
 
@@ -14,10 +15,22 @@ router.post('/', (req, res) => {
     const settingsList = Array.isArray(data.settings) ? data.settings : (data.settings ? [data.settings] : [])
 
     if (Array.isArray(data.providers) && data.providers.length > 0) {
-      const sql = `INSERT OR REPLACE INTO providers (id, name, website, contact, baseCurrency, usdRate, eurRate, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      const sql = `INSERT OR REPLACE INTO providers (id, name, website, contact, baseCurrency, usdRate, eurRate, notes, apiType, apiBaseUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       for (const r of data.providers) {
         const p = typeof r === 'object' ? r : {}
-        db.run(sql, p.id ?? '', p.name ?? '', p.website ?? '', p.contact ?? '', p.baseCurrency ?? '', p.usdRate ?? '', p.eurRate ?? '', p.notes ?? '')
+        db.run(
+          sql,
+          p.id ?? '',
+          p.name ?? '',
+          p.website ?? '',
+          p.contact ?? '',
+          p.baseCurrency ?? '',
+          p.usdRate ?? '',
+          p.eurRate ?? '',
+          p.notes ?? '',
+          p.apiType ?? '',
+          p.apiBaseUrl ?? '',
+        )
       }
     }
     if (Array.isArray(data.providerAccounts) && data.providerAccounts.length > 0) {
@@ -59,6 +72,7 @@ router.post('/', (req, res) => {
         db.run(sql, s.id ?? 'settings-main', s.baseCurrency ?? 'RUB', s.ratesUrl ?? '', s.autoConvert !== false ? 1 : 0, s.ratesUpdatedAt ?? '', s.syncEnabled ? 1 : 0, s.syncIntervalMinutes ?? 60)
       }
     }
+    consolidateProviderApiFromAccounts(db)
     saveDb()
 
     res.json({ ok: true })

@@ -27,6 +27,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ProjectSuggestInput } from '../components/ProjectSuggestInput'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 import { getPaidUntilDate as computePaidUntilForHealth } from '../lib/paid-until'
+import { billmanagerSyncableAccounts } from '../lib/billmanager-ui'
 
 const emptyForm = {
   ip: '',
@@ -140,8 +141,8 @@ export function VpsPage({ db, actions, settings, ratesData }) {
   const baseCurrency = settings?.[0]?.baseCurrency || 'RUB'
 
   const billmanagerAccounts = useMemo(
-    () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
-    [db.providerAccounts],
+    () => billmanagerSyncableAccounts(db.providerAccounts, db.providers),
+    [db.providerAccounts, db.providers],
   )
 
   const providerById = useMemo(

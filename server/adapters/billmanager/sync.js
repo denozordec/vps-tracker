@@ -7,7 +7,7 @@ import { mapVdsToVps, mapPaymentToPayment } from './mappers.js'
 
 /**
  * Sync BILLmanager data into vps-tracker DB
- * @param {object} account - provider_account with apiBaseUrl, apiCredentials
+ * @param {object} account - provider_account с apiCredentials и apiBaseUrl (URL с хостера или уже подставленный)
  * @param {object} db - getDb() wrapper
  * @param {object} [opts] - { paymentDaysBack, skipTariffs, skipVpsPayments }
  * @returns {{ vpsCount: number, paymentsCount: number, tariffsCount: number, balance?: object }}

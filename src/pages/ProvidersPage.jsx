@@ -3,7 +3,9 @@ import { UiModal } from '../components/UiModal'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { faviconUrlFromWebsite } from '../lib/utils'
-import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
+import { noBrowserSuggestProps, passwordCredentialInputProps } from '../lib/noBrowserSuggestProps'
+import { testApiConnection } from '../lib/api'
+import { IconPlugConnected } from '@tabler/icons-react'
 
 const emptyForm = {
   name: '',
@@ -13,12 +15,18 @@ const emptyForm = {
   usdRate: '',
   eurRate: '',
   notes: '',
+  apiType: '',
+  apiBaseUrl: '',
 }
 
 export function ProvidersPage({ db, actions }) {
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [apiProbeLogin, setApiProbeLogin] = useState('')
+  const [apiProbePassword, setApiProbePassword] = useState('')
+  const [testConnectionLoading, setTestConnectionLoading] = useState(false)
+  const [testConnectionResult, setTestConnectionResult] = useState(null)
 
   const onSubmit = (event) => {
     event.preventDefault()
@@ -32,6 +40,9 @@ export function ProvidersPage({ db, actions }) {
     }
     setForm(emptyForm)
     setEditingId(null)
+    setApiProbeLogin('')
+    setApiProbePassword('')
+    setTestConnectionResult(null)
     setIsModalOpen(false)
   }
 
@@ -44,9 +55,37 @@ export function ProvidersPage({ db, actions }) {
       usdRate: provider.usdRate || '',
       eurRate: provider.eurRate || '',
       notes: provider.notes || '',
+      apiType: provider.apiType || '',
+      apiBaseUrl: provider.apiBaseUrl || '',
     })
     setEditingId(provider.id)
+    setApiProbeLogin('')
+    setApiProbePassword('')
+    setTestConnectionResult(null)
     setIsModalOpen(true)
+  }
+
+  const canTestApi =
+    form.apiType === 'billmanager' &&
+    form.apiBaseUrl?.trim() &&
+    apiProbeLogin?.trim() &&
+    apiProbePassword?.trim()
+
+  const onTestConnection = async () => {
+    if (!canTestApi) {
+      setTestConnectionResult({ ok: false, error: 'Заполните URL API и тестовый логин/пароль аккаунта' })
+      return
+    }
+    setTestConnectionLoading(true)
+    setTestConnectionResult(null)
+    try {
+      const result = await testApiConnection(form.apiBaseUrl, `${apiProbeLogin}:${apiProbePassword}`)
+      setTestConnectionResult(result)
+    } catch (err) {
+      setTestConnectionResult({ ok: false, error: err.message || 'Ошибка проверки' })
+    } finally {
+      setTestConnectionLoading(false)
+    }
   }
 
   return (
@@ -64,6 +103,9 @@ export function ProvidersPage({ db, actions }) {
                 onClick={() => {
                   setForm(emptyForm)
                   setEditingId(null)
+                  setApiProbeLogin('')
+                  setApiProbePassword('')
+                  setTestConnectionResult(null)
                   setIsModalOpen(true)
                 }}
               >
@@ -79,6 +121,7 @@ export function ProvidersPage({ db, actions }) {
                   <th>Сайт</th>
                   <th>Валюта / курсы</th>
                   <th>Контакт</th>
+                  <th>API</th>
                   <th />
                 </tr>
               </thead>
@@ -107,6 +150,13 @@ export function ProvidersPage({ db, actions }) {
                       </div>
                     </td>
                     <td>{provider.contact || '-'}</td>
+                    <td>
+                      {provider.apiType === 'billmanager' && (provider.apiBaseUrl || '').trim() ? (
+                        <span className="text-secondary small">BILLmanager</span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="text-end">
                       <div className="table-actions">
                         <button
@@ -128,7 +178,7 @@ export function ProvidersPage({ db, actions }) {
                   </tr>
                 ))}
                 {db.providers.length === 0 ? (
-                  <EmptyState message="Пока нет хостеров" colSpan={5} />
+                  <EmptyState message="Пока нет хостеров" colSpan={6} />
                 ) : null}
               </tbody>
             </table>
@@ -144,6 +194,9 @@ export function ProvidersPage({ db, actions }) {
           setIsModalOpen(false)
           setEditingId(null)
           setForm(emptyForm)
+          setApiProbeLogin('')
+          setApiProbePassword('')
+          setTestConnectionResult(null)
         }}
         size="modal-md"
       >
@@ -218,6 +271,88 @@ export function ProvidersPage({ db, actions }) {
               onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
             />
           </div>
+          <div className="col-12">
+            <hr className="my-2" />
+            <h6 className="text-secondary mb-2">Интеграция API (один URL на хостера)</h6>
+            <div className="text-secondary small mb-2">
+              Логин и пароль задаются в карточке каждого аккаунта этого хостера.
+            </div>
+          </div>
+          <div className="col-12">
+            <label className="form-label">Тип API</label>
+            <select
+              autoComplete="off"
+              className="form-select"
+              value={form.apiType}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  apiType: e.target.value,
+                  apiBaseUrl: e.target.value === 'billmanager' ? prev.apiBaseUrl : '',
+                }))
+              }
+            >
+              <option value="">— Не использовать —</option>
+              <option value="billmanager">BILLmanager</option>
+            </select>
+          </div>
+          {form.apiType === 'billmanager' ? (
+            <>
+              <div className="col-12">
+                <label className="form-label">URL API BILLmanager</label>
+                <input
+                  {...noBrowserSuggestProps}
+                  className="form-control"
+                  placeholder="https://bill.example.com:1500/billmgr"
+                  value={form.apiBaseUrl}
+                  onChange={(e) => setForm((prev) => ({ ...prev, apiBaseUrl: e.target.value }))}
+                />
+              </div>
+              <div className="col-12 col-sm-6">
+                <label className="form-label">Тест: логин аккаунта</label>
+                <input
+                  {...noBrowserSuggestProps}
+                  className="form-control"
+                  placeholder="не сохраняется"
+                  value={apiProbeLogin}
+                  onChange={(e) => setApiProbeLogin(e.target.value)}
+                />
+              </div>
+              <div className="col-12 col-sm-6">
+                <label className="form-label">Тест: пароль</label>
+                <input
+                  {...passwordCredentialInputProps}
+                  type="password"
+                  className="form-control"
+                  placeholder="не сохраняется"
+                  value={apiProbePassword}
+                  onChange={(e) => setApiProbePassword(e.target.value)}
+                />
+              </div>
+              <div className="col-12 d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={onTestConnection}
+                  disabled={!canTestApi || testConnectionLoading}
+                >
+                  {testConnectionLoading ? (
+                    <span className="spinner-border spinner-border-sm me-1" role="status" />
+                  ) : (
+                    <IconPlugConnected size={14} className="me-1" />
+                  )}
+                  Проверить соединение
+                </button>
+                {testConnectionResult ? (
+                  <span className={testConnectionResult.ok ? 'text-success small' : 'text-danger small'}>
+                    {testConnectionResult.ok
+                      ? `Соединение успешно${testConnectionResult.vdsCount != null ? `, VDS: ${testConnectionResult.vdsCount}` : ''}`
+                      : testConnectionResult.error}
+                  </span>
+                ) : null}
+              </div>
+            </>
+          ) : null}
           <div className="col-12 d-flex gap-2 justify-content-end">
             <button type="button" className="btn btn-outline-secondary" onClick={() => setIsModalOpen(false)}>
               Отмена

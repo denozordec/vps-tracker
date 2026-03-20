@@ -53,13 +53,15 @@ export function lastOkSyncFinishedAt(accountId, syncLog) {
  * @param {{
  *   vps: object[],
  *   providerAccounts: object[],
+ *   providers: object[],
  *   payments: object[],
  *   balanceLedger: object[],
  *   syncLog?: object[],
  * }} input
  */
 export function computeInventoryHealth(input) {
-  const { vps, providerAccounts, payments, balanceLedger, syncLog = [] } = input
+  const { vps, providerAccounts, providers = [], payments, balanceLedger, syncLog = [] } = input
+  const providerById = new Map(providers.map((p) => [p.id, p]))
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const ctx = { vps, providerAccounts, payments, balanceLedger, now }
@@ -109,9 +111,10 @@ export function computeInventoryHealth(input) {
     })
   }
 
-  const bmAccounts = providerAccounts.filter(
-    (a) => a.apiType === 'billmanager' && (a.apiBaseUrl || '').trim() && a.apiCredentialsSet,
-  )
+  const bmAccounts = providerAccounts.filter((a) => {
+    const p = providerById.get(a.providerId)
+    return p?.apiType === 'billmanager' && (p.apiBaseUrl || '').trim() && a.apiCredentialsSet
+  })
   const staleMs = STALE_SYNC_HOURS * 60 * 60 * 1000
   const staleAccounts = bmAccounts.filter((a) => {
     const t = lastOkSyncFinishedAt(a.id, syncLog)
@@ -144,12 +147,15 @@ export function computeInventoryHealth(input) {
 
 /**
  * @param {object[]} providerAccounts
+ * @param {object[]} providers
  * @param {object[]} syncLog
  */
-export function getStaleSyncAccountIds(providerAccounts, syncLog, now = new Date()) {
-  const bmAccounts = providerAccounts.filter(
-    (a) => a.apiType === 'billmanager' && (a.apiBaseUrl || '').trim() && a.apiCredentialsSet,
-  )
+export function getStaleSyncAccountIds(providerAccounts, providers, syncLog, now = new Date()) {
+  const providerById = new Map(providers.map((p) => [p.id, p]))
+  const bmAccounts = providerAccounts.filter((a) => {
+    const p = providerById.get(a.providerId)
+    return p?.apiType === 'billmanager' && (p.apiBaseUrl || '').trim() && a.apiCredentialsSet
+  })
   const staleMs = STALE_SYNC_HOURS * 60 * 60 * 1000
   return bmAccounts
     .filter((a) => {

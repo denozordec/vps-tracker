@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { getDb } from '../db.js'
 import { fetchDashboardInfo, testConnection } from '../adapters/billmanager/index.js'
 import { runBillmanagerAccountSync } from '../sync-account-job.js'
+import { billmanagerAccountRowForSync } from '../utils/billmanager-context.js'
 
 const router = Router()
 
@@ -51,13 +52,19 @@ router.get('/:accountId/balance', async (req, res) => {
     if (!row) {
       return res.status(404).json({ error: 'Account not found' })
     }
-    if (row.apiType !== 'billmanager') {
-      return res.status(400).json({ error: 'Account is not configured for BILLmanager API' })
+    const provider = row.providerId
+      ? db.prepare('SELECT * FROM providers WHERE id = ?').get(row.providerId)
+      : null
+    const syncRow = billmanagerAccountRowForSync(row, provider)
+    if (!syncRow) {
+      return res.status(400).json({
+        error:
+          'Укажите в настройках хостера тип API BILLmanager и URL; в аккаунте — логин и пароль API',
+      })
     }
-    if (!row.apiBaseUrl?.trim() || !row.apiCredentials?.trim()) {
-      return res.status(400).json({ error: 'API URL and credentials are required' })
-    }
-    const info = await fetchDashboardInfo(row.apiBaseUrl, row.apiCredentials.trim(), { fallbackCurrency: row.currency })
+    const info = await fetchDashboardInfo(syncRow.apiBaseUrl, syncRow.apiCredentials.trim(), {
+      fallbackCurrency: row.currency,
+    })
     db.run(
       'UPDATE provider_accounts SET balance_api=?, balance_currency=?, balance_updated_at=?, enoughmoneyto=? WHERE id=?',
       info.balance,
@@ -82,15 +89,19 @@ router.post('/:accountId', async (req, res) => {
     if (!row) {
       return res.status(404).json({ error: 'Account not found' })
     }
-    if (row.apiType !== 'billmanager') {
-      return res.status(400).json({ error: 'Account is not configured for BILLmanager API' })
-    }
-    if (!row.apiBaseUrl?.trim() || !row.apiCredentials?.trim()) {
-      return res.status(400).json({ error: 'API URL and credentials are required' })
+    const provider = row.providerId
+      ? db.prepare('SELECT * FROM providers WHERE id = ?').get(row.providerId)
+      : null
+    const syncRow = billmanagerAccountRowForSync(row, provider)
+    if (!syncRow) {
+      return res.status(400).json({
+        error:
+          'Укажите в настройках хостера тип API BILLmanager и URL; в аккаунте — логин и пароль API',
+      })
     }
 
     const opts = onlyTariffs ? { skipVpsPayments: true } : { skipTariffs: true }
-    const result = await runBillmanagerAccountSync(row, opts)
+    const result = await runBillmanagerAccountSync(syncRow, opts)
 
     res.json({
       ok: true,

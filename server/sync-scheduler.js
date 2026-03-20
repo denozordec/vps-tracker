@@ -1,6 +1,7 @@
 import { getDb } from './db.js'
 import { runBillmanagerAccountSync } from './sync-account-job.js'
 import { sendTelegramMessage } from './telegram.js'
+import { billmanagerAccountRowForSync } from './utils/billmanager-context.js'
 
 let syncIntervalId = null
 let syncTariffsIntervalId = null
@@ -109,10 +110,18 @@ export async function runScheduledSync() {
     const db = getDb()
     const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('settings-main')
     if (!settings?.syncEnabled) return
-    const accounts = db.prepare(`
-      SELECT * FROM provider_accounts
-      WHERE apiType = 'billmanager' AND apiBaseUrl IS NOT NULL AND apiBaseUrl != '' AND apiCredentials IS NOT NULL AND apiCredentials != ''
+    const accountRows = db.prepare(`
+      SELECT pa.* FROM provider_accounts pa
+      INNER JOIN providers p ON p.id = pa.providerId
+      WHERE lower(trim(COALESCE(p.apiType, ''))) = 'billmanager'
+        AND length(trim(COALESCE(p.apiBaseUrl, ''))) > 0
+        AND pa.apiCredentials IS NOT NULL AND length(trim(pa.apiCredentials)) > 0
     `).all()
+    const providers = db.prepare('SELECT * FROM providers').all()
+    const providerById = new Map(providers.map((p) => [p.id, p]))
+    const accounts = accountRows
+      .map((a) => billmanagerAccountRowForSync(a, providerById.get(a.providerId)))
+      .filter(Boolean)
 
     const digestLines = []
     const lowBalanceLines = []
@@ -173,11 +182,18 @@ export async function runScheduledSyncTariffs() {
     const db = getDb()
     const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('settings-main')
     if (!settings?.syncEnabled) return
-    const accounts = db.prepare(`
-      SELECT * FROM provider_accounts
-      WHERE apiType = 'billmanager' AND apiBaseUrl IS NOT NULL AND apiBaseUrl != '' AND apiCredentials IS NOT NULL AND apiCredentials != ''
+    const accountRows = db.prepare(`
+      SELECT pa.* FROM provider_accounts pa
+      INNER JOIN providers p ON p.id = pa.providerId
+      WHERE lower(trim(COALESCE(p.apiType, ''))) = 'billmanager'
+        AND length(trim(COALESCE(p.apiBaseUrl, ''))) > 0
+        AND pa.apiCredentials IS NOT NULL AND length(trim(pa.apiCredentials)) > 0
     `).all()
     const providers = db.prepare('SELECT * FROM providers ORDER BY name').all()
+    const providerById = new Map(providers.map((p) => [p.id, p]))
+    const accounts = accountRows
+      .map((a) => billmanagerAccountRowForSync(a, providerById.get(a.providerId)))
+      .filter(Boolean)
 
     for (const account of accounts) {
       try {

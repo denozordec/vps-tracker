@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS providers (
   baseCurrency TEXT,
   usdRate TEXT,
   eurRate TEXT,
-  notes TEXT
+  notes TEXT,
+  apiType TEXT,
+  apiBaseUrl TEXT
 );
 
 CREATE TABLE IF NOT EXISTS provider_accounts (

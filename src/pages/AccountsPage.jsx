@@ -12,6 +12,11 @@ import { ConvertedAmount } from '../components/ConvertedAmount'
 import { syncAccount, testApiConnection, fetchAccountBalance, fetchSyncStatus } from '../lib/api'
 import { noBrowserSuggestProps, passwordCredentialInputProps } from '../lib/noBrowserSuggestProps'
 import { getBalanceMismatchAccountIds, getStaleSyncAccountIds } from '../lib/inventory-health'
+import {
+  billmanagerSyncableAccounts,
+  accountBillmanagerUiReady,
+  accountUsesBillmanagerBalanceApi,
+} from '../lib/billmanager-ui'
 import { IconRefresh, IconPlugConnected } from '@tabler/icons-react'
 
 const emptyForm = {
@@ -21,8 +26,6 @@ const emptyForm = {
   currency: 'USD',
   billingMode: 'monthly',
   notes: '',
-  apiType: '',
-  apiBaseUrl: '',
   apiLogin: '',
   apiPassword: '',
   balance_alert_below: '',
@@ -51,8 +54,8 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   }, [])
 
   const billmanagerAccounts = useMemo(
-    () => db.providerAccounts.filter((a) => a.apiType === 'billmanager' && a.apiBaseUrl),
-    [db.providerAccounts],
+    () => billmanagerSyncableAccounts(db.providerAccounts, db.providers),
+    [db.providerAccounts, db.providers],
   )
   const [testConnectionLoading, setTestConnectionLoading] = useState(false)
   const [testConnectionResult, setTestConnectionResult] = useState(null)
@@ -60,13 +63,13 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
 
   const highlightAccountIds = useMemo(() => {
     if (accountsHealth === 'stale-sync') {
-      return new Set(getStaleSyncAccountIds(db.providerAccounts, syncLog))
+      return new Set(getStaleSyncAccountIds(db.providerAccounts, db.providers, syncLog))
     }
     if (accountsHealth === 'balance-mismatch') {
       return new Set(getBalanceMismatchAccountIds(db.providerAccounts, db.balanceLedger))
     }
     return null
-  }, [accountsHealth, db.providerAccounts, db.balanceLedger, syncLog])
+  }, [accountsHealth, db.providerAccounts, db.providers, db.balanceLedger, syncLog])
 
   const balances = useMemo(() => {
     return db.providerAccounts.map((account) => {
@@ -84,7 +87,8 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   const getBalance = (accountId) => balances.find((item) => item.accountId === accountId)?.balance || 0
 
   const getDisplayBalance = (account) => {
-    if (account.apiType === 'billmanager' && account.balance_api != null) {
+    const provider = db.providers.find((p) => p.id === account.providerId)
+    if (accountUsesBillmanagerBalanceApi(account, provider)) {
       return account.balance_api
     }
     return getBalance(account.id)
@@ -116,10 +120,11 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
       currency: form.currency,
       billingMode: form.billingMode,
       notes: form.notes,
-      apiType: form.apiType || '',
-      apiBaseUrl: form.apiType === 'billmanager' ? form.apiBaseUrl : '',
     }
-    if (form.apiType === 'billmanager' && form.apiLogin && form.apiPassword) {
+    const selectedProvider = db.providers.find((p) => p.id === form.providerId)
+    const bmReady =
+      selectedProvider?.apiType === 'billmanager' && (selectedProvider.apiBaseUrl || '').trim()
+    if (bmReady && form.apiLogin && form.apiPassword) {
       payload.apiCredentials = `${form.apiLogin}:${form.apiPassword}`
     }
     {
@@ -146,14 +151,19 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   }
 
   const onTestConnection = async () => {
-    if (!form.apiBaseUrl?.trim() || !form.apiLogin?.trim() || !form.apiPassword?.trim()) {
-      setTestConnectionResult({ ok: false, error: 'Заполните URL, логин и пароль' })
+    const p = db.providers.find((x) => x.id === form.providerId)
+    const baseUrl = p?.apiType === 'billmanager' ? (p.apiBaseUrl || '').trim() : ''
+    if (!baseUrl || !form.apiLogin?.trim() || !form.apiPassword?.trim()) {
+      setTestConnectionResult({
+        ok: false,
+        error: 'В настройках хостера укажите URL API; здесь — логин и пароль',
+      })
       return
     }
     setTestConnectionLoading(true)
     setTestConnectionResult(null)
     try {
-      const result = await testApiConnection(form.apiBaseUrl, `${form.apiLogin}:${form.apiPassword}`)
+      const result = await testApiConnection(baseUrl, `${form.apiLogin}:${form.apiPassword}`)
       setTestConnectionResult(result)
     } catch (err) {
       setTestConnectionResult({ ok: false, error: err.message || 'Ошибка проверки' })
@@ -170,8 +180,6 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
       currency: account.currency || 'USD',
       billingMode: account.billingMode || 'monthly',
       notes: account.notes || '',
-      apiType: account.apiType || '',
-      apiBaseUrl: account.apiBaseUrl || '',
       apiLogin: '',
       apiPassword: '',
       balance_alert_below:
@@ -185,7 +193,12 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   }
 
   const editingAccount = editingId ? db.providerAccounts.find((a) => a.id === editingId) : null
-  const canTestConnection = form.apiType === 'billmanager' && form.apiBaseUrl?.trim() && form.apiLogin?.trim() && form.apiPassword?.trim()
+  const formProvider = db.providers.find((p) => p.id === form.providerId)
+  const formBmUrl =
+    formProvider?.apiType === 'billmanager' ? (formProvider.apiBaseUrl || '').trim() : ''
+  const canTestConnection = Boolean(
+    formBmUrl && form.apiLogin?.trim() && form.apiPassword?.trim(),
+  )
 
   const onSync = async (accountId) => {
     setSyncLoadingId(accountId)
@@ -333,6 +346,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
               <tbody>
                 {db.providerAccounts.map((account) => {
                   const provider = db.providers.find((item) => item.id === account.providerId)
+                  const bmUi = accountBillmanagerUiReady(account, provider)
                   const linkedVps = db.vps.filter((item) => item.providerAccountId === account.id)
                   const rowWarn = highlightAccountIds?.has(account.id)
                   return (
@@ -374,7 +388,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                       </td>
                       <td className="text-end">
                         <div className="table-actions d-flex gap-1 flex-wrap justify-content-end">
-                          {account.apiType === 'billmanager' && account.apiBaseUrl ? (
+                          {bmUi ? (
                             <>
                               <button
                                 type="button"
@@ -511,32 +525,22 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
           </div>
           <div className="col-12">
             <hr className="my-2" />
-            <h6 className="text-secondary mb-2">Интеграция API</h6>
-          </div>
-          <div className="col-12">
-            <label className="form-label">Тип API</label>
-            <select autoComplete="off"
-              className="form-select"
-              value={form.apiType}
-              onChange={(e) => setForm((prev) => ({ ...prev, apiType: e.target.value, apiBaseUrl: '', apiLogin: '', apiPassword: '' }))}
-            >
-              <option value="">— Не использовать —</option>
-              <option value="billmanager">BILLmanager</option>
-            </select>
-          </div>
-          {form.apiType === 'billmanager' ? (
-            <>
-              <div className="col-12">
-                <label className="form-label">URL API BILLmanager</label>
-                <input {...noBrowserSuggestProps}
-                  className="form-control"
-                  placeholder="https://bill.example.com:1500/billmgr"
-                  value={form.apiBaseUrl}
-                  onChange={(e) => setForm((prev) => ({ ...prev, apiBaseUrl: e.target.value }))}
-                />
+            <h6 className="text-secondary mb-2">Учётные данные API BILLmanager</h6>
+            {formProvider?.apiType === 'billmanager' && (formProvider.apiBaseUrl || '').trim() ? (
+              <div className="text-secondary small mb-2">
+                URL: <code className="user-select-all">{formProvider.apiBaseUrl}</code>
               </div>
+            ) : (
+              <div className="alert alert-secondary py-2 small mb-2">
+                В карточке хостера выберите тип API BILLmanager и укажите URL — один на все аккаунты этого
+                хостера.
+              </div>
+            )}
+          </div>
+          {formProvider?.apiType === 'billmanager' && (formProvider.apiBaseUrl || '').trim() ? (
+            <>
               <div className="col-12 col-sm-6">
-                <label className="form-label">Логин</label>
+                <label className="form-label">Логин API</label>
                 <input {...noBrowserSuggestProps}
                   className="form-control"
                   placeholder="admin"
@@ -545,7 +549,7 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                 />
               </div>
               <div className="col-12 col-sm-6">
-                <label className="form-label">Пароль</label>
+                <label className="form-label">Пароль API</label>
                 <input {...passwordCredentialInputProps}
                   type="password"
                   className="form-control"
