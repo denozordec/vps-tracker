@@ -1,10 +1,9 @@
-import { useMemo } from 'react'
-import {
-  billingModeLabel,
-  convertCurrency,
-  formatCurrency,
-  monthKey,
-} from '../lib/utils'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { convertCurrency, formatCurrency, monthKey } from '../lib/utils'
+import { getPaidUntilDate as computePaidUntil } from '../lib/paid-until'
+import { computeInventoryHealth, formatSyncSummaryLine } from '../lib/inventory-health'
+import { fetchSyncStatus } from '../lib/api'
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { EmptyState } from '../components/EmptyState'
 import { ExpenseChart } from '../components/ExpenseChart'
@@ -23,6 +22,13 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
   const balanceLedger = Array.isArray(db.balanceLedger) ? db.balanceLedger : []
   const payments = Array.isArray(db.payments) ? db.payments : []
   const providers = Array.isArray(db.providers) ? db.providers : []
+
+  const [syncLogRows, setSyncLogRows] = useState([])
+  useEffect(() => {
+    fetchSyncStatus()
+      .then(setSyncLogRows)
+      .catch(() => setSyncLogRows([]))
+  }, [db.vps?.length, db.providerAccounts?.length])
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -189,89 +195,124 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
   )
 
   const UPCOMING_DAYS = 7
-  const getAccountBalance = (accountId) => {
-    const account = providerAccounts.find((a) => a.id === accountId)
-    if (account?.balance_api != null && Number.isFinite(Number(account.balance_api))) {
-      return Number(account.balance_api)
-    }
-    const ledgerRows = balanceLedger.filter((row) => row.providerAccountId === accountId)
-    const credits = ledgerRows
-      .filter((row) => row.direction === 'credit')
-      .reduce((acc, row) => acc + Number(row.amount || 0), 0)
-    const debits = ledgerRows
-      .filter((row) => row.direction === 'debit')
-      .reduce((acc, row) => acc + Number(row.amount || 0), 0)
-    return credits - debits
-  }
+  const paidUntilCtx = { vps, providerAccounts, payments, balanceLedger, now }
+  const getPaidUntilDate = (item) => computePaidUntil(item, paidUntilCtx)
 
-  const getPaidUntilDate = (item) => {
-    if (item.status !== 'active') return null
-    const account = providerAccounts.find((a) => a.id === item.providerAccountId)
-    const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
-    const isDailyBilling = tariffType === 'daily' || account?.billingMode === 'daily'
+  const inventoryIssues = useMemo(
+    () =>
+      computeInventoryHealth({
+        vps,
+        providerAccounts,
+        payments,
+        balanceLedger,
+        syncLog: syncLogRows,
+      }),
+    [vps, providerAccounts, payments, balanceLedger, syncLogRows],
+  )
 
-    const paidUntilFromApi = item.paidUntil
-      ? (() => {
-          const d = new Date(item.paidUntil)
-          return Number.isNaN(d.getTime()) ? null : d
-        })()
-      : null
+  const recentSyncFeed = useMemo(() => {
+    return [...syncLogRows]
+      .filter((r) => r.finishedAt && (r.status === 'ok' || r.status === 'error'))
+      .slice(0, 12)
+  }, [syncLogRows])
 
-    const isPaidUntilNextDay =
-      paidUntilFromApi &&
-      (() => {
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        const diffMs = paidUntilFromApi - today
-        const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000))
-        return diffDays >= 0 && diffDays <= 2
-      })()
-
-    const shouldCalculateFromBalance = isDailyBilling || isPaidUntilNextDay
-
-    if (!shouldCalculateFromBalance && paidUntilFromApi) {
-      return paidUntilFromApi
-    }
-
-    const dailyRate = Number(item.dailyRate || 0)
-    const monthlyRate = Number(item.monthlyRate || 0)
-    const burnRate = tariffType === 'daily' ? dailyRate : monthlyRate / 30
-    if (!Number.isFinite(burnRate) || burnRate <= 0) return paidUntilFromApi
-
-    const accountBalance = getAccountBalance(item.providerAccountId)
-    const activeInAccount = vps.filter(
-      (v) => v.providerAccountId === item.providerAccountId && v.status === 'active',
-    ).length
-    const allocatedBalance = activeInAccount > 0 ? Math.max(0, accountBalance) / activeInAccount : 0
-    const directPayments = payments
-      .filter((p) => p.vpsId === item.id && p.type === 'direct_vps_payment')
-      .reduce((acc, p) => acc + Number(p.amount || 0), 0)
-    const funds = directPayments + allocatedBalance
-    const coveredDays = Math.floor(funds / burnRate)
-    if (!Number.isFinite(coveredDays) || coveredDays <= 0) return paidUntilFromApi
-
-    const paidUntil = new Date()
-    paidUntil.setDate(paidUntil.getDate() + coveredDays)
-    return paidUntil
-  }
-
-  const upcoming = useMemo(() => {
-    const threshold = new Date()
-    threshold.setDate(threshold.getDate() + UPCOMING_DAYS)
-    return vps
-      .filter((item) => item.status === 'active')
-      .map((item) => {
-        const date = getPaidUntilDate(item)
-        return { vps: item, paidUntil: date }
-      })
-      .filter(({ paidUntil }) => paidUntil && paidUntil <= threshold && paidUntil >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
-      .sort((a, b) => a.paidUntil - b.paidUntil)
-      .slice(0, 10)
-  }, [vps, payments, balanceLedger, providerAccounts])
+  const upcomingThreshold = new Date(now)
+  upcomingThreshold.setDate(upcomingThreshold.getDate() + UPCOMING_DAYS)
+  const todayStartForUpcoming = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const upcoming = vps
+    .filter((item) => item.status === 'active')
+    .map((item) => {
+      const date = getPaidUntilDate(item)
+      return { vps: item, paidUntil: date }
+    })
+    .filter(
+      ({ paidUntil }) =>
+        paidUntil &&
+        paidUntil <= upcomingThreshold &&
+        paidUntil >= todayStartForUpcoming,
+    )
+    .sort((a, b) => a.paidUntil - b.paidUntil)
+    .slice(0, 10)
 
   return (
     <>
       <PageHeader pretitle="Обзор" title="Дашборд" />
       <div className="row row-cards">
+      {inventoryIssues.length > 0 ? (
+        <div className="col-12">
+          <div className="card border-warning">
+            <div className="card-header">
+              <h3 className="card-title">Здоровье инвентаря</h3>
+            </div>
+            <div className="card-body">
+              <div className="row g-2">
+                {inventoryIssues.map((issue) => (
+                  <div className="col-md-6 col-xl-4" key={issue.key}>
+                    <Link className="card card-link" to={issue.to}>
+                      <div className="card-body py-2 px-3">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className="fw-medium">{issue.title}</span>
+                          <span className="badge bg-orange-lt text-orange">{issue.count}</span>
+                        </div>
+                        {issue.hint ? <div className="text-secondary small mt-1">{issue.hint}</div> : null}
+                      </div>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Последние синхронизации</h3>
+            <div className="card-actions">
+              <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
+                Аккаунты
+              </Link>
+            </div>
+          </div>
+          <div className="list-group list-group-flush">
+            {recentSyncFeed.map((row) => {
+              const acc = providerAccounts.find((a) => a.id === row.accountId)
+              const line = formatSyncSummaryLine(row.summary)
+              return (
+                <div key={row.id} className="list-group-item">
+                  <div className="d-flex justify-content-between align-items-start gap-2">
+                    <div>
+                      <div className="fw-medium">{acc?.name || row.accountId}</div>
+                      <div className="text-secondary small">
+                        {row.status === 'error' ? (
+                          <span className="text-danger">{row.error || line}</span>
+                        ) : (
+                          line || 'OK'
+                        )}
+                      </div>
+                    </div>
+                    <span className={`badge ${row.status === 'ok' ? 'bg-green-lt text-green' : 'bg-red-lt text-red'}`}>
+                      {row.status === 'ok' ? 'OK' : 'Ошибка'}
+                    </span>
+                  </div>
+                  <div className="text-secondary small mt-1">
+                    {row.finishedAt
+                      ? new Date(row.finishedAt).toLocaleString('ru-RU')
+                      : '—'}
+                  </div>
+                </div>
+              )
+            })}
+            {recentSyncFeed.length === 0 ? (
+              <div className="list-group-item text-secondary text-center py-4">
+                Запустите синхронизацию на странице аккаунтов — здесь появится краткий итог
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <div className="col-sm-6 col-lg-3">
         <div className="card metric-card metric-blue h-100">
           <div className="card-body">

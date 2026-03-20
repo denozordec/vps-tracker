@@ -1,5 +1,5 @@
 import { getDb } from './db.js'
-import { syncFromBillmanager } from './adapters/billmanager/index.js'
+import { runBillmanagerAccountSync } from './sync-account-job.js'
 import { sendTelegramMessage } from './telegram.js'
 
 let syncIntervalId = null
@@ -113,13 +113,53 @@ export async function runScheduledSync() {
       SELECT * FROM provider_accounts
       WHERE apiType = 'billmanager' AND apiBaseUrl IS NOT NULL AND apiBaseUrl != '' AND apiCredentials IS NOT NULL AND apiCredentials != ''
     `).all()
+
+    const digestLines = []
+    const lowBalanceLines = []
+    const token = settings?.telegramBotToken?.trim()
+    const chatId = settings?.telegramChatId?.trim()
+    const canTg = Boolean(token && chatId)
+
     for (const account of accounts) {
       try {
-        await syncFromBillmanager(account, db, { skipTariffs: true })
+        const result = await runBillmanagerAccountSync(account, { skipTariffs: true })
+        const s = result.syncSummary || {}
+        const parts = []
+        if (s.added?.length) parts.push(`+${s.added.length} VPS`)
+        if (s.updated?.length) parts.push(`изм. ${s.updated.length}`)
+        if (result.paymentsCount) parts.push(`платежи +${result.paymentsCount}`)
+        digestLines.push(`✓ ${account.name}: ${parts.length ? parts.join(', ') : 'без изменений'}`)
+
+        const apiBal = result.balance?.balance
+        const threshold = account.balance_alert_below
+        if (
+          canTg &&
+          settings.notifyLowBalanceEnabled &&
+          threshold != null &&
+          Number.isFinite(Number(threshold)) &&
+          apiBal != null &&
+          Number.isFinite(Number(apiBal)) &&
+          Number(apiBal) < Number(threshold)
+        ) {
+          const cur = result.balance?.currency || account.balance_currency || account.currency || ''
+          lowBalanceLines.push(
+            `• ${account.name}: ${apiBal} ${cur} (порог ${threshold})`,
+          )
+        }
       } catch (err) {
-        console.warn(`Sync VPS/payments failed for account ${account.id}:`, err.message)
+        digestLines.push(`✗ ${account.name}: ${err.message || 'ошибка'}`)
       }
     }
+
+    if (canTg && settings.notifySyncDigestEnabled && digestLines.length > 0) {
+      const text = `📋 <b>Синхронизация VPS</b>\n\n${digestLines.join('\n')}`
+      await sendTelegramMessage(token, chatId, text, settings.telegramMessageThreadId)
+    }
+    if (canTg && settings.notifyLowBalanceEnabled && lowBalanceLines.length > 0) {
+      const text = `💰 <b>Низкий баланс</b>\n\n${lowBalanceLines.join('\n')}`
+      await sendTelegramMessage(token, chatId, text, settings.telegramMessageThreadId)
+    }
+
     if (settings?.notifyPaymentExpiryEnabled) {
       await sendPaymentExpiryNotifications(db)
     }
@@ -141,7 +181,7 @@ export async function runScheduledSyncTariffs() {
 
     for (const account of accounts) {
       try {
-        const result = await syncFromBillmanager(account, db, { skipVpsPayments: true })
+        const result = await runBillmanagerAccountSync(account, { skipVpsPayments: true })
         const newTariffs = result?.newTariffs || []
         if (newTariffs.length > 0 && settings?.notifyNewTariffsEnabled && settings?.telegramBotToken?.trim() && settings?.telegramChatId?.trim()) {
           const provider = providers.find((p) => p.id === account.providerId)

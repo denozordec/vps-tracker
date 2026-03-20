@@ -11,12 +11,13 @@ import balanceLedgerRouter from './routes/balance-ledger.js'
 import settingsRouter from './routes/settings.js'
 import syncRouter from './routes/sync.js'
 import projectsRouter from './routes/projects.js'
+import backupRouter from './routes/backup.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
 
 ;(async () => {
   await initDb()
@@ -31,6 +32,7 @@ app.use(express.json())
   app.use('/api/settings', settingsRouter)
   app.use('/api/sync', syncRouter)
   app.use('/api/projects', projectsRouter)
+  app.use('/api/backup', backupRouter)
 
   const { startScheduler } = await import('./sync-scheduler.js')
   startScheduler()

@@ -24,9 +24,13 @@ router.post('/', (req, res) => {
     const db = getDb()
     const r = req.body
     const id = r.id || `account-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const alertBelow =
+      r.balance_alert_below != null && r.balance_alert_below !== ''
+        ? Number(r.balance_alert_below)
+        : null
     db.prepare(`
-      INSERT INTO provider_accounts (id, providerId, name, panelUrl, currency, billingMode, notes, apiType, apiBaseUrl, apiCredentials)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO provider_accounts (id, providerId, name, panelUrl, currency, billingMode, notes, apiType, apiBaseUrl, apiCredentials, balance_alert_below)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       r.providerId ?? '',
@@ -38,6 +42,7 @@ router.post('/', (req, res) => {
       r.apiType ?? '',
       r.apiBaseUrl ?? '',
       r.apiCredentials ?? '',
+      Number.isFinite(alertBelow) ? alertBelow : null,
     )
     const row = db.prepare('SELECT * FROM provider_accounts WHERE id = ?').get(id)
     res.status(201).json(sanitizeAccount(row))
@@ -56,9 +61,19 @@ router.put('/:id', (req, res) => {
     const apiType = r.apiType !== undefined ? String(r.apiType || '') : (existing.apiType || '')
     const apiBaseUrl = r.apiBaseUrl !== undefined ? String(r.apiBaseUrl || '') : (existing.apiBaseUrl || '')
     const apiCredentials = r.apiCredentials !== undefined ? String(r.apiCredentials || '') : (existing.apiCredentials || '')
+    let balanceAlertBelow = existing.balance_alert_below
+    if (r.balance_alert_below !== undefined) {
+      const v = r.balance_alert_below
+      balanceAlertBelow =
+        v === '' || v == null
+          ? null
+          : Number.isFinite(Number(v))
+            ? Number(v)
+            : null
+    }
     db.prepare(`
       UPDATE provider_accounts SET
-        providerId = ?, name = ?, panelUrl = ?, currency = ?, billingMode = ?, notes = ?, apiType = ?, apiBaseUrl = ?, apiCredentials = ?
+        providerId = ?, name = ?, panelUrl = ?, currency = ?, billingMode = ?, notes = ?, apiType = ?, apiBaseUrl = ?, apiCredentials = ?, balance_alert_below = ?
       WHERE id = ?
     `).run(
       r.providerId ?? existing.providerId ?? '',
@@ -70,6 +85,7 @@ router.put('/:id', (req, res) => {
       apiType,
       apiBaseUrl,
       apiCredentials,
+      balanceAlertBelow,
       id,
     )
     const row = db.prepare('SELECT * FROM provider_accounts WHERE id = ?').get(id)

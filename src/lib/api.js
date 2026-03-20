@@ -176,3 +176,64 @@ export async function sendTelegramTestNotification() {
   const res = await fetchApi('/api/settings/telegram/test', { method: 'POST' })
   return res
 }
+
+export async function downloadBackupJsonBlob() {
+  const url = `${API_BASE}/api/backup/json`
+  const res = await fetch(url)
+  if (!res.ok) {
+    let message = res.statusText || 'Ошибка выгрузки'
+    try {
+      const data = await res.json()
+      if (data?.error) message = data.error
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message)
+  }
+  return res.blob()
+}
+
+export async function downloadBackupDatabaseBlob() {
+  const url = `${API_BASE}/api/backup/database`
+  const res = await fetch(url)
+  if (!res.ok) {
+    let message = res.statusText || 'Ошибка выгрузки'
+    try {
+      const data = await res.json()
+      if (data?.error) message = data.error
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message)
+  }
+  return res.blob()
+}
+
+export async function importBackupJson(payload) {
+  return fetchApi('/api/backup/json', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function importBackupDatabaseBuffer(buffer) {
+  const url = `${API_BASE}/api/backup/database`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: buffer,
+  })
+  if (!res.ok) {
+    let message = res.statusText || 'Ошибка восстановления'
+    try {
+      const data = await res.json()
+      if (data?.error) message = data.error
+    } catch {
+      /* ignore */
+    }
+    const err = new Error(message)
+    err.status = res.status
+    throw err
+  }
+  return res.json()
+}

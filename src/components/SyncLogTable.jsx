@@ -1,4 +1,5 @@
 import { EmptyState } from './EmptyState'
+import { formatSyncSummaryLine } from '../lib/inventory-health'
 
 export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
   const getAccountName = (accountId) => {
@@ -38,6 +39,7 @@ export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
               <th>Статус</th>
               <th>VPS</th>
               <th>Платежи</th>
+              <th>Итог</th>
               <th>Ошибка</th>
             </tr>
           </thead>
@@ -54,6 +56,9 @@ export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
                 </td>
                 <td>{row.vpsCount ?? '—'}</td>
                 <td>{row.paymentsCount ?? '—'}</td>
+                <td className="small">
+                  {formatSyncSummaryLine(row.summary) || '—'}
+                </td>
                 <td>
                   {row.error ? (
                     <span className="text-danger small" title={row.error}>
@@ -66,7 +71,7 @@ export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
               </tr>
             ))}
             {syncLog.length === 0 ? (
-              <EmptyState message="Нет записей синхронизации" colSpan={7} />
+              <EmptyState message="Нет записей синхронизации" colSpan={8} />
             ) : null}
           </tbody>
         </table>

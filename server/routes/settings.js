@@ -23,6 +23,8 @@ export function rowToSettings(row) {
     syncEnabled: Boolean(row.syncEnabled),
     notifyPaymentExpiryEnabled: Boolean(row.notifyPaymentExpiryEnabled),
     notifyNewTariffsEnabled: Boolean(row.notifyNewTariffsEnabled),
+    notifyLowBalanceEnabled: Boolean(row.notifyLowBalanceEnabled),
+    notifySyncDigestEnabled: Boolean(row.notifySyncDigestEnabled),
     customFields: Array.isArray(customFields) ? customFields : [],
   }
 }
@@ -70,6 +72,8 @@ router.put('/:id', (req, res) => {
     const syncTariffsIntervalMinutes = r.syncTariffsIntervalMinutes !== undefined ? Math.max(60, Number(r.syncTariffsIntervalMinutes) || 1440) : (existing?.syncTariffsIntervalMinutes ?? 1440)
     const notifyPaymentExpiryEnabled = r.notifyPaymentExpiryEnabled !== undefined ? (r.notifyPaymentExpiryEnabled ? 1 : 0) : (existing?.notifyPaymentExpiryEnabled ? 1 : 0)
     const notifyNewTariffsEnabled = r.notifyNewTariffsEnabled !== undefined ? (r.notifyNewTariffsEnabled ? 1 : 0) : (existing?.notifyNewTariffsEnabled ? 1 : 0)
+    const notifyLowBalanceEnabled = r.notifyLowBalanceEnabled !== undefined ? (r.notifyLowBalanceEnabled ? 1 : 0) : (existing?.notifyLowBalanceEnabled ? 1 : 0)
+    const notifySyncDigestEnabled = r.notifySyncDigestEnabled !== undefined ? (r.notifySyncDigestEnabled ? 1 : 0) : (existing?.notifySyncDigestEnabled ? 1 : 0)
     const telegramBotToken = r.telegramBotToken !== undefined ? (r.telegramBotToken || '') : (existing?.telegramBotToken ?? '')
     const telegramChatId = r.telegramChatId !== undefined ? (r.telegramChatId || '') : (existing?.telegramChatId ?? '')
     const telegramMessageThreadId = r.telegramMessageThreadId !== undefined ? (r.telegramMessageThreadId || '') : (existing?.telegramMessageThreadId ?? '')
@@ -78,7 +82,8 @@ router.put('/:id', (req, res) => {
       db.prepare(`
         UPDATE settings SET
           baseCurrency = ?, ratesUrl = ?, autoConvert = ?, ratesUpdatedAt = ?, syncEnabled = ?, syncIntervalMinutes = ?, syncTariffsIntervalMinutes = ?,
-          telegramBotToken = ?, telegramChatId = ?, telegramMessageThreadId = ?, notifyPaymentExpiryEnabled = ?, notifyNewTariffsEnabled = ?, customFields = ?
+          telegramBotToken = ?, telegramChatId = ?, telegramMessageThreadId = ?, notifyPaymentExpiryEnabled = ?, notifyNewTariffsEnabled = ?, customFields = ?,
+          notifyLowBalanceEnabled = ?, notifySyncDigestEnabled = ?
         WHERE id = ?
       `).run(
         r.baseCurrency ?? existing.baseCurrency ?? 'RUB',
@@ -94,12 +99,14 @@ router.put('/:id', (req, res) => {
         notifyPaymentExpiryEnabled,
         notifyNewTariffsEnabled,
         customFields,
+        notifyLowBalanceEnabled,
+        notifySyncDigestEnabled,
         id,
       )
     } else {
       db.prepare(`
-        INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes, syncTariffsIntervalMinutes, telegramBotToken, telegramChatId, telegramMessageThreadId, notifyPaymentExpiryEnabled, notifyNewTariffsEnabled, customFields)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes, syncTariffsIntervalMinutes, telegramBotToken, telegramChatId, telegramMessageThreadId, notifyPaymentExpiryEnabled, notifyNewTariffsEnabled, customFields, notifyLowBalanceEnabled, notifySyncDigestEnabled)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
         r.baseCurrency ?? 'RUB',
@@ -115,6 +122,8 @@ router.put('/:id', (req, res) => {
         notifyPaymentExpiryEnabled,
         notifyNewTariffsEnabled,
         customFields,
+        notifyLowBalanceEnabled,
+        notifySyncDigestEnabled,
       )
     }
     startScheduler()
@@ -135,13 +144,15 @@ router.post('/', (req, res) => {
     const syncTariffsIntervalMinutes = Math.max(60, Number(r.syncTariffsIntervalMinutes) || 1440)
     const notifyPaymentExpiryEnabled = r.notifyPaymentExpiryEnabled ? 1 : 0
     const notifyNewTariffsEnabled = r.notifyNewTariffsEnabled ? 1 : 0
+    const notifyLowBalanceEnabled = r.notifyLowBalanceEnabled ? 1 : 0
+    const notifySyncDigestEnabled = r.notifySyncDigestEnabled ? 1 : 0
     const telegramBotToken = r.telegramBotToken ?? ''
     const telegramChatId = r.telegramChatId ?? ''
     const telegramMessageThreadId = r.telegramMessageThreadId ?? ''
     const customFields = serializeCustomFields(r.customFields)
     db.prepare(`
-      INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes, syncTariffsIntervalMinutes, telegramBotToken, telegramChatId, telegramMessageThreadId, notifyPaymentExpiryEnabled, notifyNewTariffsEnabled, customFields)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO settings (id, baseCurrency, ratesUrl, autoConvert, ratesUpdatedAt, syncEnabled, syncIntervalMinutes, syncTariffsIntervalMinutes, telegramBotToken, telegramChatId, telegramMessageThreadId, notifyPaymentExpiryEnabled, notifyNewTariffsEnabled, customFields, notifyLowBalanceEnabled, notifySyncDigestEnabled)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       r.baseCurrency ?? 'RUB',
@@ -157,6 +168,8 @@ router.post('/', (req, res) => {
       notifyPaymentExpiryEnabled,
       notifyNewTariffsEnabled,
       customFields,
+      notifyLowBalanceEnabled,
+      notifySyncDigestEnabled,
     )
     startScheduler()
     const row = db.prepare('SELECT * FROM settings WHERE id = ?').get(id)

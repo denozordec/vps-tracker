@@ -231,4 +231,39 @@ export const MIGRATIONS = [
       ) WHERE length(trim(COALESCE(vps.project, ''))) > 0`)
     },
   },
+  {
+    name: 'sync_log_summary',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE sync_log ADD COLUMN summary TEXT')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+    },
+  },
+  {
+    name: 'settings_notify_balance_digest',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN notifyLowBalanceEnabled INTEGER')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN notifySyncDigestEnabled INTEGER')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+    },
+  },
+  {
+    name: 'provider_accounts_balance_alert_below',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE provider_accounts ADD COLUMN balance_alert_below REAL')
+      } catch (e) {
+        if (!String(e.message || e).includes('duplicate column')) throw e
+      }
+    },
+  },
 ]

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
-import { sendTelegramTestNotification } from '../lib/api'
+import {
+  downloadBackupDatabaseBlob,
+  downloadBackupJsonBlob,
+  importBackupDatabaseBuffer,
+  importBackupJson,
+  sendTelegramTestNotification,
+} from '../lib/api'
+import { downloadBlob } from '../lib/utils'
 import { noBrowserSuggestProps, passwordCredentialInputProps } from '../lib/noBrowserSuggestProps'
 
 const defaultSettings = {
@@ -16,6 +23,8 @@ const defaultSettings = {
   telegramMessageThreadId: '',
   notifyPaymentExpiryEnabled: false,
   notifyNewTariffsEnabled: false,
+  notifyLowBalanceEnabled: false,
+  notifySyncDigestEnabled: false,
 }
 
 export function SettingsPage({ db, actions, ratesData, ratesError }) {
@@ -32,15 +41,18 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
     telegramMessageThreadId: current.telegramMessageThreadId ?? '',
     notifyPaymentExpiryEnabled: Boolean(current.notifyPaymentExpiryEnabled),
     notifyNewTariffsEnabled: Boolean(current.notifyNewTariffsEnabled),
+    notifyLowBalanceEnabled: Boolean(current.notifyLowBalanceEnabled),
+    notifySyncDigestEnabled: Boolean(current.notifySyncDigestEnabled),
   })
   const [telegramTokenEdited, setTelegramTokenEdited] = useState(false)
   const [telegramTestLoading, setTelegramTestLoading] = useState(false)
   const [telegramTestMessage, setTelegramTestMessage] = useState(null)
+  const [backupBusy, setBackupBusy] = useState(false)
+  const [backupMessage, setBackupMessage] = useState(null)
   const [newFieldLabel, setNewFieldLabel] = useState('')
   const customFields = Array.isArray(current.customFields) ? current.customFields : []
 
   useEffect(() => {
-    /* eslint-disable-next-line react-hooks/set-state-in-effect -- sync form when settings change from parent */
     setForm((prev) => ({
       ...prev,
       baseCurrency: current.baseCurrency || 'RUB',
@@ -53,8 +65,10 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
       telegramMessageThreadId: current.telegramMessageThreadId ?? '',
       notifyPaymentExpiryEnabled: Boolean(current.notifyPaymentExpiryEnabled),
       notifyNewTariffsEnabled: Boolean(current.notifyNewTariffsEnabled),
+      notifyLowBalanceEnabled: Boolean(current.notifyLowBalanceEnabled),
+      notifySyncDigestEnabled: Boolean(current.notifySyncDigestEnabled),
     }))
-  }, [current.baseCurrency, current.ratesUrl, current.autoConvert, current.syncEnabled, current.syncIntervalMinutes, current.syncTariffsIntervalMinutes, current.telegramChatId, current.telegramMessageThreadId, current.notifyPaymentExpiryEnabled, current.notifyNewTariffsEnabled])
+  }, [current.baseCurrency, current.ratesUrl, current.autoConvert, current.syncEnabled, current.syncIntervalMinutes, current.syncTariffsIntervalMinutes, current.telegramChatId, current.telegramMessageThreadId, current.notifyPaymentExpiryEnabled, current.notifyNewTariffsEnabled, current.notifyLowBalanceEnabled, current.notifySyncDigestEnabled])
 
   const availableCurrencies = useMemo(() => {
     const list = new Set(['RUB', 'USD', 'EUR'])
@@ -103,6 +117,8 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
       telegramMessageThreadId: form.telegramMessageThreadId || '',
       notifyPaymentExpiryEnabled: form.notifyPaymentExpiryEnabled,
       notifyNewTariffsEnabled: form.notifyNewTariffsEnabled,
+      notifyLowBalanceEnabled: form.notifyLowBalanceEnabled,
+      notifySyncDigestEnabled: form.notifySyncDigestEnabled,
     }
     if (telegramTokenEdited && form.telegramBotToken !== undefined) {
       payload.telegramBotToken = form.telegramBotToken || ''
@@ -368,6 +384,30 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                   <span className="form-check-label">Уведомления о новых тарифах</span>
                 </label>
               </div>
+              <div className="col-12">
+                <label className="form-check">
+                  <input {...noBrowserSuggestProps}
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={form.notifyLowBalanceEnabled}
+                    onChange={(e) => setForm((prev) => ({ ...prev, notifyLowBalanceEnabled: e.target.checked }))}
+                  />
+                  <span className="form-check-label">
+                    Низкий баланс (порог задаётся у каждого аккаунта BILLmanager)
+                  </span>
+                </label>
+              </div>
+              <div className="col-12">
+                <label className="form-check">
+                  <input {...noBrowserSuggestProps}
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={form.notifySyncDigestEnabled}
+                    onChange={(e) => setForm((prev) => ({ ...prev, notifySyncDigestEnabled: e.target.checked }))}
+                  />
+                  <span className="form-check-label">Краткий итог после планового синка VPS</span>
+                </label>
+              </div>
               <div className="col-12 d-flex justify-content-end gap-2">
                 <button
                   type="button"
@@ -397,6 +437,120 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                 </div>
               ) : null}
             </form>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Резервная копия</h3>
+          </div>
+          <div className="card-body">
+            <p className="text-secondary small mb-3">
+              JSON включает все данные (в т.ч. API-ключи и токен Telegram). Файл SQLite — точная копия базы.
+              Восстановление перезаписывает текущие данные.
+            </p>
+            <div className="d-flex flex-wrap gap-2 mb-3">
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={backupBusy}
+                onClick={async () => {
+                  setBackupMessage(null)
+                  setBackupBusy(true)
+                  try {
+                    const blob = await downloadBackupJsonBlob()
+                    downloadBlob('vps-tracker-backup.json', blob)
+                  } catch (err) {
+                    setBackupMessage({ type: 'danger', text: err.message || 'Ошибка выгрузки' })
+                  } finally {
+                    setBackupBusy(false)
+                  }
+                }}
+              >
+                Скачать JSON
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                disabled={backupBusy}
+                onClick={async () => {
+                  setBackupMessage(null)
+                  setBackupBusy(true)
+                  try {
+                    const blob = await downloadBackupDatabaseBlob()
+                    downloadBlob('vps-tracker.db', blob)
+                  } catch (err) {
+                    setBackupMessage({ type: 'danger', text: err.message || 'Ошибка выгрузки' })
+                  } finally {
+                    setBackupBusy(false)
+                  }
+                }}
+              >
+                Скачать SQLite
+              </button>
+            </div>
+            <div className="row g-2 align-items-end">
+              <div className="col-12 col-md-6">
+                <label className="form-label">Восстановить из JSON</label>
+                <input
+                  {...noBrowserSuggestProps}
+                  type="file"
+                  accept="application/json,.json"
+                  className="form-control"
+                  disabled={backupBusy}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!file) return
+                    setBackupMessage(null)
+                    setBackupBusy(true)
+                    try {
+                      const text = await file.text()
+                      const data = JSON.parse(text)
+                      await importBackupJson(data)
+                      await actions.refreshData()
+                      setBackupMessage({ type: 'success', text: 'Данные восстановлены из JSON' })
+                    } catch (err) {
+                      setBackupMessage({ type: 'danger', text: err.message || 'Ошибка импорта' })
+                    } finally {
+                      setBackupBusy(false)
+                    }
+                  }}
+                />
+              </div>
+              <div className="col-12 col-md-6">
+                <label className="form-label">Восстановить из SQLite</label>
+                <input
+                  {...noBrowserSuggestProps}
+                  type="file"
+                  accept=".db,application/octet-stream"
+                  className="form-control"
+                  disabled={backupBusy}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!file) return
+                    setBackupMessage(null)
+                    setBackupBusy(true)
+                    try {
+                      const buf = await file.arrayBuffer()
+                      await importBackupDatabaseBuffer(buf)
+                      await actions.refreshData()
+                      setBackupMessage({ type: 'success', text: 'База восстановлена из SQLite' })
+                    } catch (err) {
+                      setBackupMessage({ type: 'danger', text: err.message || 'Ошибка восстановления' })
+                    } finally {
+                      setBackupBusy(false)
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            {backupMessage ? (
+              <div className={`alert alert-${backupMessage.type} py-2 mt-3 mb-0`}>{backupMessage.text}</div>
+            ) : null}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { getDb } from '../db.js'
-import { syncFromBillmanager, fetchDashboardInfo, testConnection } from '../adapters/billmanager/index.js'
+import { fetchDashboardInfo, testConnection } from '../adapters/billmanager/index.js'
+import { runBillmanagerAccountSync } from '../sync-account-job.js'
 
 const router = Router()
 
@@ -21,10 +22,22 @@ router.get('/status', (req, res) => {
   try {
     const db = getDb()
     const rows = db.prepare(`
-      SELECT id, accountId, startedAt, finishedAt, status, vpsCount, paymentsCount, error
+      SELECT id, accountId, startedAt, finishedAt, status, vpsCount, paymentsCount, error, summary
       FROM sync_log ORDER BY startedAt DESC LIMIT 50
     `).all()
-    res.json(rows)
+    res.json(
+      rows.map((row) => {
+        let summaryParsed = null
+        if (row.summary) {
+          try {
+            summaryParsed = JSON.parse(row.summary)
+          } catch {
+            summaryParsed = null
+          }
+        }
+        return { ...row, summary: summaryParsed }
+      }),
+    )
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -76,19 +89,8 @@ router.post('/:accountId', async (req, res) => {
       return res.status(400).json({ error: 'API URL and credentials are required' })
     }
 
-    const logId = `sync-${accountId}-${Date.now()}`
-    db.prepare(`
-      INSERT INTO sync_log (id, accountId, startedAt, status)
-      VALUES (?, ?, ?, ?)
-    `).run(logId, accountId, new Date().toISOString(), 'running')
-
     const opts = onlyTariffs ? { skipVpsPayments: true } : { skipTariffs: true }
-    const result = await syncFromBillmanager(row, db, opts)
-
-    db.prepare(`
-      UPDATE sync_log SET finishedAt=?, status=?, vpsCount=?, paymentsCount=?
-      WHERE id=?
-    `).run(new Date().toISOString(), 'ok', result.vpsCount, result.paymentsCount, logId)
+    const result = await runBillmanagerAccountSync(row, opts)
 
     res.json({
       ok: true,
@@ -100,17 +102,6 @@ router.post('/:accountId', async (req, res) => {
     })
   } catch (err) {
     console.error('Sync error:', err)
-    const { accountId } = req.params
-    const db = getDb()
-    const logRows = db.prepare('SELECT id FROM sync_log WHERE accountId=? AND status=? ORDER BY startedAt DESC LIMIT 1').all(accountId, 'running')
-    if (logRows.length > 0) {
-      db.prepare('UPDATE sync_log SET finishedAt=?, status=?, error=? WHERE id=?').run(
-        new Date().toISOString(),
-        'error',
-        err.message || 'Unknown error',
-        logRows[0].id,
-      )
-    }
     res.status(500).json({ ok: false, error: err.message || 'Sync failed' })
   }
 })

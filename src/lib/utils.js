@@ -340,3 +340,16 @@ export function downloadTextFile(fileName, content) {
   anchor.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * @param {string} fileName
+ * @param {Blob} blob
+ */
+export function downloadBlob(fileName, blob) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  anchor.click()
+  URL.revokeObjectURL(url)
+}

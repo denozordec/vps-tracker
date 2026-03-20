@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   convertCurrency,
   faviconUrlFromWebsite,
@@ -25,6 +26,7 @@ import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { ProjectSuggestInput } from '../components/ProjectSuggestInput'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
+import { getPaidUntilDate as computePaidUntilForHealth } from '../lib/paid-until'
 
 const emptyForm = {
   ip: '',
@@ -111,6 +113,9 @@ function buildDefaultVpsFilters(customFields) {
 }
 
 export function VpsPage({ db, actions, settings, ratesData }) {
+  const [searchParams] = useSearchParams()
+  const healthKey = (searchParams.get('health') || '').trim()
+
   const customFields = Array.isArray(settings?.[0]?.customFields) ? settings[0].customFields : []
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
@@ -150,8 +155,43 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     tableCompact: false,
   })
 
+  const healthPredicate = useMemo(() => {
+    if (!healthKey) return null
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const ctx = {
+      vps: db.vps,
+      providerAccounts: db.providerAccounts,
+      payments: db.payments,
+      balanceLedger: db.balanceLedger,
+    }
+    if (healthKey === 'no-project') {
+      return (item) => item.status === 'active' && !(item.project || '').trim()
+    }
+    if (healthKey === 'no-rate') {
+      return (item) => {
+        if (item.status !== 'active') return false
+        const dr = Number(item.dailyRate || 0)
+        const mr = Number(item.monthlyRate || 0)
+        const noMoney =
+          (!Number.isFinite(dr) || dr <= 0) && (!Number.isFinite(mr) || mr <= 0)
+        const noCur = !(item.currency || '').trim()
+        return noMoney || noCur
+      }
+    }
+    if (healthKey === 'paid-overdue') {
+      return (item) => {
+        if (item.status !== 'active') return false
+        const d = computePaidUntilForHealth(item, ctx)
+        return Boolean(d && d < todayStart)
+      }
+    }
+    return null
+  }, [healthKey, db.vps, db.providerAccounts, db.payments, db.balanceLedger])
+
   const filteredVps = useMemo(() => {
     return db.vps.filter((item) => {
+      if (healthPredicate && !healthPredicate(item)) return false
       const search = filters.search.toLowerCase()
       const extraIps = Array.isArray(item.additionalIps) ? item.additionalIps.join(' ') : ''
       const minVcpu = Number(filters.minVcpu || 0)
@@ -217,7 +257,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         byProject
       )
     })
-  }, [db.vps, filters, customFields])
+  }, [db.vps, filters, customFields, healthPredicate])
 
   const projectNameOptions = useMemo(() => {
     const names = new Set()
@@ -598,6 +638,20 @@ export function VpsPage({ db, actions, settings, ratesData }) {
   return (
     <>
       <PageHeader pretitle="Управление инфраструктурой" title="VPS серверы" />
+      {healthKey && healthPredicate ? (
+        <div className="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <span>Показаны только VPS по замечанию с дашборда ({healthKey}).</span>
+          <Link to="/vps" className="btn btn-sm btn-outline-primary">
+            Сбросить ссылку
+          </Link>
+        </div>
+      ) : null}
+      {healthKey && !healthPredicate ? (
+        <div className="alert alert-warning">
+          Неизвестный параметр health=&quot;{healthKey}&quot;.{' '}
+          <Link to="/vps">К полному списку</Link>
+        </div>
+      ) : null}
       <div className="row row-cards">
       <div className="col-12 card-stack">
         <div className="card">

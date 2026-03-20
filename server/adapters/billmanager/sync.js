@@ -35,6 +35,8 @@ export async function syncFromBillmanager(account, db, opts = {}) {
   const { tariffItems = [], slist = {} } = tariffResult || {}
 
   let vpsCount = 0
+  /** @type {{ added: { id: string, label: string }[], updated: { id: string, label: string, fields: string[] }[], paymentsAdded: number }} */
+  const syncSummary = { added: [], updated: [], paymentsAdded: 0 }
   if (fetchVpsPayments) {
   const vpsInsertSql = `INSERT INTO vps (id, ip, ipv6, additionalIps, dns, providerId, providerAccountId, country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization, bandwidthTb, sshPort, rootUser, purpose, environment, project, projectId, monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate, monthlyRate, createdAt, paidUntil, notes, userOverrides)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -42,6 +44,12 @@ export async function syncFromBillmanager(account, db, opts = {}) {
     WHERE id=?`
 
   const SYNC_UPDATE_FIELDS = ['country', 'city', 'datacenter', 'os', 'notes', 'status', 'tariffType', 'currency', 'dailyRate', 'monthlyRate', 'paidUntil']
+
+  const normVal = (v) => {
+    if (v == null || v === '') return ''
+    if (typeof v === 'number') return Number.isFinite(v) ? String(v) : ''
+    return String(v)
+  }
 
   for (const item of vdsItems) {
     const vps = mapVdsToVps(item, providerId, accountId)
@@ -82,6 +90,14 @@ export async function syncFromBillmanager(account, db, opts = {}) {
           merged[f] = existing[f]
         }
       }
+      const compareFields = ['ip', 'ipv6', 'dns', ...SYNC_UPDATE_FIELDS]
+      const changedFields = compareFields.filter(
+        (f) => normVal(merged[f]) !== normVal(existing[f]),
+      )
+      if (changedFields.length > 0) {
+        const label = merged.dns || merged.ip || existing.id
+        syncSummary.updated.push({ id: existing.id, label, fields: changedFields })
+      }
       db.run(vpsUpdateSql,
         merged.ip,
         merged.ipv6,
@@ -101,6 +117,8 @@ export async function syncFromBillmanager(account, db, opts = {}) {
         existing.id,
       )
     } else {
+      const label = vps.dns || vps.ip || id
+      syncSummary.added.push({ id, label })
       db.run(vpsInsertSql,
         id,
         vps.ip,
@@ -159,6 +177,7 @@ export async function syncFromBillmanager(account, db, opts = {}) {
     db.run(paymentInsertSql, id, payment.type, payment.date, payment.amount, payment.currency, payment.providerAccountId, payment.vpsId, note)
     existingPayments.add(note)
     paymentsCount++
+    syncSummary.paymentsAdded += 1
   }
   }
 
@@ -229,5 +248,8 @@ export async function syncFromBillmanager(account, db, opts = {}) {
   }
   }
 
-  return { vpsCount, paymentsCount, tariffsCount, newTariffs, balance: dashboardInfo }
+  if (!fetchVpsPayments) {
+    syncSummary.tariffsOnly = true
+  }
+  return { vpsCount, paymentsCount, tariffsCount, newTariffs, balance: dashboardInfo, syncSummary }
 }

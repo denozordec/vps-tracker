@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   billingModeLabel,
   faviconUrlFromWebsite,
@@ -10,6 +11,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { syncAccount, testApiConnection, fetchAccountBalance, fetchSyncStatus } from '../lib/api'
 import { noBrowserSuggestProps, passwordCredentialInputProps } from '../lib/noBrowserSuggestProps'
+import { getBalanceMismatchAccountIds, getStaleSyncAccountIds } from '../lib/inventory-health'
 import { IconRefresh, IconPlugConnected } from '@tabler/icons-react'
 
 const emptyForm = {
@@ -23,9 +25,12 @@ const emptyForm = {
   apiBaseUrl: '',
   apiLogin: '',
   apiPassword: '',
+  balance_alert_below: '',
 }
 
 export function AccountsPage({ db, actions, settings, ratesData }) {
+  const [searchParams] = useSearchParams()
+  const accountsHealth = (searchParams.get('health') || '').trim()
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -52,6 +57,16 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   const [testConnectionLoading, setTestConnectionLoading] = useState(false)
   const [testConnectionResult, setTestConnectionResult] = useState(null)
   const [syncLog, setSyncLog] = useState([])
+
+  const highlightAccountIds = useMemo(() => {
+    if (accountsHealth === 'stale-sync') {
+      return new Set(getStaleSyncAccountIds(db.providerAccounts, syncLog))
+    }
+    if (accountsHealth === 'balance-mismatch') {
+      return new Set(getBalanceMismatchAccountIds(db.providerAccounts, db.balanceLedger))
+    }
+    return null
+  }, [accountsHealth, db.providerAccounts, db.balanceLedger, syncLog])
 
   const balances = useMemo(() => {
     return db.providerAccounts.map((account) => {
@@ -107,6 +122,14 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
     if (form.apiType === 'billmanager' && form.apiLogin && form.apiPassword) {
       payload.apiCredentials = `${form.apiLogin}:${form.apiPassword}`
     }
+    {
+      let b = null
+      if (String(form.balance_alert_below || '').trim() !== '') {
+        const x = Number(form.balance_alert_below)
+        if (Number.isFinite(x)) b = x
+      }
+      payload.balance_alert_below = b
+    }
     setSaveError(null)
     try {
       if (editingId) {
@@ -151,6 +174,10 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
       apiBaseUrl: account.apiBaseUrl || '',
       apiLogin: '',
       apiPassword: '',
+      balance_alert_below:
+        account.balance_alert_below != null && account.balance_alert_below !== ''
+          ? String(account.balance_alert_below)
+          : '',
     })
     setEditingId(account.id)
     setIsModalOpen(true)
@@ -212,6 +239,44 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
   return (
     <>
       <PageHeader pretitle="Справочники" title="Аккаунты хостеров" />
+      {accountsHealth === 'stale-sync' ? (
+        highlightAccountIds?.size ? (
+          <div className="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span>
+              Подсвечены аккаунты без успешного синка дольше 48 ч или без записей в журнале.
+            </span>
+            <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
+              Сбросить фильтр
+            </Link>
+          </div>
+        ) : (
+          <div className="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span>Все BILLmanager-аккаунты имеют недавний успешный синк.</span>
+            <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
+              Закрыть
+            </Link>
+          </div>
+        )
+      ) : null}
+      {accountsHealth === 'balance-mismatch' ? (
+        highlightAccountIds?.size ? (
+          <div className="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span>
+              Подсвечены аккаунты, где баланс API заметно расходится с суммой по ledger (та же валюта).
+            </span>
+            <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
+              Сбросить фильтр
+            </Link>
+          </div>
+        ) : (
+          <div className="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span>Расхождений баланса API и ledger по выбранным правилам не найдено.</span>
+            <Link to="/accounts" className="btn btn-sm btn-outline-secondary">
+              Закрыть
+            </Link>
+          </div>
+        )
+      ) : null}
       <div className="row row-cards">
       <div className="col-12">
         <div className="card">
@@ -267,8 +332,9 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                 {db.providerAccounts.map((account) => {
                   const provider = db.providers.find((item) => item.id === account.providerId)
                   const linkedVps = db.vps.filter((item) => item.providerAccountId === account.id)
+                  const rowWarn = highlightAccountIds?.has(account.id)
                   return (
-                    <tr key={account.id}>
+                    <tr key={account.id} className={rowWarn ? 'table-warning' : undefined}>
                       <td>{account.name}</td>
                       <td>
                         <div className="d-flex align-items-center gap-2">
@@ -507,6 +573,23 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
                       : testConnectionResult.error}
                   </span>
                 ) : null}
+              </div>
+              <div className="col-12">
+                <label className="form-label">Порог баланса для Telegram</label>
+                <input
+                  {...noBrowserSuggestProps}
+                  type="number"
+                  step="any"
+                  className="form-control"
+                  placeholder="Пусто — не слать по балансу"
+                  value={form.balance_alert_below}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, balance_alert_below: e.target.value }))
+                  }
+                />
+                <div className="form-hint">
+                  При плановом синке, если баланс API ниже этого значения — уведомление (вкл. в настройках).
+                </div>
               </div>
             </>
           ) : null}

@@ -13,10 +13,12 @@ import { seed, isDbEmpty } from './seed.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // db/ is in server/, so .. = server, .. again = project root
-const DB_PATH = join(__dirname, '..', '..', 'data', 'vps-tracker.db')
+export const DB_PATH = join(__dirname, '..', '..', 'data', 'vps-tracker.db')
 const SEED_DIR = join(__dirname, '..', '..', 'public', 'data')
 
 let dbInstance = null
+/** @type {import('sql.js').SqlJsStatic | null} */
+let sqlJsFactory = null
 
 export async function initDb() {
   const dataDir = join(__dirname, '..', '..', 'data')
@@ -25,6 +27,7 @@ export async function initDb() {
   }
 
   const SQL = await initSqlJs()
+  sqlJsFactory = SQL
   let db
 
   if (existsSync(DB_PATH)) {
@@ -109,4 +112,28 @@ export function saveDb() {
   if (!dbInstance) return
   const data = dbInstance.export()
   writeFileSync(DB_PATH, Buffer.from(data))
+}
+
+/**
+ * Заменить in-memory БД из буфера SQLite и сохранить на диск.
+ * @param {Buffer|Uint8Array} buffer
+ */
+export async function reloadDatabaseFromBuffer(buffer) {
+  const SQL = sqlJsFactory || (await initSqlJs())
+  sqlJsFactory = SQL
+  if (dbInstance) {
+    dbInstance.close()
+    dbInstance = null
+  }
+  const u8 = buffer instanceof Buffer ? new Uint8Array(buffer) : buffer
+  dbInstance = new SQL.Database(u8)
+  dbInstance.exec(SCHEMA)
+  for (const m of MIGRATIONS) {
+    try {
+      m.run(dbInstance)
+    } catch (err) {
+      console.warn(`Migration ${m.name} after reload failed:`, err.message)
+    }
+  }
+  saveDb()
 }
