@@ -138,4 +138,39 @@ export const MIGRATIONS = [
       }
     },
   },
+  {
+    name: 'settings_telegram',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN telegramBotToken TEXT')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN telegramChatId TEXT')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN notifyPaymentExpiryEnabled INTEGER')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN notifyNewTariffsEnabled INTEGER')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+    },
+  },
+  {
+    name: 'settings_telegram_thread',
+    run(db) {
+      try {
+        db.exec('ALTER TABLE settings ADD COLUMN telegramMessageThreadId TEXT')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+    },
+  },
 ]

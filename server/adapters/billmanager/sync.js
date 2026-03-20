@@ -172,7 +172,11 @@ export async function syncFromBillmanager(account, db, opts = {}) {
   }
 
   let tariffsCount = 0
+  let newTariffs = []
   if (fetchTariffs) {
+  const existingTariffIds = new Set(
+    db.prepare('SELECT id FROM active_tariffs WHERE providerAccountId = ?').all(accountId).map((r) => r.id),
+  )
   const syncedAt = new Date().toISOString()
   db.run('DELETE FROM active_tariffs WHERE providerAccountId = ?', accountId)
   const tariffInsertSql = `INSERT INTO active_tariffs (id, providerAccountId, providerId, externalId, datacenterKey, datacenterName, name, desc, vcpu, ramGb, diskGb, diskType, virtualization, channel, location, country, cpuModel, orderAvailable, price, syncedAt)
@@ -182,6 +186,9 @@ export async function syncFromBillmanager(account, db, opts = {}) {
     const dcKey = t.datacenterKey ?? ''
     const dcName = t.datacenterName ?? ''
     const id = dcKey ? `tariff-bm-${accountId}-${t.externalId}-${dcKey}` : `tariff-bm-${accountId}-${t.externalId}`
+    if (!existingTariffIds.has(id)) {
+      newTariffs.push({ name: t.name || '', price: t.price || '', providerId })
+    }
     db.run(tariffInsertSql,
       id,
       accountId,
@@ -220,5 +227,5 @@ export async function syncFromBillmanager(account, db, opts = {}) {
   }
   }
 
-  return { vpsCount, paymentsCount, tariffsCount, balance: dashboardInfo }
+  return { vpsCount, paymentsCount, tariffsCount, newTariffs, balance: dashboardInfo }
 }

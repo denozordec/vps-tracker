@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
+import { sendTelegramTestNotification } from '../lib/api'
 
 const defaultSettings = {
   baseCurrency: 'RUB',
@@ -9,6 +10,11 @@ const defaultSettings = {
   syncEnabled: false,
   syncIntervalMinutes: 60,
   syncTariffsIntervalMinutes: 1440,
+  telegramBotToken: '',
+  telegramChatId: '',
+  telegramMessageThreadId: '',
+  notifyPaymentExpiryEnabled: false,
+  notifyNewTariffsEnabled: false,
 }
 
 export function SettingsPage({ db, actions, ratesData, ratesError }) {
@@ -20,21 +26,34 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
     syncEnabled: current.syncEnabled !== false && Boolean(current.syncEnabled),
     syncIntervalMinutes: current.syncIntervalMinutes ?? 60,
     syncTariffsIntervalMinutes: current.syncTariffsIntervalMinutes ?? 1440,
+    telegramBotToken: '',
+    telegramChatId: current.telegramChatId ?? '',
+    telegramMessageThreadId: current.telegramMessageThreadId ?? '',
+    notifyPaymentExpiryEnabled: Boolean(current.notifyPaymentExpiryEnabled),
+    notifyNewTariffsEnabled: Boolean(current.notifyNewTariffsEnabled),
   })
+  const [telegramTokenEdited, setTelegramTokenEdited] = useState(false)
+  const [telegramTestLoading, setTelegramTestLoading] = useState(false)
+  const [telegramTestMessage, setTelegramTestMessage] = useState(null)
   const [newFieldLabel, setNewFieldLabel] = useState('')
   const customFields = Array.isArray(current.customFields) ? current.customFields : []
 
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- sync form when settings change from parent */
-    setForm({
+    setForm((prev) => ({
+      ...prev,
       baseCurrency: current.baseCurrency || 'RUB',
       ratesUrl: current.ratesUrl || 'https://www.cbr-xml-daily.ru/latest.js',
       autoConvert: current.autoConvert !== false,
       syncEnabled: Boolean(current.syncEnabled),
       syncIntervalMinutes: current.syncIntervalMinutes ?? 60,
       syncTariffsIntervalMinutes: current.syncTariffsIntervalMinutes ?? 1440,
-    })
-  }, [current.baseCurrency, current.ratesUrl, current.autoConvert, current.syncEnabled, current.syncIntervalMinutes, current.syncTariffsIntervalMinutes])
+      telegramChatId: current.telegramChatId ?? '',
+      telegramMessageThreadId: current.telegramMessageThreadId ?? '',
+      notifyPaymentExpiryEnabled: Boolean(current.notifyPaymentExpiryEnabled),
+      notifyNewTariffsEnabled: Boolean(current.notifyNewTariffsEnabled),
+    }))
+  }, [current.baseCurrency, current.ratesUrl, current.autoConvert, current.syncEnabled, current.syncIntervalMinutes, current.syncTariffsIntervalMinutes, current.telegramChatId, current.telegramMessageThreadId, current.notifyPaymentExpiryEnabled, current.notifyNewTariffsEnabled])
 
   const availableCurrencies = useMemo(() => {
     const list = new Set(['RUB', 'USD', 'EUR'])
@@ -61,6 +80,35 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
       syncIntervalMinutes: Math.max(15, Number(form.syncIntervalMinutes) || 60),
       syncTariffsIntervalMinutes: Math.max(60, Number(form.syncTariffsIntervalMinutes) || 1440),
     })
+  }
+
+  const onTelegramTest = async () => {
+    setTelegramTestMessage(null)
+    setTelegramTestLoading(true)
+    try {
+      await sendTelegramTestNotification()
+      setTelegramTestMessage({ type: 'success', text: 'Тестовое уведомление отправлено' })
+    } catch (err) {
+      setTelegramTestMessage({ type: 'danger', text: err.message || 'Ошибка отправки' })
+    } finally {
+      setTelegramTestLoading(false)
+    }
+  }
+
+  const onTelegramSubmit = (event) => {
+    event.preventDefault()
+    const payload = {
+      telegramChatId: form.telegramChatId || '',
+      telegramMessageThreadId: form.telegramMessageThreadId || '',
+      notifyPaymentExpiryEnabled: form.notifyPaymentExpiryEnabled,
+      notifyNewTariffsEnabled: form.notifyNewTariffsEnabled,
+    }
+    if (telegramTokenEdited && form.telegramBotToken !== undefined) {
+      payload.telegramBotToken = form.telegramBotToken || ''
+    }
+    actions.upsertSettings(payload)
+    setTelegramTokenEdited(false)
+    setForm((prev) => ({ ...prev, telegramBotToken: '' }))
   }
 
   const addCustomField = () => {
@@ -243,6 +291,111 @@ export function SettingsPage({ db, actions, ratesData, ratesError }) {
                   Сохранить
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12 col-lg-6">
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Уведомления Telegram</h3>
+          </div>
+          <div className="card-body">
+            <p className="text-secondary small mb-3">
+              Уведомления отправляются в Telegram при периодической синхронизации. Каждый тип можно включить или отключить отдельно.
+            </p>
+            <form className="row g-3" onSubmit={onTelegramSubmit}>
+              <div className="col-12">
+                <label className="form-label">Токен бота</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  value={form.telegramBotToken}
+                  onChange={(e) => {
+                    setForm((prev) => ({ ...prev, telegramBotToken: e.target.value }))
+                    setTelegramTokenEdited(true)
+                  }}
+                  placeholder={current.telegramBotTokenSet ? '••••••••' : 'Токен от @BotFather'}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="col-12">
+                <label className="form-label">Chat ID (SuperGroup)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.telegramChatId}
+                  onChange={(e) => setForm((prev) => ({ ...prev, telegramChatId: e.target.value }))}
+                  placeholder="например -1001234567890"
+                />
+                <div className="text-secondary small mt-1">
+                  ID группы (отрицательное число). Добавьте бота в группу, затем getUpdates — chat.id.
+                </div>
+              </div>
+              <div className="col-12">
+                <label className="form-label">ID топика (цепочки сообщений)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.telegramMessageThreadId}
+                  onChange={(e) => setForm((prev) => ({ ...prev, telegramMessageThreadId: e.target.value }))}
+                  placeholder="необязательно, например 12345"
+                />
+                <div className="text-secondary small mt-1">
+                  Для SuperGroup с топиками — ID топика. Оставьте пустым для общей ленты группы.
+                </div>
+              </div>
+              <div className="col-12">
+                <label className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={form.notifyPaymentExpiryEnabled}
+                    onChange={(e) => setForm((prev) => ({ ...prev, notifyPaymentExpiryEnabled: e.target.checked }))}
+                  />
+                  <span className="form-check-label">Уведомления об истекающей оплате (ближайшие 7 дней)</span>
+                </label>
+              </div>
+              <div className="col-12">
+                <label className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={form.notifyNewTariffsEnabled}
+                    onChange={(e) => setForm((prev) => ({ ...prev, notifyNewTariffsEnabled: e.target.checked }))}
+                  />
+                  <span className="form-check-label">Уведомления о новых тарифах</span>
+                </label>
+              </div>
+              <div className="col-12 d-flex justify-content-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={onTelegramTest}
+                  disabled={telegramTestLoading || !current.telegramBotTokenSet || !current.telegramChatId}
+                >
+                  {telegramTestLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1" />
+                      Отправка…
+                    </>
+                  ) : (
+                    <>
+                      <IconSend size={16} className="me-1" />
+                      Тестовое уведомление
+                    </>
+                  )}
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Сохранить
+                </button>
+              </div>
+              {telegramTestMessage ? (
+                <div className={`col-12 alert alert-${telegramTestMessage.type} py-2 mb-0`}>
+                  {telegramTestMessage.text}
+                </div>
+              ) : null}
             </form>
           </div>
         </div>

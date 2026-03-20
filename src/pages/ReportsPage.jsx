@@ -91,18 +91,7 @@ export function ReportsPage({ db, settings, ratesData }) {
       const allDebits = [...debitsDirect, ...debitsAccountLevel]
       const totalPayments = allPayments.reduce((acc, item) => acc + Number(item.amount || 0), 0)
       const totalDebits = allDebits.reduce((acc, item) => acc + Number(item.amount || 0), 0)
-      let total = totalPayments + totalDebits
-
-      if (total === 0 && (vps.monthlyRate != null && vps.monthlyRate > 0 || vps.dailyRate != null && vps.dailyRate > 0)) {
-        const monthly = Number(vps.monthlyRate) || 0
-        const daily = Number(vps.dailyRate) || 0
-        if (dateFrom && dateTo) {
-          const days = Math.ceil((new Date(dateTo) - new Date(dateFrom)) / (24 * 60 * 60 * 1000)) + 1
-          total = monthly > 0 ? monthly * Math.ceil(days / 30) : daily * days
-        } else {
-          total = monthly > 0 ? monthly : daily * 30
-        }
-      }
+      const total = totalPayments + totalDebits
 
       return {
         providerId: vps.providerId,

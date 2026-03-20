@@ -51,7 +51,14 @@ async function fetchApi(path, options = {}) {
     ...options,
   })
   if (!res.ok) {
-    const err = new Error(res.statusText || 'API error')
+    let message = res.statusText || 'API error'
+    try {
+      const data = await res.json()
+      if (data?.error) message = data.error
+    } catch {
+      /* ignore */
+    }
+    const err = new Error(message)
     err.status = res.status
     err.response = res
     throw err
@@ -155,4 +162,9 @@ export async function testApiConnection(apiBaseUrl, apiCredentials) {
 
 export async function fetchSyncStatus() {
   return fetchApi('/api/sync/status')
+}
+
+export async function sendTelegramTestNotification() {
+  const res = await fetchApi('/api/settings/telegram/test', { method: 'POST' })
+  return res
 }

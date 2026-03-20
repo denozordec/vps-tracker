@@ -260,6 +260,10 @@ export function VpsPage({ db, actions, settings, ratesData }) {
   }
 
   const getAccountBalance = (providerAccountId) => {
+    const account = db.providerAccounts?.find((a) => a.id === providerAccountId)
+    if (account?.balance_api != null && Number.isFinite(Number(account.balance_api))) {
+      return Number(account.balance_api)
+    }
     const rows = db.balanceLedger.filter((row) => row.providerAccountId === providerAccountId)
     const credits = rows
       .filter((row) => row.direction === 'credit')
@@ -274,24 +278,41 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     if (item.status !== 'active') {
       return '-'
     }
+    const account = db.providerAccounts?.find((a) => a.id === item.providerAccountId)
+    const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+    const isDailyBilling = tariffType === 'daily' || account?.billingMode === 'daily'
+
+    let paidUntilFromApi = null
     if (item.paidUntil) {
       try {
         const d = new Date(item.paidUntil)
-        return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('ru-RU')
+        paidUntilFromApi = Number.isNaN(d.getTime()) ? null : d
       } catch {
-        return item.paidUntil
+        paidUntilFromApi = null
       }
     }
-    const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+
+    const now = new Date()
+    const isPaidUntilNextDay =
+      paidUntilFromApi &&
+      (() => {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const diffMs = paidUntilFromApi - today
+        const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000))
+        return diffDays >= 0 && diffDays <= 2
+      })()
+
+    const shouldCalculateFromBalance = isDailyBilling || isPaidUntilNextDay
+
+    if (!shouldCalculateFromBalance && paidUntilFromApi) {
+      return paidUntilFromApi.toLocaleDateString('ru-RU')
+    }
+
     const dailyRate = Number(item.dailyRate || 0)
     const monthlyRate = Number(item.monthlyRate || 0)
-    const activeRate = tariffType === 'daily' ? dailyRate : monthlyRate
-    if (activeRate <= 0) {
-      return '-'
-    }
     const burnRate = tariffType === 'daily' ? dailyRate : monthlyRate / 30
     if (!Number.isFinite(burnRate) || burnRate <= 0) {
-      return '-'
+      return paidUntilFromApi ? paidUntilFromApi.toLocaleDateString('ru-RU') : '-'
     }
 
     const directPayments = db.payments
@@ -307,7 +328,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     const funds = directPayments + allocatedBalance
     const coveredDays = Math.floor(funds / burnRate)
     if (!Number.isFinite(coveredDays) || coveredDays <= 0) {
-      return '-'
+      return paidUntilFromApi ? paidUntilFromApi.toLocaleDateString('ru-RU') : '-'
     }
 
     const paidUntil = new Date()

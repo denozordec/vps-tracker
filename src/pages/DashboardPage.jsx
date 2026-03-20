@@ -124,6 +124,13 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
   }, [payments, balanceLedger, vps, providerAccounts, providers, baseCurrency, ratesData])
 
   const accountBalances = providerAccounts.map((account) => {
+    if (account.balance_api != null && Number.isFinite(Number(account.balance_api))) {
+      return {
+        ...account,
+        balance: Number(account.balance_api),
+        currency: account.balance_currency || account.currency,
+      }
+    }
     const ledgerRows = balanceLedger.filter((row) => row.providerAccountId === account.id)
     const credits = ledgerRows
       .filter((row) => row.direction === 'credit')
@@ -141,6 +148,10 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
 
   const UPCOMING_DAYS = 7
   const getAccountBalance = (accountId) => {
+    const account = providerAccounts.find((a) => a.id === accountId)
+    if (account?.balance_api != null && Number.isFinite(Number(account.balance_api))) {
+      return Number(account.balance_api)
+    }
     const ledgerRows = balanceLedger.filter((row) => row.providerAccountId === accountId)
     const credits = ledgerRows
       .filter((row) => row.direction === 'credit')
@@ -153,26 +164,49 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
 
   const getPaidUntilDate = (item) => {
     if (item.status !== 'active') return null
-    if (item.paidUntil) {
-      const d = new Date(item.paidUntil)
-      return Number.isNaN(d.getTime()) ? null : d
-    }
+    const account = providerAccounts.find((a) => a.id === item.providerAccountId)
     const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
+    const isDailyBilling = tariffType === 'daily' || account?.billingMode === 'daily'
+
+    const paidUntilFromApi = item.paidUntil
+      ? (() => {
+          const d = new Date(item.paidUntil)
+          return Number.isNaN(d.getTime()) ? null : d
+        })()
+      : null
+
+    const isPaidUntilNextDay =
+      paidUntilFromApi &&
+      (() => {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const diffMs = paidUntilFromApi - today
+        const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000))
+        return diffDays >= 0 && diffDays <= 2
+      })()
+
+    const shouldCalculateFromBalance = isDailyBilling || isPaidUntilNextDay
+
+    if (!shouldCalculateFromBalance && paidUntilFromApi) {
+      return paidUntilFromApi
+    }
+
     const dailyRate = Number(item.dailyRate || 0)
     const monthlyRate = Number(item.monthlyRate || 0)
     const burnRate = tariffType === 'daily' ? dailyRate : monthlyRate / 30
-    if (!Number.isFinite(burnRate) || burnRate <= 0) return null
-    const directPayments = payments
-      .filter((p) => p.vpsId === item.id && p.type === 'direct_vps_payment')
-      .reduce((acc, p) => acc + Number(p.amount || 0), 0)
+    if (!Number.isFinite(burnRate) || burnRate <= 0) return paidUntilFromApi
+
     const accountBalance = getAccountBalance(item.providerAccountId)
     const activeInAccount = vps.filter(
       (v) => v.providerAccountId === item.providerAccountId && v.status === 'active',
     ).length
     const allocatedBalance = activeInAccount > 0 ? Math.max(0, accountBalance) / activeInAccount : 0
+    const directPayments = payments
+      .filter((p) => p.vpsId === item.id && p.type === 'direct_vps_payment')
+      .reduce((acc, p) => acc + Number(p.amount || 0), 0)
     const funds = directPayments + allocatedBalance
     const coveredDays = Math.floor(funds / burnRate)
-    if (!Number.isFinite(coveredDays) || coveredDays <= 0) return null
+    if (!Number.isFinite(coveredDays) || coveredDays <= 0) return paidUntilFromApi
+
     const paidUntil = new Date()
     paidUntil.setDate(paidUntil.getDate() + coveredDays)
     return paidUntil
@@ -190,7 +224,7 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
       .filter(({ paidUntil }) => paidUntil && paidUntil <= threshold && paidUntil >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
       .sort((a, b) => a.paidUntil - b.paidUntil)
       .slice(0, 10)
-  }, [vps, payments, balanceLedger])
+  }, [vps, payments, balanceLedger, providerAccounts])
 
   return (
     <>
