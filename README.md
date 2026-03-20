@@ -113,12 +113,12 @@ docker rm vps-tracker
 
 ## Запуск через Docker Compose
 
-Имеет смысл, если вы **склонировали этот репозиторий** и хотите собирать или менять конфигурацию через файл [docker-compose.yml](docker-compose.yml).
+Имеет смысл, если вы **склонировали этот репозиторий**: в [docker-compose.yml](docker-compose.yml) указан готовый образ **ghcr.io/denozordec/vps-tracker** — при `up` он подтягивается с GitHub Container Registry (локальная сборка не нужна).
 
 ```bash
 git clone https://github.com/denozordec/vps-tracker.git
 cd vps-tracker
-docker compose up -d --build
+docker compose up -d
 ```
 
 Данные по умолчанию сохраняются в папку `data` внутри каталога проекта на диске.
@@ -206,8 +206,10 @@ docker rm vps-tracker
 ```bash
 cd vps-tracker
 git pull
-docker compose up -d --build
+docker compose up -d
 ```
+
+Файл Compose настроен с `pull_policy: always`, поэтому при каждом `up` запрашивается актуальный образ с GHCR.
 
 ---
 

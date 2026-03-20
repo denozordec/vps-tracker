@@ -1,7 +1,8 @@
-# VPS Tracker: приложение + SQLite в ./data (создайте каталог или он появится при первом запуске)
+# VPS Tracker: образ с GHCR + SQLite в ./data на хосте
 services:
   app:
-    build: .
+    image: ghcr.io/denozordec/vps-tracker:latest
+    pull_policy: always
     ports:
       - "3001:3001"
     environment:
