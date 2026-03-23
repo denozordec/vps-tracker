@@ -449,7 +449,11 @@ export function AccountsPage({ db, actions, settings, ratesData }) {
       </div>
 
       <div className="col-12 mt-3">
-        <SyncLogTable syncLog={syncLog} providerAccounts={db.providerAccounts} />
+        <SyncLogTable
+          syncLog={syncLog}
+          providerAccounts={db.providerAccounts}
+          providers={db.providers}
+        />
       </div>
     </div>
 

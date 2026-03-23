@@ -1,10 +1,17 @@
+import { useMemo } from 'react'
 import { EmptyState } from './EmptyState'
 import { formatSyncSummaryLine } from '../lib/inventory-health'
+import { accountSelectLabel } from '../lib/account-select-label'
 
-export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
-  const getAccountName = (accountId) => {
+export function SyncLogTable({ syncLog = [], providerAccounts = [], providers = [] }) {
+  const providerById = useMemo(
+    () => new Map((providers || []).map((p) => [p.id, p])),
+    [providers],
+  )
+  const labelForAccountId = (accountId) => {
     const account = providerAccounts.find((a) => a.id === accountId)
-    return account?.name || accountId
+    if (!account) return accountId
+    return accountSelectLabel(account, providerById, '')
   }
 
   const formatDate = (dateStr) => {
@@ -33,7 +40,7 @@ export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
         <table className="table card-table table-vcenter">
           <thead>
             <tr>
-              <th>Аккаунт</th>
+              <th>Хостер / аккаунт</th>
               <th>Начало</th>
               <th>Окончание</th>
               <th>Статус</th>
@@ -46,7 +53,7 @@ export function SyncLogTable({ syncLog = [], providerAccounts = [] }) {
           <tbody>
             {syncLog.map((row) => (
               <tr key={row.id || `${row.accountId}-${row.startedAt}`}>
-                <td>{getAccountName(row.accountId)}</td>
+                <td>{labelForAccountId(row.accountId)}</td>
                 <td>{formatDate(row.startedAt)}</td>
                 <td>{formatDate(row.finishedAt)}</td>
                 <td>

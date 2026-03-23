@@ -152,11 +152,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
                         </span>
                       </td>
                       <td>
-                        <div>
-                          {account
-                            ? accountSelectLabel(account, providerById, '')
-                            : '-'}
-                        </div>
+                        <div>{account?.name || '-'}</div>
                         <div className="text-secondary">{vps?.dns || vps?.ip || '-'}</div>
                       </td>
                       <td>
