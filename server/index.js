@@ -18,6 +18,7 @@ import settingsRouter from './routes/settings.js'
 import syncRouter from './routes/sync.js'
 import projectsRouter from './routes/projects.js'
 import backupRouter from './routes/backup.js'
+import ratesProxyRouter from './routes/rates-proxy.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -39,6 +40,7 @@ app.use(express.json({ limit: '50mb' }))
   app.use('/api/sync', syncRouter)
   app.use('/api/projects', projectsRouter)
   app.use('/api/backup', backupRouter)
+  app.use('/api/rates-proxy', ratesProxyRouter)
 
   if (existsSync(distPath)) {
     app.use(express.static(distPath))

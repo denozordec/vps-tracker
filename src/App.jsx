@@ -56,7 +56,8 @@ function App() {
     if (!settings?.ratesUrl) {
       return
     }
-    fetch(settings.ratesUrl)
+    const proxyUrl = `/api/rates-proxy?url=${encodeURIComponent(settings.ratesUrl)}`
+    fetch(proxyUrl)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Не удалось получить курсы валют')

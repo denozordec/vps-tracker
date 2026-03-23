@@ -337,10 +337,16 @@ export function convertWithProviderRate(amount, currency, provider, appSettings,
     return { value: safeAmount * eurRate, currency: appBase, source: 'provider' }
   }
 
+  if (!ratesData || !ratesData.rates || !ratesData.base) {
+    return { value: safeAmount, currency: fromCurrency, source: 'no-rates' }
+  }
+
+  const converted = convertCurrency(safeAmount, fromCurrency, appBase, ratesData)
+  const didConvert = Math.abs(converted - safeAmount) > 0.0001 || fromCurrency === appBase
   return {
-    value: convertCurrency(safeAmount, fromCurrency, appBase, ratesData),
+    value: converted,
     currency: appBase,
-    source: 'global',
+    source: didConvert ? 'global' : 'no-rates',
   }
 }
 
