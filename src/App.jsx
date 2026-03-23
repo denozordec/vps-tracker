@@ -56,18 +56,20 @@ function App() {
     if (!settings?.ratesUrl) {
       return
     }
-    const proxyUrl = `/api/rates-proxy?url=${encodeURIComponent(settings.ratesUrl)}`
-    fetch(proxyUrl)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Не удалось получить курсы валют')
-        }
-        return response.json()
+    const directUrl = settings.ratesUrl
+    const proxyUrl = `/api/rates-proxy?url=${encodeURIComponent(directUrl)}`
+    const handlePayload = (payload) => {
+      setRatesData(normalizeRatesPayload(payload) ?? payload)
+      setRatesError('')
+    }
+    const fetchJson = (url) =>
+      fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
       })
-      .then((payload) => {
-        setRatesData(normalizeRatesPayload(payload) ?? payload)
-        setRatesError('')
-      })
+    fetchJson(proxyUrl)
+      .then(handlePayload)
+      .catch(() => fetchJson(directUrl).then(handlePayload))
       .catch((error) => {
         setRatesError(error.message || 'Ошибка загрузки курсов')
       })
