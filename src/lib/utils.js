@@ -174,22 +174,15 @@ function toIsoCurrency(currency) {
 }
 
 /**
- * Валюта суммы тарифа VPS: поле vps.currency, иначе (только у хостеров без API) — валюта приёма из справочника.
- * Для BILLmanager нельзя подставлять baseCurrency хостера при пустом поле: тариф в валюте из API (часто RUB).
- * У ручных хостеров «USD» в VPS часто дефолт формы — тогда берём валюту хостера.
+ * Валюта тарифа VPS = валюта хостера (provider.baseCurrency).
+ * vps.currency — только как запасной вариант, если хостер не найден.
  */
 export function effectiveVpsTariffCurrency(vps, provider) {
-  const ownRaw = (vps?.currency || '').trim()
-  const ownIso = ownRaw ? toIsoCurrency(ownRaw) : null
   const provRaw = (provider?.baseCurrency || '').trim()
-  const provIso = provRaw ? toIsoCurrency(provRaw) : null
-  const noApi = !(provider?.apiType || '').trim()
-  if (noApi && ownIso === 'USD' && provIso && provIso !== 'USD') {
-    return provIso
-  }
-  if (ownIso) return ownIso
-  if (provIso && noApi) return provIso
-  return noApi ? 'USD' : 'RUB'
+  if (provRaw) return toIsoCurrency(provRaw)
+  const ownRaw = (vps?.currency || '').trim()
+  if (ownRaw) return toIsoCurrency(ownRaw)
+  return 'RUB'
 }
 
 /**

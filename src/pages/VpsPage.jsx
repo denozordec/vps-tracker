@@ -374,14 +374,10 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     customFields.forEach((f) => {
       customFieldValues[f.key] = form[f.key] ?? ''
     })
-    const prov = providerById.get(form.providerId)
-    const resolvedCurrency =
-      (form.currency || '').trim() || (prov?.baseCurrency || '').trim() || 'USD'
     const payload = {
       ...restForm,
       ...customFieldValues,
       additionalIps,
-      currency: resolvedCurrency,
       dailyRate: form.tariffType === 'daily' ? form.dailyRate : '',
       monthlyRate: form.tariffType === 'monthly' ? form.monthlyRate : '',
     }
@@ -426,7 +422,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
       status: vps.status || 'active',
       tariffType:
         vps.tariffType || (Number(vps.dailyRate || 0) > 0 ? 'daily' : 'monthly'),
-      currency: effectiveVpsTariffCurrency(vps, providerById.get(vps.providerId)),
+      currency: vps.currency || '',
       dailyRate: vps.dailyRate || '',
       monthlyRate: vps.monthlyRate || '',
       createdAt: vps.createdAt || '',
@@ -1440,18 +1436,13 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 <select autoComplete="off"
                   className="form-select"
                   value={form.providerId}
-                  onChange={(e) => {
-                    const newProviderId = e.target.value
-                    const prov = providerById.get(newProviderId)
-                    const nextCur =
-                      (prov?.baseCurrency || '').trim().toUpperCase() || 'USD'
+                  onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      providerId: newProviderId,
+                      providerId: e.target.value,
                       providerAccountId: '',
-                      currency: nextCur,
                     }))
-                  }}
+                  }
                   required
                 >
                   <option value="">— Выберите —</option>
@@ -1681,7 +1672,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
           <section className="vps-form-section">
             <h6 className="vps-form-section-title">Тариф и оплата</h6>
             <div className="row g-3">
-              <div className="col-12 col-sm-6 col-md-3">
+              <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Статус</label>
                 <select autoComplete="off"
                   className="form-select"
@@ -1693,7 +1684,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <option value="archived">{vpsStatusLabel('archived')}</option>
                 </select>
               </div>
-              <div className="col-12 col-sm-6 col-md-3">
+              <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">Тип тарифа</label>
                 <select autoComplete="off"
                   className="form-select"
@@ -1711,7 +1702,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <option value="monthly">{tariffTypeLabel('monthly')}</option>
                 </select>
               </div>
-              <div className="col-12 col-sm-6 col-md-3">
+              <div className="col-12 col-sm-6 col-md-4">
                 <label className="form-label">
                   {form.tariffType === 'daily' ? 'Суточный тариф' : 'Месячный тариф'}
                 </label>
@@ -1731,21 +1722,13 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   placeholder="0.00"
                 />
               </div>
-              <div className="col-12 col-sm-6 col-md-3">
-                <label className="form-label">Валюта тарифа</label>
-                <select autoComplete="off"
-                  className="form-select"
-                  value={form.currency || (providerById.get(form.providerId)?.baseCurrency || '').trim() || 'USD'}
-                  onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
-                >
-                  <option value="RUB">RUB</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
-                <div className="text-secondary small mt-1">
-                  В списке VPS и конвертации используется эта валюта, а не только валюта хостера в справочнике.
+              {form.providerId ? (
+                <div className="col-12">
+                  <span className="text-secondary small">
+                    Валюта тарифа: {(providerById.get(form.providerId)?.baseCurrency || '—').toUpperCase()} (из справочника хостера)
+                  </span>
                 </div>
-              </div>
+              ) : null}
               <div className="col-12 col-sm-6">
                 <label className="form-label">Дата создания</label>
                 <input {...noBrowserSuggestProps}

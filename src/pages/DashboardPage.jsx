@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { convertCurrency, formatCurrency, monthKey } from '../lib/utils'
+import { convertCurrency, effectiveVpsTariffCurrency, formatCurrency, monthKey } from '../lib/utils'
 import { getPaidUntilDate as computePaidUntil } from '../lib/paid-until'
 import { computeInventoryHealth, formatSyncSummaryLine } from '../lib/inventory-health'
 import { fetchSyncStatus } from '../lib/api'
@@ -37,6 +37,11 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
 
   const activeVpsCount = vps.filter((item) => item.status === 'active').length
 
+  const providerById = useMemo(
+    () => new Map(providers.map((p) => [p.id, p])),
+    [providers],
+  )
+
   const monthForecast = useMemo(() => {
     return vps
       .filter((item) => item.status === 'active')
@@ -46,9 +51,10 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
           tariffType === 'daily'
             ? Number(item.dailyRate || 0) * 30
             : Number(item.monthlyRate || 0)
-        return acc + convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+        const cur = effectiveVpsTariffCurrency(item, providerById.get(item.providerId))
+        return acc + convertCurrency(amount, cur, baseCurrency, ratesData)
       }, 0)
-  }, [vps, baseCurrency, ratesData])
+  }, [vps, baseCurrency, ratesData, providerById])
 
   const monthExpenses = useMemo(() => {
     return [...payments, ...balanceLedger]
@@ -144,14 +150,15 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
         tariffType === 'daily'
           ? Number(item.dailyRate || 0) * 30
           : Number(item.monthlyRate || 0)
-      map[key].forecast += convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+      const cur = effectiveVpsTariffCurrency(item, providerById.get(item.providerId))
+      map[key].forecast += convertCurrency(amount, cur, baseCurrency, ratesData)
     }
     return Object.values(map).sort((a, b) => {
       if (a.key === '__none__') return 1
       if (b.key === '__none__') return -1
       return a.label.localeCompare(b.label, 'ru')
     })
-  }, [vps, baseCurrency, ratesData])
+  }, [vps, baseCurrency, ratesData, providerById])
 
   const forecastByAccount = useMemo(() => {
     return providerAccounts
@@ -164,13 +171,14 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
             tariffType === 'daily'
               ? Number(item.dailyRate || 0) * 30
               : Number(item.monthlyRate || 0)
-          forecast += convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+          const cur = effectiveVpsTariffCurrency(item, providerById.get(item.providerId))
+          forecast += convertCurrency(amount, cur, baseCurrency, ratesData)
         }
         return { account: acc, count: items.length, forecast }
       })
       .filter((row) => row.count > 0)
       .sort((a, b) => b.forecast - a.forecast)
-  }, [vps, providerAccounts, baseCurrency, ratesData])
+  }, [vps, providerAccounts, baseCurrency, ratesData, providerById])
 
   const accountBalances = providerAccounts.map((account) => {
     if (account.balance_api != null && Number.isFinite(Number(account.balance_api))) {

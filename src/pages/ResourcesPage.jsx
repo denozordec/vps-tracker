@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react'
 import {
   convertCurrency,
+  effectiveVpsTariffCurrency,
   formatCurrency,
 } from '../lib/utils'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 
-function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData) {
+function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData, providerById) {
   if (item.status !== 'active') return 0
   const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
   const amount =
     tariffType === 'daily'
       ? Number(item.dailyRate || 0) * 30
       : Number(item.monthlyRate || 0)
-  return convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+  const cur = effectiveVpsTariffCurrency(item, providerById.get(item.providerId))
+  return convertCurrency(amount, cur, baseCurrency, ratesData)
 }
 
 export function ResourcesPage({ db, settings, ratesData }) {
@@ -74,6 +76,11 @@ export function ResourcesPage({ db, settings, ratesData }) {
     })
   }, [db.vps, filters, customFields])
 
+  const providerById = useMemo(
+    () => new Map((db.providers || []).map((p) => [p.id, p])),
+    [db.providers],
+  )
+
   const groups = useMemo(() => {
     const map = new Map()
     const accounts = db.providerAccounts || []
@@ -123,7 +130,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
       g.vcpu += Number(item.vcpu || 0)
       g.ramGb += Number(item.ramGb || 0)
       g.diskGb += Number(item.diskGb || 0)
-      g.forecast += vpsMonthlyEstimateInBase(item, baseCurrency, ratesData)
+      g.forecast += vpsMonthlyEstimateInBase(item, baseCurrency, ratesData, providerById)
     }
     const list = [...map.values()]
     list.sort((a, b) => {
@@ -134,7 +141,7 @@ export function ResourcesPage({ db, settings, ratesData }) {
       return b.forecast - a.forecast || b.vcpu - a.vcpu
     })
     return list
-  }, [vpsFiltered, groupBy, db.providerAccounts, baseCurrency, ratesData])
+  }, [vpsFiltered, groupBy, db.providerAccounts, baseCurrency, ratesData, providerById])
 
   const maxForecast = useMemo(
     () => groups.reduce((m, g) => Math.max(m, g.forecast), 0),

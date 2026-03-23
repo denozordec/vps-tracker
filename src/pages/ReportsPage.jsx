@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   convertCurrency,
   downloadTextFile,
+  effectiveVpsTariffCurrency,
   formatCurrency,
   toCsv,
   vpsStatusLabel,
@@ -134,7 +135,7 @@ export function ReportsPage({ db, settings, ratesData }) {
         city: vps.city || '',
         status: vps.status,
         expense: Number(total.toFixed(2)),
-        currency: vps.currency || 'USD',
+        currency: effectiveVpsTariffCurrency(vps, provider),
       }
     })
   }, [db.payments, db.balanceLedger, db.providers, db.providerAccounts, db.vps, filters])
