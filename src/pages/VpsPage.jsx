@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   convertCurrency,
+  effectiveVpsTariffCurrency,
   faviconUrlFromWebsite,
   formatCurrency,
   getCountryFlagEmoji,
@@ -55,7 +56,7 @@ const emptyForm = {
   backupEnabled: false,
   status: 'active',
   tariffType: 'monthly',
-  currency: 'USD',
+  currency: '',
   dailyRate: '',
   monthlyRate: '',
   createdAt: new Date().toISOString().slice(0, 10),
@@ -85,14 +86,16 @@ function accountSelectLabel(account, providerById, scopedProviderId) {
   return `${providerName} / ${name}`
 }
 
-function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData) {
+function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData, providerById) {
   if (item.status !== 'active') return 0
   const tariffType = item.tariffType || (Number(item.dailyRate || 0) > 0 ? 'daily' : 'monthly')
   const amount =
     tariffType === 'daily'
       ? Number(item.dailyRate || 0) * 30
       : Number(item.monthlyRate || 0)
-  return convertCurrency(amount, item.currency || 'USD', baseCurrency, ratesData)
+  const provider = providerById.get(item.providerId)
+  const cur = effectiveVpsTariffCurrency(item, provider)
+  return convertCurrency(amount, cur, baseCurrency, ratesData)
 }
 
 function buildDefaultVpsFilters(customFields) {
@@ -189,7 +192,9 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         const mr = Number(item.monthlyRate || 0)
         const noMoney =
           (!Number.isFinite(dr) || dr <= 0) && (!Number.isFinite(mr) || mr <= 0)
-        const noCur = !(item.currency || '').trim()
+        const prov = providerById.get(item.providerId)
+        const noCur =
+          !(item.currency || '').trim() && !(prov?.baseCurrency || '').trim()
         return noMoney || noCur
       }
     }
@@ -201,7 +206,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
       }
     }
     return null
-  }, [healthKey, db.vps, db.providerAccounts, db.payments, db.balanceLedger])
+  }, [healthKey, db.vps, db.providerAccounts, db.payments, db.balanceLedger, providerById])
 
   const filteredVps = useMemo(() => {
     return db.vps.filter((item) => {
@@ -294,7 +299,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
           items: filteredVps,
           count: filteredVps.length,
           forecast: filteredVps.reduce(
-            (acc, item) => acc + vpsMonthlyEstimateInBase(item, baseCurrency, ratesData),
+            (acc, item) => acc + vpsMonthlyEstimateInBase(item, baseCurrency, ratesData, providerById),
             0,
           ),
         },
@@ -314,7 +319,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     return keys.map((key) => {
       const items = map.get(key)
       const forecast = items.reduce(
-        (acc, item) => acc + vpsMonthlyEstimateInBase(item, baseCurrency, ratesData),
+        (acc, item) => acc + vpsMonthlyEstimateInBase(item, baseCurrency, ratesData, providerById),
         0,
       )
       return {
@@ -325,7 +330,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
         forecast,
       }
     })
-  }, [filteredVps, filters.groupByProject, baseCurrency, ratesData])
+  }, [filteredVps, filters.groupByProject, baseCurrency, ratesData, providerById])
 
   const tableColCount = 8 + (viewMode === 'extended' ? 16 + customFields.length : 0)
 
@@ -376,10 +381,14 @@ export function VpsPage({ db, actions, settings, ratesData }) {
     customFields.forEach((f) => {
       customFieldValues[f.key] = form[f.key] ?? ''
     })
+    const prov = providerById.get(form.providerId)
+    const resolvedCurrency =
+      (form.currency || '').trim() || (prov?.baseCurrency || '').trim() || 'USD'
     const payload = {
       ...restForm,
       ...customFieldValues,
       additionalIps,
+      currency: resolvedCurrency,
       dailyRate: form.tariffType === 'daily' ? form.dailyRate : '',
       monthlyRate: form.tariffType === 'monthly' ? form.monthlyRate : '',
     }
@@ -424,7 +433,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
       status: vps.status || 'active',
       tariffType:
         vps.tariffType || (Number(vps.dailyRate || 0) > 0 ? 'daily' : 'monthly'),
-      currency: vps.currency || 'USD',
+      currency: effectiveVpsTariffCurrency(vps, providerById.get(vps.providerId)),
       dailyRate: vps.dailyRate || '',
       monthlyRate: vps.monthlyRate || '',
       createdAt: vps.createdAt || '',
@@ -1319,7 +1328,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                         </div>
                         <ConvertedAmount
                           amount={tariffAmount}
-                          currency={item.currency}
+                          currency={effectiveVpsTariffCurrency(item, provider)}
                           provider={provider}
                           settings={settings}
                           ratesData={ratesData}
@@ -1438,13 +1447,18 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                 <select autoComplete="off"
                   className="form-select"
                   value={form.providerId}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const newProviderId = e.target.value
+                    const prov = providerById.get(newProviderId)
+                    const nextCur =
+                      (prov?.baseCurrency || '').trim().toUpperCase() || 'USD'
                     setForm((prev) => ({
                       ...prev,
-                      providerId: e.target.value,
+                      providerId: newProviderId,
                       providerAccountId: '',
+                      currency: nextCur,
                     }))
-                  }
+                  }}
                   required
                 >
                   <option value="">— Выберите —</option>
@@ -1674,7 +1688,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
           <section className="vps-form-section">
             <h6 className="vps-form-section-title">Тариф и оплата</h6>
             <div className="row g-3">
-              <div className="col-12 col-sm-6 col-md-4">
+              <div className="col-12 col-sm-6 col-md-3">
                 <label className="form-label">Статус</label>
                 <select autoComplete="off"
                   className="form-select"
@@ -1686,7 +1700,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <option value="archived">{vpsStatusLabel('archived')}</option>
                 </select>
               </div>
-              <div className="col-12 col-sm-6 col-md-4">
+              <div className="col-12 col-sm-6 col-md-3">
                 <label className="form-label">Тип тарифа</label>
                 <select autoComplete="off"
                   className="form-select"
@@ -1704,7 +1718,7 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   <option value="monthly">{tariffTypeLabel('monthly')}</option>
                 </select>
               </div>
-              <div className="col-12 col-sm-6 col-md-4">
+              <div className="col-12 col-sm-6 col-md-3">
                 <label className="form-label">
                   {form.tariffType === 'daily' ? 'Суточный тариф' : 'Месячный тариф'}
                 </label>
@@ -1723,6 +1737,21 @@ export function VpsPage({ db, actions, settings, ratesData }) {
                   }
                   placeholder="0.00"
                 />
+              </div>
+              <div className="col-12 col-sm-6 col-md-3">
+                <label className="form-label">Валюта тарифа</label>
+                <select autoComplete="off"
+                  className="form-select"
+                  value={form.currency || (providerById.get(form.providerId)?.baseCurrency || '').trim() || 'USD'}
+                  onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
+                >
+                  <option value="RUB">RUB</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+                <div className="text-secondary small mt-1">
+                  В списке VPS и конвертации используется эта валюта, а не только валюта хостера в справочнике.
+                </div>
               </div>
               <div className="col-12 col-sm-6">
                 <label className="form-label">Дата создания</label>

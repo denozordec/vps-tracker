@@ -172,6 +172,24 @@ function toIsoCurrency(currency) {
 }
 
 /**
+ * Валюта суммы тарифа VPS: поле vps.currency, иначе валюта приёма платежей хостера (справочник).
+ * Для хостеров без API «USD» в записи VPS часто остаётся дефолтом формы — тогда берём валюту хостера.
+ */
+export function effectiveVpsTariffCurrency(vps, provider) {
+  const ownRaw = (vps?.currency || '').trim()
+  const ownIso = ownRaw ? toIsoCurrency(ownRaw) : null
+  const provRaw = (provider?.baseCurrency || '').trim()
+  const provIso = provRaw ? toIsoCurrency(provRaw) : null
+  const noApi = !(provider?.apiType || '').trim()
+  if (noApi && ownIso === 'USD' && provIso && provIso !== 'USD') {
+    return provIso
+  }
+  if (ownIso) return ownIso
+  if (provIso) return provIso
+  return 'USD'
+}
+
+/**
  * Форматирует сумму в валюте (ru-RU)
  * @param {number} amount
  * @param {string} [currency='USD']
