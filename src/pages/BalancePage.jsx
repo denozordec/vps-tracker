@@ -8,6 +8,7 @@ import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { ConvertedAmount } from '../components/ConvertedAmount'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
+import { accountSelectLabel } from '../lib/account-select-label'
 
 const emptyForm = {
   type: 'daily_debit',
@@ -23,6 +24,11 @@ export function BalancePage({ db, actions, settings, ratesData }) {
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const providerById = useMemo(
+    () => new Map(db.providers.map((p) => [p.id, p])),
+    [db.providers],
+  )
 
   const vpsOptions = useMemo(
     () => db.vps.filter((vps) => !form.providerAccountId || vps.providerAccountId === form.providerAccountId),
@@ -94,7 +100,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
               <tbody>
                 {accountBalances.map((account) => (
                   <tr key={account.id}>
-                    <td>{account.name}</td>
+                    <td>{accountSelectLabel(account, providerById, '')}</td>
                     <td>{billingModeLabel(account.billingMode)}</td>
                     <td>
                       <ConvertedAmount
@@ -146,7 +152,11 @@ export function BalancePage({ db, actions, settings, ratesData }) {
                         </span>
                       </td>
                       <td>
-                        <div>{account?.name || '-'}</div>
+                        <div>
+                          {account
+                            ? accountSelectLabel(account, providerById, '')
+                            : '-'}
+                        </div>
                         <div className="text-secondary">{vps?.dns || vps?.ip || '-'}</div>
                       </td>
                       <td>
@@ -216,7 +226,7 @@ export function BalancePage({ db, actions, settings, ratesData }) {
               <option value="">Выберите аккаунт</option>
               {db.providerAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name}
+                  {accountSelectLabel(account, providerById, '')}
                 </option>
               ))}
             </select>

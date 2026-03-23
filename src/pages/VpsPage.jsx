@@ -29,6 +29,7 @@ import { ProjectSuggestInput } from '../components/ProjectSuggestInput'
 import { noBrowserSuggestProps } from '../lib/noBrowserSuggestProps'
 import { getPaidUntilDate as computePaidUntilForHealth } from '../lib/paid-until'
 import { billmanagerSyncableAccounts } from '../lib/billmanager-ui'
+import { accountSelectLabel } from '../lib/account-select-label'
 
 const emptyForm = {
   ip: '',
@@ -76,14 +77,6 @@ function loadFilterPresets() {
   } catch {
     return []
   }
-}
-
-/** Подпись аккаунта в select: при фильтре по одному хостеру — только имя, иначе «хостер / аккаунт». */
-function accountSelectLabel(account, providerById, scopedProviderId) {
-  const name = account.name?.trim() || '—'
-  if (scopedProviderId) return name
-  const providerName = providerById.get(account.providerId)?.name ?? '—'
-  return `${providerName} / ${name}`
 }
 
 function vpsMonthlyEstimateInBase(item, baseCurrency, ratesData, providerById) {
