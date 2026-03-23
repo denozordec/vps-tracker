@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { convertCurrency, effectiveVpsTariffCurrency, formatCurrency, monthKey } from '../lib/utils'
+import { accountSelectLabel } from '../lib/account-select-label'
 import { getPaidUntilDate as computePaidUntil } from '../lib/paid-until'
 import { computeInventoryHealth, formatSyncSummaryLine } from '../lib/inventory-health'
 import { fetchSyncStatus } from '../lib/api'
@@ -351,7 +352,7 @@ export function DashboardPage({ db = {}, settings, ratesData }) {
               <tbody>
                 {accountBalances.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.name}</td>
+                    <td>{accountSelectLabel(item, providerById, '')}</td>
                     <td>{item.currency}</td>
                     <td>
                       <ConvertedAmount
