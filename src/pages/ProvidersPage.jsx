@@ -223,6 +223,12 @@ export function ProvidersPage({ db, actions }) {
             />
           </div>
           <div className="col-12">
+            <div className="text-secondary small">
+              Курс USD/EUR: рублей (или единиц валюты отображения в настройках) за 1 USD/EUR. Пусто или «auto» —
+              конвертация по ссылке на курсы валют из настроек.
+            </div>
+          </div>
+          <div className="col-12">
             <label className="form-label">Заметки</label>
             <textarea {...noBrowserSuggestProps}
               className="form-control"

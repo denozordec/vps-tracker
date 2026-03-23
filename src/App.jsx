@@ -18,6 +18,7 @@ import {
   loadDataSet,
   updateRecord,
 } from './lib/api'
+import { normalizeRatesPayload } from './lib/utils'
 
 function App() {
   const [isReady, setIsReady] = useState(false)
@@ -63,7 +64,7 @@ function App() {
         return response.json()
       })
       .then((payload) => {
-        setRatesData(payload)
+        setRatesData(normalizeRatesPayload(payload) ?? payload)
         setRatesError('')
       })
       .catch((error) => {

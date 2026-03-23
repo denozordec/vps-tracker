@@ -209,6 +209,59 @@ export function formatCurrency(amount, currency = 'USD') {
 }
 
 /**
+ * Числовой курс хостера из справочника: только явное положительное число.
+ * Пусто, «auto», невалид — нет своего курса, используется ссылка на курсы из настроек.
+ * @param {unknown} raw
+ * @returns {number}
+ */
+export function parseProviderFxRate(raw) {
+  if (raw == null) return NaN
+  const s = String(raw).trim()
+  if (!s) return NaN
+  if (s.toLowerCase() === 'auto') return NaN
+  const n = Number(s.replace(',', '.'))
+  if (!Number.isFinite(n) || n <= 0) return NaN
+  return n
+}
+
+/**
+ * Приводит ответ API курсов к виду { base, rates }.
+ * Поддержка JSON ЦБ с полем Valute (daily_json.js) и уже нормализованного latest.js.
+ * @param {object|null|undefined} payload
+ * @returns {{ base: string, rates: object, date?: string }|null}
+ */
+export function normalizeRatesPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null
+  if (payload.base && payload.rates && typeof payload.rates === 'object') {
+    return payload
+  }
+  if (payload.Valute && typeof payload.Valute === 'object') {
+    const rates = {}
+    for (const v of Object.values(payload.Valute)) {
+      const code = v?.CharCode
+      const val = Number(v?.Value)
+      const nom = Number(v?.Nominal) || 1
+      if (
+        typeof code === 'string' &&
+        code.length === 3 &&
+        Number.isFinite(val) &&
+        val > 0 &&
+        nom > 0
+      ) {
+        rates[code] = nom / val
+      }
+    }
+    if (Object.keys(rates).length === 0) return null
+    return {
+      base: 'RUB',
+      rates,
+      date: typeof payload.Date === 'string' ? payload.Date : '',
+    }
+  }
+  return null
+}
+
+/**
  * Конвертирует сумму из одной валюты в другую по ratesData (CBR и т.п.)
  * @param {number} amount
  * @param {string} fromCurrency
@@ -267,7 +320,7 @@ export function formatInBaseCurrency(amount, currency, appSettings, ratesData) {
  * Конвертирует сумму в валюту отображения (из настроек).
  * provider.baseCurrency — валюта, в которой хостер принимает платежи.
  * settings.baseCurrency — валюта отображения на дашбордах.
- * Курсы хостера (usdRate, eurRate) — курс 1 USD/EUR в валюту отображения.
+ * Курсы хостера (usdRate, eurRate) — только если заданы явные числа; иначе — курсы по ссылке из настроек.
  */
 export function convertWithProviderRate(amount, currency, provider, appSettings, ratesData) {
   const safeAmount = Number(amount)
@@ -282,12 +335,12 @@ export function convertWithProviderRate(amount, currency, provider, appSettings,
     return { value: safeAmount, currency: appBase, source: 'native' }
   }
 
-  const usdRate = Number(provider?.usdRate)
-  const eurRate = Number(provider?.eurRate)
-  if (fromCurrency === 'USD' && Number.isFinite(usdRate) && usdRate > 0) {
+  const usdRate = parseProviderFxRate(provider?.usdRate)
+  const eurRate = parseProviderFxRate(provider?.eurRate)
+  if (fromCurrency === 'USD' && Number.isFinite(usdRate)) {
     return { value: safeAmount * usdRate, currency: appBase, source: 'provider' }
   }
-  if (fromCurrency === 'EUR' && Number.isFinite(eurRate) && eurRate > 0) {
+  if (fromCurrency === 'EUR' && Number.isFinite(eurRate)) {
     return { value: safeAmount * eurRate, currency: appBase, source: 'provider' }
   }
 
