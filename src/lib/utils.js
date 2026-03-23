@@ -167,13 +167,16 @@ function toIsoCurrency(currency) {
   if (!currency || typeof currency !== 'string') return 'USD'
   const trimmed = currency.trim()
   if (CURRENCY_SYMBOL_MAP[trimmed]) return CURRENCY_SYMBOL_MAP[trimmed]
-  if (trimmed.length === 3 && /^[A-Z]{3}$/i.test(trimmed)) return trimmed.toUpperCase()
+  const upper = trimmed.toUpperCase()
+  if (upper === 'RUR') return 'RUB'
+  if (trimmed.length === 3 && /^[A-Z]{3}$/i.test(trimmed)) return upper
   return 'USD'
 }
 
 /**
- * Валюта суммы тарифа VPS: поле vps.currency, иначе валюта приёма платежей хостера (справочник).
- * Для хостеров без API «USD» в записи VPS часто остаётся дефолтом формы — тогда берём валюту хостера.
+ * Валюта суммы тарифа VPS: поле vps.currency, иначе (только у хостеров без API) — валюта приёма из справочника.
+ * Для BILLmanager нельзя подставлять baseCurrency хостера при пустом поле: тариф в валюте из API (часто RUB).
+ * У ручных хостеров «USD» в VPS часто дефолт формы — тогда берём валюту хостера.
  */
 export function effectiveVpsTariffCurrency(vps, provider) {
   const ownRaw = (vps?.currency || '').trim()
@@ -185,8 +188,8 @@ export function effectiveVpsTariffCurrency(vps, provider) {
     return provIso
   }
   if (ownIso) return ownIso
-  if (provIso) return provIso
-  return 'USD'
+  if (provIso && noApi) return provIso
+  return noApi ? 'USD' : 'RUB'
 }
 
 /**
@@ -229,12 +232,14 @@ export function convertCurrency(amount, fromCurrency, toCurrency, ratesData) {
   const apiBase = ratesData.base.toUpperCase()
   const rates = { ...ratesData.rates, [apiBase]: 1 }
 
-  if (!rates[from] || !rates[to]) {
+  const rateFrom = rates[from]
+  const rateTo = rates[to]
+  if (!Number.isFinite(rateFrom) || rateFrom <= 0 || !Number.isFinite(rateTo) || rateTo <= 0) {
     return safeAmount
   }
 
-  const amountInApiBase = safeAmount / rates[from]
-  return amountInApiBase * rates[to]
+  const amountInApiBase = safeAmount / rateFrom
+  return amountInApiBase * rateTo
 }
 
 /**
