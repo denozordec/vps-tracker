@@ -342,11 +342,15 @@ export function convertWithProviderRate(amount, currency, provider, appSettings,
   }
 
   const converted = convertCurrency(safeAmount, fromCurrency, appBase, ratesData)
-  const didConvert = Math.abs(converted - safeAmount) > 0.0001 || fromCurrency === appBase
+  // При сумме 0 convertCurrency даёт 0 = исходной сумме — нельзя отличить «успех» от сбоя.
+  // Проверяем конвертацию 1 единицы: при отсутствии курсов convertCurrency возвращает 1 без изменений.
+  const oneConverted = convertCurrency(1, fromCurrency, appBase, ratesData)
+  const globalRatesWork =
+    Number.isFinite(oneConverted) && Math.abs(oneConverted - 1) > 1e-8
   return {
     value: converted,
     currency: appBase,
-    source: didConvert ? 'global' : 'no-rates',
+    source: globalRatesWork ? 'global' : 'no-rates',
   }
 }
 
