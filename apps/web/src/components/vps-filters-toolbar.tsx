@@ -330,8 +330,8 @@ export function VpsFiltersToolbar({
   const reset = () => onChange(buildDefaultVpsFilters())
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-[220px] flex-1">
+    <div className="flex flex-col gap-2">
+      <div className="relative w-full">
         <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Поиск: IP, DNS, проект, назначение, ОС"
@@ -341,22 +341,23 @@ export function VpsFiltersToolbar({
         />
       </div>
 
-      <Filters
-        filters={reuiFilters as unknown as Filter[]}
-        fields={fields as unknown as FilterFieldConfig[]}
-        onChange={handleFiltersChange}
-        i18n={RU_I18N}
-        size="sm"
-        allowMultiple={false}
-        trigger={
-          <Button variant="outline" size="sm">
-            <PlusIcon data-icon="inline-start" />
-            Фильтр
-          </Button>
-        }
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Filters
+          filters={reuiFilters as unknown as Filter[]}
+          fields={fields as unknown as FilterFieldConfig[]}
+          onChange={handleFiltersChange}
+          i18n={RU_I18N}
+          size="sm"
+          allowMultiple={false}
+          trigger={
+            <Button variant="outline" size="sm">
+              <PlusIcon data-icon="inline-start" />
+              Фильтр
+            </Button>
+          }
+        />
 
-      <Popover>
+        <Popover>
         <PopoverTrigger
           render={
             <Button variant="ghost" size="sm">
@@ -431,6 +432,7 @@ export function VpsFiltersToolbar({
           Сбросить
         </Button>
       ) : null}
+      </div>
     </div>
   )
 }
