@@ -10,7 +10,8 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataTableCard, type DataTableColumn } from '@/components/data-table-card'
+import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
+import type { DataTableColumn } from '@/components/data-table-card'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -138,7 +139,7 @@ function ProvidersPage() {
         emptyTitle="Хостеры не найдены"
         emptyAction={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить хостера</Button>}
       >
-        {(snap) => <DataTableCard columns={columns} data={snap.providers} rowKey={(p) => p.id} />}
+        {(snap) => <DataGridCard columns={columnDefFromDataTable(columns)} data={snap.providers} rowId={(p) => p.id} pinLastColumn />}
       </QueryState>
 
       <FormSheet

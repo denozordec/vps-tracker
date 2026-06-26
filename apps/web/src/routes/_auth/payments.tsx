@@ -9,7 +9,8 @@ import { api, ApiError } from '@/lib/api-client'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
-import { DataTableCard, type DataTableColumn } from '@/components/data-table-card'
+import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
+import type { DataTableColumn } from '@/components/data-table-card'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -123,6 +124,12 @@ function PaymentsPage() {
 
   const sorted = [...(snapshot?.payments ?? [])].sort((a, b) => b.date.localeCompare(a.date))
 
+  const totalByCurrency = sorted.reduce<Record<string, number>>((acc, p) => {
+    const cur = p.currency ?? 'RUB'
+    acc[cur] = (acc[cur] ?? 0) + Number(p.amount || 0)
+    return acc
+  }, {})
+
   return (
     <PageShell>
       <PageHeader
@@ -141,7 +148,23 @@ function PaymentsPage() {
         emptyTitle="Платежей нет"
         emptyAction={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить платёж</Button>}
       >
-        {() => <DataTableCard columns={columns} data={sorted} rowKey={(p) => p.id} />}
+        {() => (
+          <DataGridCard
+            columns={columnDefFromDataTable(columns)}
+            data={sorted}
+            rowId={(p) => p.id}
+            pinLastColumn
+            virtualization={sorted.length > 200}
+            height={560}
+            footerContent={
+              <div className="flex flex-wrap justify-end gap-6 px-3 py-2 text-sm tabular-nums">
+                {Object.entries(totalByCurrency).map(([cur, sum]) => (
+                  <span key={cur}>Итого {cur}: <b className="text-foreground">{formatCurrency(sum, cur)}</b></span>
+                ))}
+              </div>
+            }
+          />
+        )}
       </QueryState>
 
       <FormSheet

@@ -14,7 +14,8 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataTableCard, type DataTableColumn } from '@/components/data-table-card'
+import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
+import type { DataTableColumn } from '@/components/data-table-card'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -333,13 +334,16 @@ function VpsPage() {
               cityOptions={cityOptions}
             />
             {tableSections.map((section) => (
-              <DataTableCard
+              <DataGridCard
                 key={section.key}
                 title={section.label ?? undefined}
-                columns={columns}
+                columns={columnDefFromDataTable(columns)}
                 data={section.items}
-                rowKey={(v) => v.id}
+                rowId={(v) => v.id}
                 emptyTitle="VPS не найдены"
+                pinLastColumn
+                virtualization={section.items.length > 200}
+                height={560}
               />
             ))}
           </div>

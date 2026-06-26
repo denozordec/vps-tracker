@@ -1,25 +1,17 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ServerIcon, AlertTriangleIcon, WalletIcon, TrendingUpIcon } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { SectionCards } from '@/components/section-cards'
 import { QueryState } from '@/components/query-state'
-import { TableCard } from '@/components/table-card'
+import { DataGridCard } from '@/components/data-grid-card'
 import { SectionCardsSkeleton } from '@/components/skeletons'
-import { EmptyState } from '@/components/empty-state'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@cfdm/ui/components/table'
 
 import { computeInventoryHealth } from '@/lib/inventory-health'
 import { formatInBaseCurrency, normalizeRatesPayload } from '@/lib/format'
@@ -93,7 +85,7 @@ function DashboardPage() {
                 ]}
               />
 
-              <TableCard
+              <DataGridCard
                 title="Здоровье инвентаря"
                 description="Подсказки: нет проекта, нет ставки, просрочка, устаревший синк, расхождения баланса"
                 actions={
@@ -103,88 +95,88 @@ function DashboardPage() {
                     <Badge variant="secondary">всё ок</Badge>
                   )
                 }
-              >
-                {issues.length === 0 ? (
-                  <div className="p-4">
-                    <EmptyState
-                      icon={<TrendingUpIcon className="size-8" />}
-                      title="Проблем не найдено"
-                      description="Все активные VPS имеют проект, ставку и актуальный синк"
-                    />
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Проблема</TableHead>
-                        <TableHead className="w-24 text-right">Кол-во</TableHead>
-                        <TableHead className="w-32">Действие</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {issues.map((issue) => (
-                        <TableRow key={issue.key}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <AlertTriangleIcon className="size-4 text-destructive" />
-                              <div className="flex flex-col">
-                                <span>{issue.title}</span>
-                                {issue.hint ? (
-                                  <span className="text-xs text-muted-foreground">{issue.hint}</span>
-                                ) : null}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{issue.count}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate({ to: issue.to })}
-                            >
-                              Открыть
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </TableCard>
+                columns={[
+                  {
+                    id: 'title',
+                    header: 'Проблема',
+                    cell: ({ row }) => (
+                      <div className="flex items-center gap-2">
+                        <AlertTriangleIcon className="size-4 text-destructive" />
+                        <div className="flex flex-col">
+                          <span>{row.original.title}</span>
+                          {row.original.hint ? (
+                            <span className="text-xs text-muted-foreground">{row.original.hint}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'count',
+                    header: 'Кол-во',
+                    cell: ({ row }) => <span className="text-right tabular-nums">{row.original.count}</span>,
+                    meta: { align: 'right' },
+                  },
+                  {
+                    id: 'action',
+                    header: 'Действие',
+                    cell: ({ row }) => (
+                      <Button variant="outline" size="sm" onClick={() => navigate({ to: row.original.to })}>
+                        Открыть
+                      </Button>
+                    ),
+                  },
+                ] as ColumnDef<{ key: string; title: string; count: number; to: string; hint?: string }>[]}
+                data={issues}
+                rowId={(i) => i.key}
+                emptyTitle="Проблем не найдено"
+                emptyDescription="Все активные VPS имеют проект, ставку и актуальный синк"
+              />
 
-              <TableCard title="Последние VPS" description="Активные серверы">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>IP / DNS</TableHead>
-                      <TableHead>Проект</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead className="text-right">Ставка/мес</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activeVps.slice(0, 8).map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell className="font-medium">{v.ip || v.dns}</TableCell>
-                        <TableCell className="text-muted-foreground">{v.project || '—'}</TableCell>
-                        <TableCell>
-                          <Badge variant={v.status === 'active' ? 'default' : 'secondary'}>
-                            {vpsStatusLabel(v.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatInBaseCurrency(
-                            v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0),
-                            v.currency,
-                            snap.settings,
-                            ratesData,
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableCard>
+              <DataGridCard
+                title="Последние VPS"
+                description="Активные серверы"
+                columns={[
+                  {
+                    id: 'ip',
+                    header: 'IP / DNS',
+                    cell: ({ row }) => <span className="font-medium">{row.original.ip || row.original.dns}</span>,
+                  },
+                  {
+                    id: 'project',
+                    header: 'Проект',
+                    cell: ({ row }) => <span className="text-muted-foreground">{row.original.project || '—'}</span>,
+                  },
+                  {
+                    id: 'status',
+                    header: 'Статус',
+                    cell: ({ row }) => (
+                      <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+                        {vpsStatusLabel(row.original.status)}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    id: 'rate',
+                    header: 'Ставка/мес',
+                    cell: ({ row }) => (
+                      <span className="text-right tabular-nums">
+                        {formatInBaseCurrency(
+                          row.original.tariffType === 'daily'
+                            ? Number(row.original.dailyRate || 0) * 30
+                            : Number(row.original.monthlyRate || 0),
+                          row.original.currency,
+                          snap.settings,
+                          ratesData,
+                        )}
+                      </span>
+                    ),
+                  },
+                ] as ColumnDef<typeof activeVps[number]>[]}
+                data={activeVps.slice(0, 8)}
+                rowId={(v) => v.id}
+                pagination={false}
+              />
             </>
           )
         }}

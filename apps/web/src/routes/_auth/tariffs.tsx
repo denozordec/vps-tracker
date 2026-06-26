@@ -5,7 +5,8 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataTableCard, type DataTableColumn } from '@/components/data-table-card'
+import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
+import type { DataTableColumn } from '@/components/data-table-card'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { EmptyState } from '@/components/empty-state'
@@ -71,7 +72,7 @@ function TariffsPage() {
         emptyDescription="Выполните синхронизацию аккаунта BILLmanager, чтобы загрузить тарифы"
         emptyAction={<EmptyState icon={<ServerCogIcon className="size-8" />} title="Нет тарифов" />}
       >
-        {(snap) => <DataTableCard columns={columns} data={snap.activeTariffs} rowKey={(t) => t.id} />}
+        {(snap) => <DataGridCard columns={columnDefFromDataTable(columns)} data={snap.activeTariffs} rowId={(t) => t.id} />}
       </QueryState>
     </PageShell>
   )

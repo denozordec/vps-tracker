@@ -10,7 +10,8 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataTableCard, type DataTableColumn } from '@/components/data-table-card'
+import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
+import type { DataTableColumn } from '@/components/data-table-card'
 import { QueryState } from '@/components/query-state'
 import { SectionCardsSkeleton } from '@/components/skeletons'
 import { SectionCards } from '@/components/section-cards'
@@ -146,12 +147,20 @@ function BalancePage() {
                 { label: 'Чистый баланс (ledger)', value: formatCurrency(totalCredit - totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB') },
               ]}
             />
-            <DataTableCard
-              columns={columns}
+            <DataGridCard
+              columns={columnDefFromDataTable(columns)}
               data={rows}
-              rowKey={(r) => r.id}
+              rowId={(r) => r.id}
               emptyTitle="Записей нет"
               emptyAction={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить</Button>}
+              pinLastColumn
+              footerContent={
+                <div className="flex justify-end gap-6 px-3 py-2 text-sm tabular-nums">
+                  <span>Приходы: <b className="text-foreground">{formatCurrency(totalCredit, snap.settings[0]?.baseCurrency ?? 'RUB')}</b></span>
+                  <span>Списания: <b className="text-foreground">{formatCurrency(totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB')}</b></span>
+                  <span>Итого: <b className="text-foreground">{formatCurrency(totalCredit - totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB')}</b></span>
+                </div>
+              }
             />
           </>
         )}
