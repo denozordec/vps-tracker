@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo } from 'react'
 import { Controller } from 'react-hook-form'
-import { PlusIcon, PencilIcon, Trash2Icon } from 'lucide-react'
+import { PlusIcon, PencilIcon, Trash2Icon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, parseISO, isValid } from 'date-fns'
 
@@ -16,6 +16,7 @@ import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
+import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -216,25 +217,58 @@ function VpsPage() {
     {
       key: 'ip',
       header: 'IP / DNS',
-      cell: (v) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{v.ip || '—'}</span>
-          {v.dns ? <span className="text-xs text-muted-foreground">{v.dns}</span> : null}
-        </div>
-      ),
+      icon: GlobeIcon,
+      sortValue: (v) => v.ip || v.dns || '',
+      cell: (v) => dataGridCellStack(v.ip || '—', v.dns || undefined),
     },
     {
       key: 'account',
       header: 'Аккаунт',
+      icon: UserRoundIcon,
+      sortValue: (v) => {
+        const acc = snapshot?.providerAccounts.find((a) => a.id === v.providerAccountId)
+        return acc ? accountSelectLabel(acc, providerById) : ''
+      },
       cell: (v) => {
         const acc = snapshot?.providerAccounts.find((a) => a.id === v.providerAccountId)
-        return acc ? accountSelectLabel(acc, providerById) : '—'
+        if (!acc) return '—'
+        const providerName = providerById.get(acc.providerId)?.name ?? '—'
+        return dataGridCellStack(acc.name, providerName)
       },
     },
-    { key: 'project', header: 'Проект', cell: (v) => <span className="text-muted-foreground">{v.project || '—'}</span> },
+    {
+      key: 'location',
+      header: 'Локация',
+      icon: MapPinIcon,
+      sortValue: (v) => [v.country, v.city].filter(Boolean).join(', '),
+      cell: (v) => {
+        const country = v.country?.trim()
+        const city = v.city?.trim()
+        if (!country && !city) return <span className="text-muted-foreground">—</span>
+        const countryEntry = country ? COUNTRY_BY_NAME_RU[country] : undefined
+        const flag = countryEntry
+          ? getCountryFlagEmojiByCode(countryEntry.code)
+          : country
+            ? getCountryFlagEmoji(country)
+            : null
+        const primary = country || city || '—'
+        const secondary = country && city ? city : undefined
+        return flag
+          ? dataGridCellWithFlag(flag, primary, secondary)
+          : dataGridCellStack(primary, secondary)
+      },
+    },
+    {
+      key: 'project',
+      header: 'Проект',
+      icon: FolderKanbanIcon,
+      cell: (v) => <span className="text-muted-foreground">{v.project || '—'}</span>,
+    },
     {
       key: 'specs',
       header: 'Ресурсы',
+      icon: CpuIcon,
+      sortValue: (v) => v.vcpu,
       cell: (v) => (
         <span className="tabular-nums text-muted-foreground">
           {v.vcpu} vCPU / {v.ramGb} GB / {v.diskGb} GB
@@ -244,6 +278,7 @@ function VpsPage() {
     {
       key: 'status',
       header: 'Статус',
+      icon: CircleDotIcon,
       cell: (v) => (
         <Badge variant={v.status === 'active' ? 'default' : v.status === 'archived' ? 'outline' : 'secondary'}>
           {vpsStatusLabel(v.status)}
@@ -253,21 +288,22 @@ function VpsPage() {
     {
       key: 'tariff',
       header: 'Тариф',
+      icon: CreditCardIcon,
+      sortValue: (v) => (v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0)),
       cell: (v) => {
         const provider = providerById.get(v.providerId)
         const currency = effectiveVpsTariffCurrency(v, provider)
         const amount = v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0)
-        return (
-          <span className="tabular-nums">
-            {formatInProviderCurrency(amount, currency, provider, snapshot?.settings ?? [], ratesData)}
-            <span className="ml-1 text-xs text-muted-foreground">{tariffTypeLabel(v.tariffType)}</span>
-          </span>
+        return dataGridCellStack(
+          formatInProviderCurrency(amount, currency, provider, snapshot?.settings ?? [], ratesData),
+          tariffTypeLabel(v.tariffType),
         )
       },
     },
     {
       key: 'actions',
       header: '',
+      sortable: false,
       className: 'w-24 text-right',
       cell: (v) => (
         <div className="flex justify-end gap-1">

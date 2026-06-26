@@ -7,10 +7,11 @@ import { PageHeader } from '@/components/page-header'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
+import { dataGridCellStack } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { EmptyState } from '@/components/empty-state'
-import { ServerCogIcon } from 'lucide-react'
+import { ServerCogIcon, ServerIcon, UserRoundIcon, CpuIcon, CoinsIcon, HardDriveIcon } from 'lucide-react'
 
 import type { ActiveTariff } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
@@ -30,19 +31,29 @@ function TariffsPage() {
     {
       key: 'name',
       header: 'Тариф',
+      icon: ServerIcon,
       cell: (t) => <span className="font-medium">{t.name || `#${t.pricelistId ?? t.id}`}</span>,
     },
     {
       key: 'account',
       header: 'Аккаунт',
+      icon: UserRoundIcon,
+      sortValue: (t) => {
+        const acc = snapshot?.providerAccounts.find((a) => a.id === t.providerAccountId)
+        return acc ? accountSelectLabel(acc, providerById) : ''
+      },
       cell: (t) => {
         const acc = snapshot?.providerAccounts.find((a) => a.id === t.providerAccountId)
-        return acc ? accountSelectLabel(acc, providerById) : '—'
+        if (!acc) return '—'
+        const providerName = providerById.get(acc.providerId)?.name ?? '—'
+        return dataGridCellStack(acc.name, providerName)
       },
     },
     {
       key: 'specs',
       header: 'Ресурсы',
+      icon: CpuIcon,
+      sortValue: (t) => t.vcpu ?? 0,
       cell: (t) => (
         <span className="tabular-nums text-muted-foreground">
           {t.vcpu ?? '—'} vCPU / {t.ramGb ?? '—'} GB / {t.diskGb ?? '—'} GB
@@ -52,9 +63,18 @@ function TariffsPage() {
     {
       key: 'price',
       header: 'Цена/мес',
-      cell: (t) => <span className="tabular-nums">{formatCurrency(Number(t.monthlyRate ?? 0), t.currency ?? 'RUB')}</span>,
+      icon: CoinsIcon,
+      headerClassName: 'text-right',
+      className: 'text-right',
+      sortValue: (t) => Number(t.monthlyRate ?? 0),
+      cell: (t) => <span className="tabular-nums font-medium">{formatCurrency(Number(t.monthlyRate ?? 0), t.currency ?? 'RUB')}</span>,
     },
-    { key: 'disk', header: 'Диск', cell: (t) => <Badge variant="outline">{t.diskType ?? '—'}</Badge> },
+    {
+      key: 'disk',
+      header: 'Диск',
+      icon: HardDriveIcon,
+      cell: (t) => <Badge variant="outline">{t.diskType ?? '—'}</Badge>,
+    },
   ]
 
   return (

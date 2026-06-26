@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, PencilIcon, Trash2Icon } from 'lucide-react'
+import { PlusIcon, PencilIcon, Trash2Icon, CalendarIcon, UserRoundIcon, TagIcon, CoinsIcon, StickyNoteIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
+import { dataGridCellStack } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -81,29 +82,55 @@ function PaymentsPage() {
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
 
   const columns: DataTableColumn<Payment>[] = [
-    { key: 'date', header: 'Дата', cell: (p) => <span className="tabular-nums">{p.date}</span> },
+    {
+      key: 'date',
+      header: 'Дата',
+      icon: CalendarIcon,
+      cell: (p) => <span className="tabular-nums">{p.date}</span>,
+    },
     {
       key: 'account',
       header: 'Аккаунт',
+      icon: UserRoundIcon,
+      sortValue: (p) => {
+        const acc = snapshot?.providerAccounts.find((a) => a.id === p.providerAccountId)
+        return acc ? accountSelectLabel(acc, providerById) : ''
+      },
       cell: (p) => {
         const acc = snapshot?.providerAccounts.find((a) => a.id === p.providerAccountId)
-        return acc ? accountSelectLabel(acc, providerById) : '—'
+        if (!acc) return '—'
+        const providerName = providerById.get(acc.providerId)?.name ?? '—'
+        return dataGridCellStack(acc.name, providerName)
       },
     },
     {
       key: 'type',
       header: 'Тип',
+      icon: TagIcon,
       cell: (p) => <span>{paymentTypeLabel(p.type)}</span>,
     },
     {
       key: 'amount',
       header: 'Сумма',
-      cell: (p) => <span className="tabular-nums">{formatCurrency(p.amount, p.currency)}</span>,
+      icon: CoinsIcon,
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (p) => (
+        <span className="tabular-nums font-medium">
+          {formatCurrency(p.amount, p.currency)}
+        </span>
+      ),
     },
-    { key: 'note', header: 'Заметка', cell: (p) => <span className="text-muted-foreground">{p.note || '—'}</span> },
+    {
+      key: 'note',
+      header: 'Заметка',
+      icon: StickyNoteIcon,
+      cell: (p) => <span className="text-muted-foreground">{p.note || '—'}</span>,
+    },
     {
       key: 'actions',
       header: '',
+      sortable: false,
       className: 'w-24 text-right',
       cell: (p) => (
         <div className="flex justify-end gap-1">

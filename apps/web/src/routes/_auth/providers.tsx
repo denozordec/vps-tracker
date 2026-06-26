@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, PencilIcon, Trash2Icon, BuildingIcon } from 'lucide-react'
+import { PlusIcon, PencilIcon, Trash2Icon, BuildingIcon, PlugIcon, CircleDollarSignIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
@@ -12,6 +12,7 @@ import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
+import { dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -86,22 +87,32 @@ function ProvidersPage() {
     {
       key: 'name',
       header: 'Хостер',
-      cell: (p) => (
-        <div className="flex items-center gap-2">
-          {p.website ? (
-            <img src={faviconUrlFromWebsite(p.website)} alt="" className="size-4 rounded-sm" />
-          ) : (
-            <BuildingIcon className="size-4 text-muted-foreground" />
-          )}
-          <span className="font-medium">{p.name}</span>
-        </div>
-      ),
+      icon: BuildingIcon,
+      cell: (p) => {
+        const icon = p.website ? (
+          <img src={faviconUrlFromWebsite(p.website)} alt="" className="size-4 rounded-sm" />
+        ) : (
+          <BuildingIcon />
+        )
+        return dataGridCellWithIcon(icon, <span className="font-medium">{p.name}</span>)
+      },
     },
-    { key: 'api', header: 'API', cell: (p) => <Badge variant="outline">{p.apiType}</Badge> },
-    { key: 'cur', header: 'Валюта', cell: (p) => <span className="tabular-nums">{p.baseCurrency ?? '—'}</span> },
+    {
+      key: 'api',
+      header: 'API',
+      icon: PlugIcon,
+      cell: (p) => <Badge variant="outline">{p.apiType}</Badge>,
+    },
+    {
+      key: 'cur',
+      header: 'Валюта',
+      icon: CircleDollarSignIcon,
+      cell: (p) => <span className="tabular-nums">{p.baseCurrency ?? '—'}</span>,
+    },
     {
       key: 'actions',
       header: '',
+      sortable: false,
       className: 'w-24 text-right',
       cell: (p) => (
         <div className="flex justify-end gap-1">

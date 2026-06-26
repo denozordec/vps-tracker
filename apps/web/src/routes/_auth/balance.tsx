@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, Trash2Icon, ArrowDownUpIcon } from 'lucide-react'
+import { PlusIcon, Trash2Icon, ArrowDownUpIcon, CalendarIcon, UserRoundIcon, ArrowLeftRightIcon, CoinsIcon, StickyNoteIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
@@ -12,6 +12,7 @@ import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
+import { dataGridCellStack } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { SectionCardsSkeleton } from '@/components/skeletons'
 import { SectionCards } from '@/components/section-cards'
@@ -73,18 +74,31 @@ function BalancePage() {
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
 
   const columns: DataTableColumn<BalanceLedgerRow>[] = [
-    { key: 'date', header: 'Дата', cell: (r) => <span className="tabular-nums">{r.date}</span> },
+    {
+      key: 'date',
+      header: 'Дата',
+      icon: CalendarIcon,
+      cell: (r) => <span className="tabular-nums">{r.date}</span>,
+    },
     {
       key: 'account',
       header: 'Аккаунт',
+      icon: UserRoundIcon,
+      sortValue: (r) => {
+        const acc = snapshot?.providerAccounts.find((a) => a.id === r.providerAccountId)
+        return acc ? accountSelectLabel(acc, providerById) : ''
+      },
       cell: (r) => {
         const acc = snapshot?.providerAccounts.find((a) => a.id === r.providerAccountId)
-        return acc ? accountSelectLabel(acc, providerById) : '—'
+        if (!acc) return '—'
+        const providerName = providerById.get(acc.providerId)?.name ?? '—'
+        return dataGridCellStack(acc.name, providerName)
       },
     },
     {
       key: 'dir',
       header: 'Движение',
+      icon: ArrowLeftRightIcon,
       cell: (r) => (
         <Badge variant={r.direction === 'credit' ? 'default' : 'destructive'}>
           <ArrowDownUpIcon data-icon="inline-start" />
@@ -95,16 +109,26 @@ function BalancePage() {
     {
       key: 'amount',
       header: 'Сумма',
+      icon: CoinsIcon,
+      headerClassName: 'text-right',
+      className: 'text-right',
+      sortValue: (r) => Number(r.amount),
       cell: (r) => (
-        <span className={`tabular-nums ${r.direction === 'credit' ? '' : 'text-destructive'}`}>
+        <span className={`tabular-nums font-medium ${r.direction === 'credit' ? '' : 'text-destructive'}`}>
           {r.direction === 'credit' ? '+' : '−'}{formatCurrency(Number(r.amount), r.currency ?? 'RUB')}
         </span>
       ),
     },
-    { key: 'note', header: 'Заметка', cell: (r) => <span className="text-muted-foreground">{r.note || '—'}</span> },
+    {
+      key: 'note',
+      header: 'Заметка',
+      icon: StickyNoteIcon,
+      cell: (r) => <span className="text-muted-foreground">{r.note || '—'}</span>,
+    },
     {
       key: 'actions',
       header: '',
+      sortable: false,
       className: 'w-16 text-right',
       cell: (r) => (
         <ConfirmDialog

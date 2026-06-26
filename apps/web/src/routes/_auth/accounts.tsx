@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon } from 'lucide-react'
+import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, UserRoundIcon, KeyRoundIcon, PlugIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
@@ -12,6 +12,7 @@ import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
+import { dataGridCellStack } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -97,37 +98,45 @@ function AccountsPage() {
     {
       key: 'name',
       header: 'Аккаунт',
-      cell: (a) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{a.name}</span>
-          <span className="text-xs text-muted-foreground">{providerById.get(a.providerId)?.name ?? '—'}</span>
-        </div>
-      ),
+      icon: UserRoundIcon,
+      cell: (a) => dataGridCellStack(a.name, providerById.get(a.providerId)?.name ?? '—'),
     },
-    { key: 'login', header: 'Логин', cell: (a) => <span className="text-muted-foreground">{a.login || '—'}</span> },
+    {
+      key: 'login',
+      header: 'Логин',
+      icon: KeyRoundIcon,
+      cell: (a) => <span className="text-muted-foreground">{a.login || '—'}</span>,
+    },
     {
       key: 'creds',
       header: 'API-доступ',
+      icon: PlugIcon,
       cell: (a) => <Badge variant={a.apiCredentialsSet ? 'default' : 'outline'}>{a.apiCredentialsSet ? 'установлены' : 'нет'}</Badge>,
     },
     {
       key: 'mode',
       header: 'Биллинг',
+      icon: ReceiptIcon,
       cell: (a) => <span>{billingModeLabel(a.billingMode ?? 'monthly')}</span>,
     },
     {
       key: 'balance',
       header: 'Баланс (API)',
+      icon: WalletIcon,
+      headerClassName: 'text-right',
+      className: 'text-right',
+      sortValue: (a) => Number(a.balance_api ?? 0),
       cell: (a) => {
         const provider = providerById.get(a.providerId)
         if (!accountBillmanagerUiReady(a, provider)) return <span className="text-muted-foreground">—</span>
         const cur = a.balance_currency || a.currency || provider?.baseCurrency || 'USD'
-        return <span className="tabular-nums">{formatCurrency(Number(a.balance_api ?? 0), cur)}</span>
+        return <span className="tabular-nums font-medium">{formatCurrency(Number(a.balance_api ?? 0), cur)}</span>
       },
     },
     {
       key: 'actions',
       header: '',
+      sortable: false,
       className: 'w-32 text-right',
       cell: (a) => {
         const provider = providerById.get(a.providerId)
