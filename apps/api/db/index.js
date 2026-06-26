@@ -12,16 +12,16 @@ import { MIGRATIONS } from './migrations.js'
 import { seed, isDbEmpty } from './seed.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-// db/ is in server/, so .. = server, .. again = project root
-export const DB_PATH = join(__dirname, '..', '..', 'data', 'vps-tracker.db')
-const SEED_DIR = join(__dirname, '..', '..', 'public', 'data')
+// db/ is in apps/api/, so .. = apps/api, ../.. = apps, ../../.. = project root
+export const DB_PATH = join(__dirname, '..', '..', '..', 'data', 'vps-tracker.db')
+const SEED_DIR = join(__dirname, '..', '..', '..', 'apps', 'web', 'public', 'data')
 
 let dbInstance = null
 /** @type {import('sql.js').SqlJsStatic | null} */
 let sqlJsFactory = null
 
 export async function initDb() {
-  const dataDir = join(__dirname, '..', '..', 'data')
+  const dataDir = join(__dirname, '..', '..', '..', 'data')
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true })
   }

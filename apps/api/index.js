@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 import { initDb } from './db.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const distPath = join(__dirname, '..', 'dist')
+const distPath = join(__dirname, '..', 'web', 'dist')
 import dataRouter from './routes/data.js'
 import migrateRouter from './routes/migrate.js'
 import vpsRouter from './routes/vps.js'

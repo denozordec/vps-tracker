@@ -58,13 +58,16 @@ COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/db ./apps/api/db
+COPY --from=build /app/apps/api/db.js ./apps/api/db.js
 COPY --from=build /app/apps/api/adapters ./apps/api/adapters
 COPY --from=build /app/apps/api/index.js ./apps/api/index.js
+COPY --from=build /app/apps/api/routes ./apps/api/routes
 COPY --from=build /app/apps/api/utils ./apps/api/utils
 COPY --from=build /app/apps/api/projects-service.js ./apps/api/projects-service.js
 COPY --from=build /app/apps/api/sync-scheduler.js ./apps/api/sync-scheduler.js
 COPY --from=build /app/apps/api/sync-account-job.js ./apps/api/sync-account-job.js
 COPY --from=build /app/apps/api/telegram.js ./apps/api/telegram.js
+COPY --from=build /app/apps/web/public ./apps/web/public
 EXPOSE 3001
 # Default runtime: legacy Express server (sync still pending migration to Fastify).
 # Set RUNTIME=fastify to use the new Fastify stack.
