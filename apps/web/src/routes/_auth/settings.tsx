@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm
 import { Field, FieldGroup, FieldLabel } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
 import { LoadingButton } from '@/components/loading-button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cfdm/ui/components/select'
+import { SelectField } from '@/components/select-field'
 
 import type { Settings } from '@/types/entities'
 import { useState } from 'react'
@@ -79,19 +79,12 @@ function SettingsPage() {
                 <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="set-cur">Базовая валюта</FieldLabel>
-                    <Select
+                    <SelectField
+                      triggerId="set-cur"
                       value={draft.baseCurrency ?? 'RUB'}
                       onValueChange={(v) => setForm({ ...draft, baseCurrency: v ?? 'RUB' })}
-                    >
-                      <SelectTrigger id="set-cur">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CURRENCIES.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                    />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="set-rates">URL курсов (JSON)</FieldLabel>
@@ -104,18 +97,16 @@ function SettingsPage() {
                   </Field>
                   <Field orientation="horizontal">
                     <FieldLabel htmlFor="set-auto">Автоконвертация</FieldLabel>
-                    <Select
+                    <SelectField
+                      triggerId="set-auto"
+                      triggerClassName="w-32"
                       value={draft.autoConvert === false ? 'off' : 'on'}
                       onValueChange={(v) => setForm({ ...draft, autoConvert: (v ?? 'on') === 'on' })}
-                    >
-                      <SelectTrigger id="set-auto" className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="on">Включена</SelectItem>
-                        <SelectItem value="off">Выключена</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      options={[
+                        { value: 'on', label: 'Включена' },
+                        { value: 'off', label: 'Выключена' },
+                      ]}
+                    />
                   </Field>
                   <LoadingButton
                     className="w-fit"

@@ -18,7 +18,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cfdm/ui/components/select'
+import { SelectField } from '@/components/select-field'
 import { Textarea } from '@cfdm/ui/components/textarea'
 
 import type { Vps } from '@/types/entities'
@@ -244,36 +244,24 @@ function VpsPage() {
                 <Input id="vps-dns" {...register('dns')} />
               </FormField>
               <FormField label="Хостер" htmlFor="vps-provider" error={errors.providerId?.message}>
-                <Select
+                <SelectField
+                  triggerId="vps-provider"
+                  placeholder="Выберите хостера"
                   value={providerId}
                   onValueChange={(v) => setValue('providerId', v ?? '', { shouldValidate: true })}
-                >
-                  <SelectTrigger id="vps-provider">
-                    <SelectValue placeholder="Выберите хостера" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {snapshot?.providers.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={(snapshot?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                />
               </FormField>
               <FormField label="Аккаунт" htmlFor="vps-account" error={errors.providerAccountId?.message}>
-                <Select
+                <SelectField
+                  triggerId="vps-account"
+                  placeholder="Выберите аккаунт"
                   value={watch('providerAccountId')}
                   onValueChange={(v) => setValue('providerAccountId', v ?? '', { shouldValidate: true })}
-                >
-                  <SelectTrigger id="vps-account">
-                    <SelectValue placeholder="Выберите аккаунт" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {snapshot?.providerAccounts
-                      .filter((a) => !providerId || a.providerId === providerId)
-                      .map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                  options={(snapshot?.providerAccounts ?? [])
+                    .filter((a) => !providerId || a.providerId === providerId)
+                    .map((a) => ({ value: a.id, label: a.name }))}
+                />
               </FormField>
               <FormField label="Проект" htmlFor="vps-project">
                 <Input id="vps-project" {...register('project')} />
@@ -291,33 +279,27 @@ function VpsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Статус" htmlFor="vps-status">
-                  <Select
+                  <SelectField
+                    triggerId="vps-status"
                     value={watch('status')}
                     onValueChange={(v) => setValue('status', (v ?? 'active') as 'active' | 'paused' | 'archived')}
-                  >
-                    <SelectTrigger id="vps-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">{vpsStatusLabel('active')}</SelectItem>
-                      <SelectItem value="paused">{vpsStatusLabel('paused')}</SelectItem>
-                      <SelectItem value="archived">{vpsStatusLabel('archived')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: 'active', label: vpsStatusLabel('active') },
+                      { value: 'paused', label: vpsStatusLabel('paused') },
+                      { value: 'archived', label: vpsStatusLabel('archived') },
+                    ]}
+                  />
                 </FormField>
                 <FormField label="Тип тарифа" htmlFor="vps-tariff">
-                  <Select
+                  <SelectField
+                    triggerId="vps-tariff"
                     value={watch('tariffType')}
                     onValueChange={(v) => setValue('tariffType', (v ?? 'monthly') as 'daily' | 'monthly')}
-                  >
-                    <SelectTrigger id="vps-tariff">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">{tariffTypeLabel('monthly')}</SelectItem>
-                      <SelectItem value="daily">{tariffTypeLabel('daily')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: 'monthly', label: tariffTypeLabel('monthly') },
+                      { value: 'daily', label: tariffTypeLabel('daily') },
+                    ]}
+                  />
                 </FormField>
               </div>
               <div className="grid grid-cols-3 gap-3">

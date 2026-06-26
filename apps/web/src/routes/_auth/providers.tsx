@@ -18,7 +18,7 @@ import { FormSheet } from '@/components/form-sheet'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { Textarea } from '@cfdm/ui/components/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cfdm/ui/components/select'
+import { SelectField } from '@/components/select-field'
 import { faviconUrlFromWebsite } from '@/lib/format'
 import type { Provider, ApiType } from '@/types/entities'
 
@@ -156,13 +156,15 @@ function ProvidersPage() {
           <Input id="pr-site" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
         </FormField>
         <FormField label="Тип API" htmlFor="pr-api">
-          <Select value={form.apiType} onValueChange={(v) => setForm({ ...form, apiType: (v ?? 'none') as ApiType })}>
-            <SelectTrigger id="pr-api"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="billmanager">BILLmanager</SelectItem>
-              <SelectItem value="none">Нет</SelectItem>
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="pr-api"
+            value={form.apiType}
+            onValueChange={(v) => setForm({ ...form, apiType: (v ?? 'none') as ApiType })}
+            options={[
+              { value: 'billmanager', label: 'BILLmanager' },
+              { value: 'none', label: 'Нет' },
+            ]}
+          />
         </FormField>
         <FormField label="API URL" htmlFor="pr-apiurl" description="Один URL на хостера для BILLmanager">
           <Input id="pr-apiurl" value={form.apiBaseUrl} onChange={(e) => setForm({ ...form, apiBaseUrl: e.target.value })} />

@@ -18,7 +18,7 @@ import { FormSheet } from '@/components/form-sheet'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { Textarea } from '@cfdm/ui/components/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cfdm/ui/components/select'
+import { SelectField } from '@/components/select-field'
 import { LoadingButton } from '@/components/loading-button'
 
 import type { ProviderAccount, BillingMode } from '@/types/entities'
@@ -191,12 +191,13 @@ function AccountsPage() {
         submitting={saveMut.isPending}
       >
         <FormField label="Хостер" htmlFor="acc-provider">
-          <Select value={form.providerId} onValueChange={(v) => setForm({ ...form, providerId: v ?? '' })}>
-            <SelectTrigger id="acc-provider"><SelectValue placeholder="Выберите хостера" /></SelectTrigger>
-            <SelectContent>
-              {snapshot?.providers.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="acc-provider"
+            placeholder="Выберите хостера"
+            value={form.providerId}
+            onValueChange={(v) => setForm({ ...form, providerId: v ?? '' })}
+            options={(snapshot?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))}
+          />
         </FormField>
         <FormField label="Название" htmlFor="acc-name">
           <Input id="acc-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -212,13 +213,15 @@ function AccountsPage() {
           <Input id="acc-creds" type="password" value={form.apiCredentials} onChange={(e) => setForm({ ...form, apiCredentials: e.target.value })} />
         </FormField>
         <FormField label="Режим биллинга" htmlFor="acc-mode">
-          <Select value={form.billingMode} onValueChange={(v) => setForm({ ...form, billingMode: (v ?? 'monthly') as BillingMode })}>
-            <SelectTrigger id="acc-mode"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="monthly">{billingModeLabel('monthly')}</SelectItem>
-              <SelectItem value="daily">{billingModeLabel('daily')}</SelectItem>
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="acc-mode"
+            value={form.billingMode}
+            onValueChange={(v) => setForm({ ...form, billingMode: (v ?? 'monthly') as BillingMode })}
+            options={[
+              { value: 'monthly', label: billingModeLabel('monthly') },
+              { value: 'daily', label: billingModeLabel('daily') },
+            ]}
+          />
         </FormField>
         <FormField label="Заметки" htmlFor="acc-notes">
           <Textarea id="acc-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />

@@ -18,7 +18,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { FormSheet } from '@/components/form-sheet'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cfdm/ui/components/select'
+import { SelectField } from '@/components/select-field'
 import { Textarea } from '@cfdm/ui/components/textarea'
 
 import type { BalanceLedgerRow, LedgerDirection } from '@/types/entities'
@@ -166,23 +166,27 @@ function BalancePage() {
         submitting={addMut.isPending}
       >
         <FormField label="Аккаунт" htmlFor="bl-acc">
-          <Select value={form.providerAccountId} onValueChange={(v) => setForm({ ...form, providerAccountId: v ?? '' })}>
-            <SelectTrigger id="bl-acc"><SelectValue placeholder="Выберите аккаунт" /></SelectTrigger>
-            <SelectContent>
-              {snapshot?.providerAccounts.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{accountSelectLabel(a, providerById)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="bl-acc"
+            placeholder="Выберите аккаунт"
+            value={form.providerAccountId}
+            onValueChange={(v) => setForm({ ...form, providerAccountId: v ?? '' })}
+            options={(snapshot?.providerAccounts ?? []).map((a) => ({
+              value: a.id,
+              label: accountSelectLabel(a, providerById),
+            }))}
+          />
         </FormField>
         <FormField label="Движение" htmlFor="bl-dir">
-          <Select value={form.direction} onValueChange={(v) => setForm({ ...form, direction: (v ?? 'credit') as LedgerDirection })}>
-            <SelectTrigger id="bl-dir"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="credit">Приход</SelectItem>
-              <SelectItem value="debit">Списание</SelectItem>
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="bl-dir"
+            value={form.direction}
+            onValueChange={(v) => setForm({ ...form, direction: (v ?? 'credit') as LedgerDirection })}
+            options={[
+              { value: 'credit', label: 'Приход' },
+              { value: 'debit', label: 'Списание' },
+            ]}
+          />
         </FormField>
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Дата" htmlFor="bl-date">

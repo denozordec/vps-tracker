@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import {
   useForm,
@@ -41,6 +42,14 @@ export function FormSheetRhf<TField extends FieldValues>({
     defaultValues: defaultValues as DefaultValues<TField>,
     mode: 'onBlur',
   })
+
+  // Re-sync form values when the sheet opens or defaultValues change (e.g. edit vs create).
+  useEffect(() => {
+    if (open) {
+      form.reset(defaultValues as DefaultValues<TField>)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultValues])
 
   const submit: SubmitHandler<TField> = (values) => onSubmit(values)
 

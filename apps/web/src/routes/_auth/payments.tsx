@@ -17,7 +17,7 @@ import { FormSheet } from '@/components/form-sheet'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { Textarea } from '@cfdm/ui/components/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@cfdm/ui/components/select'
+import { SelectField } from '@/components/select-field'
 
 import type { Payment, PaymentType } from '@/types/entities'
 import { paymentTypeLabel, formatCurrency } from '@/lib/format'
@@ -153,25 +153,29 @@ function PaymentsPage() {
         submitting={saveMut.isPending}
       >
         <FormField label="Тип" htmlFor="pay-type">
-          <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: (v ?? 'provider_balance_topup') as PaymentType })}>
-            <SelectTrigger id="pay-type"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="provider_balance_topup">{paymentTypeLabel('provider_balance_topup')}</SelectItem>
-              <SelectItem value="direct_vps_payment">{paymentTypeLabel('direct_vps_payment')}</SelectItem>
-              <SelectItem value="daily_debit">{paymentTypeLabel('daily_debit')}</SelectItem>
-              <SelectItem value="monthly_debit">{paymentTypeLabel('monthly_debit')}</SelectItem>
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="pay-type"
+            value={form.type}
+            onValueChange={(v) => setForm({ ...form, type: (v ?? 'provider_balance_topup') as PaymentType })}
+            options={[
+              { value: 'provider_balance_topup', label: paymentTypeLabel('provider_balance_topup') },
+              { value: 'direct_vps_payment', label: paymentTypeLabel('direct_vps_payment') },
+              { value: 'daily_debit', label: paymentTypeLabel('daily_debit') },
+              { value: 'monthly_debit', label: paymentTypeLabel('monthly_debit') },
+            ]}
+          />
         </FormField>
         <FormField label="Аккаунт" htmlFor="pay-acc">
-          <Select value={form.providerAccountId} onValueChange={(v) => setForm({ ...form, providerAccountId: v ?? '' })}>
-            <SelectTrigger id="pay-acc"><SelectValue placeholder="Выберите аккаунт" /></SelectTrigger>
-            <SelectContent>
-              {snapshot?.providerAccounts.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{accountSelectLabel(a, providerById)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SelectField
+            triggerId="pay-acc"
+            placeholder="Выберите аккаунт"
+            value={form.providerAccountId}
+            onValueChange={(v) => setForm({ ...form, providerAccountId: v ?? '' })}
+            options={(snapshot?.providerAccounts ?? []).map((a) => ({
+              value: a.id,
+              label: accountSelectLabel(a, providerById),
+            }))}
+          />
         </FormField>
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Дата" htmlFor="pay-date">
