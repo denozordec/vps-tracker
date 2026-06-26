@@ -4,9 +4,10 @@ import { useState, useMemo } from 'react'
 import { PlusIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { snapshotQueryOptions } from '@/queries/snapshot'
+import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { vpsSchema, type VpsFormValues } from '@/lib/schemas'
+import { normalizeRatesPayload, effectiveVpsTariffCurrency, formatInProviderCurrency } from '@/lib/format'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
@@ -30,7 +31,7 @@ import {
 } from '@/components/vps-filters'
 
 import type { Vps } from '@/types/entities'
-import { vpsStatusLabel, tariffTypeLabel, formatInBaseCurrency } from '@/lib/format'
+import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 
 export const Route = createFileRoute('/_auth/vps')({
@@ -53,6 +54,10 @@ function VpsPage() {
   const [defaultValues, setDefaultValues] = useState<VpsFormValues>(EMPTY_FORM)
   const [filters, setFilters] = useState<VpsFiltersState>(buildDefaultVpsFilters())
   const [presets, setPresets] = useState<VpsFilterPreset[]>(() => loadFilterPresets())
+
+  const settings = snapshot?.settings[0]
+  const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
+  const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
 
   const createMutation = useMutation({
     mutationFn: (record: VpsFormValues) => api.create('vps', record as unknown as Vps),
@@ -195,17 +200,17 @@ function VpsPage() {
     {
       key: 'tariff',
       header: 'Тариф',
-      cell: (v) => (
-        <span className="tabular-nums">
-          {formatInBaseCurrency(
-            v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0),
-            v.currency,
-            snapshot?.settings ?? [],
-            null,
-          )}
-          <span className="ml-1 text-xs text-muted-foreground">{tariffTypeLabel(v.tariffType)}</span>
-        </span>
-      ),
+      cell: (v) => {
+        const provider = providerById.get(v.providerId)
+        const currency = effectiveVpsTariffCurrency(v, provider)
+        const amount = v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0)
+        return (
+          <span className="tabular-nums">
+            {formatInProviderCurrency(amount, currency, provider, snapshot?.settings ?? [], ratesData)}
+            <span className="ml-1 text-xs text-muted-foreground">{tariffTypeLabel(v.tariffType)}</span>
+          </span>
+        )
+      },
     },
     {
       key: 'actions',
