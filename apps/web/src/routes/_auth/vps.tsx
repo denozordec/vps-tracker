@@ -43,7 +43,7 @@ import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
 import type { Vps } from '@/types/entities'
 import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
-import { COUNTRIES, COUNTRY_BY_NAME_RU, listCities } from '@cfdm/shared/geo'
+import { COUNTRIES, COUNTRY_BY_NAME_RU, buildCityOptions, cityMatchesCountry, resolveCountryForCityFromRows } from '@cfdm/shared/geo'
 
 export const Route = createFileRoute('/_auth/vps')({
   loader: ({ context: { queryClient } }) =>
@@ -168,23 +168,10 @@ function VpsPage() {
     })
   }, [snapshot?.vps])
 
-  const cityOptions = useMemo(() => {
-    const names = new Set<string>()
-    // Из существующих VPS
-    for (const v of snapshot?.vps ?? []) {
-      const c = (v.city || '').trim()
-      if (c) names.add(c)
-    }
-    // Из стандартизированного справочника (фильтр по первой выбранной стране, если есть)
-    const countryCode = filters.country[0]
-      ? COUNTRY_BY_NAME_RU[filters.country[0].toLowerCase()]?.code
-      : undefined
-    for (const city of listCities(countryCode)) names.add(city.name)
-    return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => ({
-      value: name,
-      label: name,
-    }))
-  }, [snapshot?.vps, filters.country])
+  const cityOptions = useMemo(
+    () => buildCityOptions(snapshot?.vps, filters.country[0]),
+    [snapshot?.vps, filters.country],
+  )
 
   const tableSections = useMemo(() => {
     if (!filters.groupByProject) {
@@ -390,6 +377,12 @@ function VpsPage() {
         {(form) => {
           const { register, formState: { errors }, watch, setValue } = form
           const providerId = watch('providerId')
+          const formCountry = watch('country') ?? ''
+          const formCity = watch('city') ?? ''
+          const formCityOptions = buildCityOptions(
+            snapshot?.vps,
+            formCountry.trim() || undefined,
+          )
           return (
             <>
               <FormField label="IP" htmlFor="vps-ip" error={errors.ip?.message} invalid={!!errors.ip}>
@@ -425,8 +418,13 @@ function VpsPage() {
                 <AutoCompleteInput
                   id="vps-country"
                   placeholder="Любая"
-                  value={watch('country') ?? ''}
-                  onChange={(v) => setValue('country', v)}
+                  value={formCountry}
+                  onChange={(v) => {
+                    setValue('country', v)
+                    if (v.trim() && formCity.trim() && !cityMatchesCountry(formCity, v, snapshot?.vps)) {
+                      setValue('city', '')
+                    }
+                  }}
                   options={countryOptions}
                   searchPlaceholder="Поиск страны…"
                   emptyText="Нет вариантов"
@@ -436,9 +434,13 @@ function VpsPage() {
                 <AutoCompleteInput
                   id="vps-city"
                   placeholder="Любой"
-                  value={watch('city') ?? ''}
-                  onChange={(v) => setValue('city', v)}
-                  options={cityOptions}
+                  value={formCity}
+                  onChange={(v) => {
+                    setValue('city', v)
+                    const country = resolveCountryForCityFromRows(v, snapshot?.vps)
+                    if (country) setValue('country', country)
+                  }}
+                  options={formCityOptions}
                   searchPlaceholder="Поиск города…"
                   emptyText="Нет вариантов"
                   showLeadingInInput={false}

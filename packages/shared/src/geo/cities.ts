@@ -4,7 +4,7 @@
  * Не зависит от данных в БД vps-tracker — общедоступный статичный справочник.
  */
 
-import { COUNTRY_BY_CODE, COUNTRIES, type CountryRef } from './countries.js'
+import { COUNTRY_BY_CODE, COUNTRY_BY_NAME_RU, COUNTRIES, type CountryRef } from './countries.js'
 
 export interface CityRef {
   /** ISO 3166-1 alpha-2 код страны */
@@ -177,6 +177,99 @@ export const CITIES: readonly CityRef[] = [
   // Израиль
   { countryCode: 'IL', name: 'Тель-Авив', nameEn: 'Tel Aviv' },
 ]
+
+export const CITY_BY_NAME_RU: Record<string, CityRef> = Object.fromEntries(
+  CITIES.map((c) => [c.name.toLowerCase(), c]),
+)
+
+/** Найти город в справочнике по русскому названию. */
+export function resolveCityRef(cityName: string): CityRef | undefined {
+  return CITY_BY_NAME_RU[cityName.trim().toLowerCase()]
+}
+
+/** Страна из справочника для города (если есть привязка). */
+export function resolveCountryForCity(cityName: string): CountryRef | undefined {
+  const city = resolveCityRef(cityName)
+  return city ? COUNTRY_BY_CODE[city.countryCode] : undefined
+}
+
+export interface CityLocationRow {
+  city?: string | null
+  country?: string | null
+}
+
+/** Проверить, относится ли город к выбранной стране (справочник или данные VPS). */
+export function cityMatchesCountry(
+  cityName: string,
+  countryName: string,
+  rows?: readonly CityLocationRow[],
+): boolean {
+  const countryCode = COUNTRY_BY_NAME_RU[countryName.trim().toLowerCase()]?.code
+  if (!countryCode) return true
+
+  const catalog = resolveCityRef(cityName)
+  if (catalog) return catalog.countryCode === countryCode
+
+  return (rows ?? []).some(
+    (row) =>
+      row.city?.trim().toLowerCase() === cityName.trim().toLowerCase() &&
+      COUNTRY_BY_NAME_RU[(row.country || '').trim().toLowerCase()]?.code === countryCode,
+  )
+}
+
+/** Опции городов: из VPS и справочника, опционально по стране. */
+export function buildCityOptions(
+  rows: readonly CityLocationRow[] | undefined,
+  countryName?: string,
+): { value: string; label: string }[] {
+  const names = new Set<string>()
+  const countryCode = countryName?.trim()
+    ? COUNTRY_BY_NAME_RU[countryName.trim().toLowerCase()]?.code
+    : undefined
+
+  const belongsToCountry = (city: string, rowCountry?: string): boolean => {
+    if (!countryCode) return true
+    const catalog = resolveCityRef(city)
+    if (catalog) return catalog.countryCode === countryCode
+    if (rowCountry?.trim()) {
+      return COUNTRY_BY_NAME_RU[rowCountry.trim().toLowerCase()]?.code === countryCode
+    }
+    return false
+  }
+
+  for (const row of rows ?? []) {
+    const city = (row.city || '').trim()
+    if (!city) continue
+    if (belongsToCountry(city, row.country ?? undefined)) {
+      names.add(city)
+    }
+  }
+
+  for (const { name } of listCities(countryCode)) {
+    names.add(name)
+  }
+
+  return [...names]
+    .sort((a, b) => a.localeCompare(b, 'ru'))
+    .map((name) => ({ value: name, label: name }))
+}
+
+/** Страна для города: справочник, иначе первая запись VPS с таким городом. */
+export function resolveCountryForCityFromRows(
+  cityName: string,
+  rows: readonly CityLocationRow[] | undefined,
+): string | undefined {
+  const trimmed = cityName.trim()
+  if (!trimmed) return undefined
+
+  const fromCatalog = resolveCountryForCity(trimmed)
+  if (fromCatalog) return fromCatalog.name
+
+  const row = (rows ?? []).find(
+    (r) => r.city?.trim().toLowerCase() === trimmed.toLowerCase() && r.country?.trim(),
+  )
+  return row?.country?.trim()
+}
 
 export interface CityOption extends CityRef {
   country: CountryRef
