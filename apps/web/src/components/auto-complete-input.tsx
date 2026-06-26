@@ -89,7 +89,7 @@ export function AutoCompleteInput({
             className={cn('w-full justify-between font-normal', className)}
           >
             <span className="flex min-w-0 items-center gap-2">
-              {leading ? <span className="text-base leading-none">{leading}</span> : null}
+              {leading ? <span className="size-4 shrink-0 leading-none">{leading}</span> : null}
               <span className={cn('truncate', !value && 'text-muted-foreground')}>
                 {value ? displayLabel : placeholder}
               </span>
@@ -98,7 +98,7 @@ export function AutoCompleteInput({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[--anchor-width] p-0">
+      <PopoverContent align="start" className="w-[--anchor-width] min-w-[220px] p-0">
         <Command shouldFilter={false} loop>
           <CommandInput
             placeholder={searchPlaceholder}
@@ -108,7 +108,7 @@ export function AutoCompleteInput({
             autoCorrect="off"
             spellCheck={false}
           />
-          <CommandList>
+          <CommandList className="py-1">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {allowFreeText && query.trim() && !filtered.some(
@@ -117,7 +117,7 @@ export function AutoCompleteInput({
                 <CommandItem
                   value={`__free__:${query.trim()}`}
                   onSelect={() => handleSelect(query.trim())}
-                  className="gap-2"
+                  className="gap-2.5"
                 >
                   <SearchIcon className="size-4 opacity-50" />
                   <span className="flex-1 truncate">
@@ -132,10 +132,10 @@ export function AutoCompleteInput({
                     key={opt.value}
                     value={opt.value}
                     onSelect={() => handleSelect(opt.value)}
-                    className="gap-2"
+                    className="gap-2.5"
                   >
                     {opt.leading ? (
-                      <span className="text-base leading-none">{opt.leading}</span>
+                      <span className="size-4 shrink-0 leading-none">{opt.leading}</span>
                     ) : null}
                     <span className="flex-1">{opt.label}</span>
                     {isSelected ? <CheckIcon className="size-4 opacity-60" /> : null}

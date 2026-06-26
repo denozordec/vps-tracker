@@ -10,6 +10,9 @@
     "cssVariables": true
   },
   "iconLibrary": "lucide",
+  "registries": {
+    "@reui": "https://reui.io/r/{style}/{name}.json"
+  },
   "aliases": {
     "components": "@/components",
     "hooks": "@/hooks",

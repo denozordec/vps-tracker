@@ -1,8 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo } from 'react'
+import { Controller } from 'react-hook-form'
 import { PlusIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
+import { format, parseISO, isValid } from 'date-fns'
 
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -23,13 +25,22 @@ import { SelectField } from '@/components/select-field'
 import { AutoCompleteInput } from '@/components/auto-complete-input'
 import { Textarea } from '@cfdm/ui/components/textarea'
 import {
-  VpsFilters,
+  NumberField,
+  NumberFieldGroup,
+  NumberFieldDecrement,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from '@/components/reui/number-field'
+import {
+  DateSelector,
+  type DateSelectorValue,
+} from '@/components/reui/date-selector'
+import {
   applyVpsFilters,
   buildDefaultVpsFilters,
-  loadFilterPresets,
   type VpsFiltersState,
-  type VpsFilterPreset,
 } from '@/components/vps-filters'
+import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
 
 import type { Vps } from '@/types/entities'
 import { vpsStatusLabel, tariffTypeLabel, getCountryFlagEmoji, getCountryFlagEmojiByCode } from '@/lib/format'
@@ -56,7 +67,6 @@ function VpsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [defaultValues, setDefaultValues] = useState<VpsFormValues>(EMPTY_FORM)
   const [filters, setFilters] = useState<VpsFiltersState>(buildDefaultVpsFilters())
-  const [presets, setPresets] = useState<VpsFilterPreset[]>(() => loadFilterPresets())
 
   const settings = snapshot?.settings[0]
   const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
@@ -154,6 +164,7 @@ function VpsPage() {
       return {
         value: name,
         label: name,
+        code: ref?.code,
         leading: ref ? getCountryFlagEmojiByCode(ref.code) : getCountryFlagEmoji(name),
       }
     })
@@ -166,9 +177,9 @@ function VpsPage() {
       const c = (v.city || '').trim()
       if (c) names.add(c)
     }
-    // Из стандартизированного справочника (фильтр по выбранной стране, если есть)
-    const countryCode = filters.country
-      ? COUNTRY_BY_NAME_RU[filters.country.toLowerCase()]?.code
+    // Из стандартизированного справочника (фильтр по первой выбранной стране, если есть)
+    const countryCode = filters.country[0]
+      ? COUNTRY_BY_NAME_RU[filters.country[0].toLowerCase()]?.code
       : undefined
     for (const city of listCities(countryCode)) names.add(city.name)
     return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => ({
@@ -311,16 +322,15 @@ function VpsPage() {
       >
         {(snap) => (
           <div className="flex flex-col gap-4">
-            <VpsFilters
+            <VpsFiltersToolbar
               filters={filters}
               onChange={setFilters}
               providers={snap.providers}
               providerAccounts={snap.providerAccounts}
+              vps={snap.vps}
               projectNameOptions={projectNameOptions}
               countryOptions={countryOptions}
               cityOptions={cityOptions}
-              presets={presets}
-              onPresetsChange={setPresets}
             />
             {tableSections.map((section) => (
               <DataTableCard
@@ -410,13 +420,67 @@ function VpsPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <FormField label="vCPU" htmlFor="vps-vcpu" error={errors.vcpu?.message}>
-                  <Input id="vps-vcpu" type="number" min={0} {...register('vcpu', { valueAsNumber: true })} />
+                  <Controller
+                    control={form.control}
+                    name="vcpu"
+                    render={({ field }) => (
+                      <NumberField
+                        id="vps-vcpu"
+                        min={0}
+                        step={1}
+                        value={Number(field.value ?? 0)}
+                        onValueChange={(val) => field.onChange(val ?? 0)}
+                      >
+                        <NumberFieldGroup>
+                          <NumberFieldDecrement />
+                          <NumberFieldInput />
+                          <NumberFieldIncrement />
+                        </NumberFieldGroup>
+                      </NumberField>
+                    )}
+                  />
                 </FormField>
                 <FormField label="RAM (GB)" htmlFor="vps-ram" error={errors.ramGb?.message}>
-                  <Input id="vps-ram" type="number" min={0} {...register('ramGb', { valueAsNumber: true })} />
+                  <Controller
+                    control={form.control}
+                    name="ramGb"
+                    render={({ field }) => (
+                      <NumberField
+                        id="vps-ram"
+                        min={0}
+                        step={1}
+                        value={Number(field.value ?? 0)}
+                        onValueChange={(val) => field.onChange(val ?? 0)}
+                      >
+                        <NumberFieldGroup>
+                          <NumberFieldDecrement />
+                          <NumberFieldInput />
+                          <NumberFieldIncrement />
+                        </NumberFieldGroup>
+                      </NumberField>
+                    )}
+                  />
                 </FormField>
                 <FormField label="Disk (GB)" htmlFor="vps-disk" error={errors.diskGb?.message}>
-                  <Input id="vps-disk" type="number" min={0} {...register('diskGb', { valueAsNumber: true })} />
+                  <Controller
+                    control={form.control}
+                    name="diskGb"
+                    render={({ field }) => (
+                      <NumberField
+                        id="vps-disk"
+                        min={0}
+                        step={1}
+                        value={Number(field.value ?? 0)}
+                        onValueChange={(val) => field.onChange(val ?? 0)}
+                      >
+                        <NumberFieldGroup>
+                          <NumberFieldDecrement />
+                          <NumberFieldInput />
+                          <NumberFieldIncrement />
+                        </NumberFieldGroup>
+                      </NumberField>
+                    )}
+                  />
                 </FormField>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -449,14 +513,73 @@ function VpsPage() {
                   <Input id="vps-cur" {...register('currency')} />
                 </FormField>
                 <FormField label="Ставка/мес" htmlFor="vps-monthly">
-                  <Input id="vps-monthly" type="number" min={0} step="any" {...register('monthlyRate', { valueAsNumber: true })} />
+                  <Controller
+                    control={form.control}
+                    name="monthlyRate"
+                    render={({ field }) => (
+                      <NumberField
+                        id="vps-monthly"
+                        min={0}
+                        step={0.01}
+                        value={Number(field.value ?? 0)}
+                        onValueChange={(val) => field.onChange(val ?? 0)}
+                      >
+                        <NumberFieldGroup>
+                          <NumberFieldDecrement />
+                          <NumberFieldInput />
+                          <NumberFieldIncrement />
+                        </NumberFieldGroup>
+                      </NumberField>
+                    )}
+                  />
                 </FormField>
                 <FormField label="Ставка/день" htmlFor="vps-daily">
-                  <Input id="vps-daily" type="number" min={0} step="any" {...register('dailyRate', { valueAsNumber: true })} />
+                  <Controller
+                    control={form.control}
+                    name="dailyRate"
+                    render={({ field }) => (
+                      <NumberField
+                        id="vps-daily"
+                        min={0}
+                        step={0.01}
+                        value={Number(field.value ?? 0)}
+                        onValueChange={(val) => field.onChange(val ?? 0)}
+                      >
+                        <NumberFieldGroup>
+                          <NumberFieldDecrement />
+                          <NumberFieldInput />
+                          <NumberFieldIncrement />
+                        </NumberFieldGroup>
+                      </NumberField>
+                    )}
+                  />
                 </FormField>
               </div>
               <FormField label="Оплачено до" htmlFor="vps-paid">
-                <Input id="vps-paid" type="date" {...register('paidUntil')} />
+                <Controller
+                  control={form.control}
+                  name="paidUntil"
+                  render={({ field }) => {
+                    const strVal = (field.value as string | undefined) ?? ''
+                    const parsed = strVal ? parseISO(strVal) : undefined
+                    const dateVal: DateSelectorValue | undefined =
+                      parsed && isValid(parsed)
+                        ? { period: 'day', operator: 'is', startDate: parsed }
+                        : undefined
+                    return (
+                      <DateSelector
+                        value={dateVal}
+                        onChange={(v) => {
+                          const d = v.startDate
+                          field.onChange(d ? format(d, 'yyyy-MM-dd') : '')
+                        }}
+                        allowRange={false}
+                        defaultPeriodType="day"
+                        showInput
+                      />
+                    )
+                  }}
+                />
               </FormField>
               <FormField label="Заметки" htmlFor="vps-notes">
                 <Textarea id="vps-notes" {...register('notes')} />
