@@ -8,6 +8,7 @@ import '@cfdm/ui/globals.css'
 
 import { queryClient } from '@/lib/queryClient'
 import { createRouter } from '@/lib/router'
+import { ThemeProvider } from '@/components/theme-provider'
 
 const router = createRouter({ context: { queryClient } })
 
@@ -16,9 +17,11 @@ if (!rootEl) throw new Error('Root element #root not found')
 
 createRoot(rootEl).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster richColors position="top-right" />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <Toaster richColors position="top-right" />
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

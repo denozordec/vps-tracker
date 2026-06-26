@@ -37,6 +37,8 @@ import { Separator } from '@cfdm/ui/components/separator'
 import { Link, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { ModeToggle } from '@/components/mode-toggle'
+
 interface NavItem {
   to: string
   label: string
@@ -68,15 +70,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Server className="size-4" />
-            </div>
-            <div className="flex flex-col text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="font-semibold">VPS Tracker</span>
-              <span className="text-xs text-muted-foreground">Учёт виртуальных серверов</span>
-            </div>
-          </div>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" render={<Link to="/dashboard" />}>
+                <div
+                  className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground"
+                  aria-hidden
+                >
+                  <Server className="size-4" />
+                </div>
+                <div className="flex flex-col gap-0.5 leading-none">
+                  <span className="font-semibold">VPS Tracker</span>
+                  <span className="text-xs text-muted-foreground">Учёт виртуальных серверов</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -116,6 +125,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto">
+            <ModeToggle />
+          </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">{children}</main>
       </SidebarInset>
