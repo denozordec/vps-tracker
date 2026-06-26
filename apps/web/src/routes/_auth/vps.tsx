@@ -42,6 +42,7 @@ export const Route = createFileRoute('/_auth/vps')({
 
 const EMPTY_FORM: VpsFormValues = {
   ip: '', dns: '', providerId: '', providerAccountId: '',
+  country: '', city: '', datacenter: '',
   vcpu: 1, ramGb: 1, diskGb: 10, status: 'active', tariffType: 'monthly',
   currency: 'RUB', monthlyRate: 0, dailyRate: 0, paidUntil: '', project: '', notes: '',
 }
@@ -102,6 +103,7 @@ function VpsPage() {
     setEditingId(v.id)
     setDefaultValues({
       id: v.id, ip: v.ip, dns: v.dns ?? '', providerId: v.providerId, providerAccountId: v.providerAccountId,
+      country: v.country ?? '', city: v.city ?? '', datacenter: v.datacenter ?? '',
       vcpu: v.vcpu, ramGb: v.ramGb, diskGb: v.diskGb, status: v.status, tariffType: v.tariffType,
       currency: v.currency, monthlyRate: Number(v.monthlyRate ?? 0), dailyRate: Number(v.dailyRate ?? 0),
       paidUntil: v.paidUntil ?? '', project: v.project ?? '', notes: v.notes ?? '',
@@ -337,6 +339,17 @@ function VpsPage() {
               <FormField label="Проект" htmlFor="vps-project">
                 <Input id="vps-project" {...register('project')} />
               </FormField>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField label="Страна" htmlFor="vps-country">
+                  <Input id="vps-country" {...register('country')} />
+                </FormField>
+                <FormField label="Город" htmlFor="vps-city">
+                  <Input id="vps-city" {...register('city')} />
+                </FormField>
+                <FormField label="Дата-центр" htmlFor="vps-dc">
+                  <Input id="vps-dc" {...register('datacenter')} />
+                </FormField>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <FormField label="vCPU" htmlFor="vps-vcpu" error={errors.vcpu?.message}>
                   <Input id="vps-vcpu" type="number" min={0} {...register('vcpu', { valueAsNumber: true })} />
