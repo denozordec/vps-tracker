@@ -11,6 +11,8 @@
       "@cfdm/shared": ["../../packages/shared/src/index.ts"],
       "@cfdm/shared/contracts/*": ["../../packages/shared/src/contracts/*"],
       "@cfdm/shared/types/*": ["../../packages/shared/src/types/*"],
+      "@cfdm/shared/geo": ["../../packages/shared/src/geo/index.ts"],
+      "@cfdm/shared/geo/*": ["../../packages/shared/src/geo/*"],
       "@cfdm/db": ["../../packages/db/src/index.ts"],
       "@cfdm/db/schema": ["../../packages/db/src/schema/index.ts"],
       "@cfdm/db/repositories/*": ["../../packages/db/src/repositories/*"]

@@ -115,6 +115,10 @@ export interface ActiveTariff {
   diskType?: string
   monthlyRate?: number
   currency?: string
+  datacenterKey?: string
+  datacenterName?: string
+  location?: string
+  country?: string
 }
 
 export interface SyncLogRow {

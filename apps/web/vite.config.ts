@@ -11,14 +11,15 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@cfdm/ui/components': path.resolve(__dirname, '../../packages/ui/src/components'),
-      '@cfdm/ui/hooks': path.resolve(__dirname, '../../packages/ui/src/hooks'),
-      '@cfdm/ui/lib/utils': path.resolve(__dirname, '../../packages/ui/src/lib/utils.ts'),
-      '@cfdm/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
-      '@cfdm/db': path.resolve(__dirname, '../../packages/db/src/index.ts'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@cfdm/ui/components', replacement: path.resolve(__dirname, '../../packages/ui/src/components') },
+      { find: '@cfdm/ui/hooks', replacement: path.resolve(__dirname, '../../packages/ui/src/hooks') },
+      { find: '@cfdm/ui/lib/utils', replacement: path.resolve(__dirname, '../../packages/ui/src/lib/utils.ts') },
+      { find: /^@cfdm\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../packages/shared/src/$1') },
+      { find: '@cfdm/shared', replacement: path.resolve(__dirname, '../../packages/shared/src/index.ts') },
+      { find: '@cfdm/db', replacement: path.resolve(__dirname, '../../packages/db/src/index.ts') },
+    ],
   },
   server: {
     port: 5173,

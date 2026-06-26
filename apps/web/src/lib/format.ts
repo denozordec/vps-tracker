@@ -37,6 +37,12 @@ export function getCountryFlagEmoji(country?: string): string {
   return code.toUpperCase().split('').map((c) => String.fromCodePoint(127397 + c.charCodeAt(0))).join('')
 }
 
+/** Флаг по ISO 3166-1 alpha-2 коду страны. */
+export function getCountryFlagEmojiByCode(code?: string): string {
+  if (!code || code.length !== 2) return '🌐'
+  return code.toUpperCase().split('').map((c) => String.fromCodePoint(127397 + c.charCodeAt(0))).join('')
+}
+
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   direct_vps_payment: 'Прямой платеж за VPS',
   provider_balance_topup: 'Пополнение баланса хостера',

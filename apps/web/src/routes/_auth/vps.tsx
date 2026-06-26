@@ -32,8 +32,9 @@ import {
 } from '@/components/vps-filters'
 
 import type { Vps } from '@/types/entities'
-import { vpsStatusLabel, tariffTypeLabel, getCountryFlagEmoji } from '@/lib/format'
+import { vpsStatusLabel, tariffTypeLabel, getCountryFlagEmoji, getCountryFlagEmojiByCode } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
+import { COUNTRIES, COUNTRY_BY_NAME_RU, listCities } from '@cfdm/shared/geo'
 
 export const Route = createFileRoute('/_auth/vps')({
   loader: ({ context: { queryClient } }) =>
@@ -141,28 +142,40 @@ function VpsPage() {
 
   const countryOptions = useMemo(() => {
     const names = new Set<string>()
+    // Из существующих VPS — могут быть произвольные строки
     for (const v of snapshot?.vps ?? []) {
       const c = (v.country || '').trim()
       if (c) names.add(c)
     }
-    return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => ({
-      value: name,
-      label: name,
-      leading: getCountryFlagEmoji(name),
-    }))
+    // Из стандартизированного справочника
+    for (const c of COUNTRIES) names.add(c.name)
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => {
+      const ref = COUNTRY_BY_NAME_RU[name.toLowerCase()]
+      return {
+        value: name,
+        label: name,
+        leading: ref ? getCountryFlagEmojiByCode(ref.code) : getCountryFlagEmoji(name),
+      }
+    })
   }, [snapshot?.vps])
 
   const cityOptions = useMemo(() => {
     const names = new Set<string>()
+    // Из существующих VPS
     for (const v of snapshot?.vps ?? []) {
       const c = (v.city || '').trim()
       if (c) names.add(c)
     }
+    // Из стандартизированного справочника (фильтр по выбранной стране, если есть)
+    const countryCode = filters.country
+      ? COUNTRY_BY_NAME_RU[filters.country.toLowerCase()]?.code
+      : undefined
+    for (const city of listCities(countryCode)) names.add(city.name)
     return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => ({
       value: name,
       label: name,
     }))
-  }, [snapshot?.vps])
+  }, [snapshot?.vps, filters.country])
 
   const tableSections = useMemo(() => {
     if (!filters.groupByProject) {

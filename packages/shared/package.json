@@ -8,7 +8,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./contracts/*": "./src/contracts/*.ts",
-    "./types/*": "./src/types/*.ts"
+    "./types/*": "./src/types/*.ts",
+    "./geo": "./src/geo/index.ts",
+    "./geo/*": "./src/geo/*.ts"
   },
   "dependencies": {
     "zod": "^3.25.0"

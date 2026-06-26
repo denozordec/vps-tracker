@@ -6,7 +6,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from '@cfdm/ui/components/command'
@@ -43,19 +42,18 @@ export function AutoCompleteInput({
   onChange,
   options,
   placeholder,
-  searchPlaceholder = 'Поиск…',
+  searchPlaceholder: _searchPlaceholder = 'Поиск…',
   emptyText = 'Ничего не найдено',
   className,
   showLeadingInInput = true,
 }: AutoCompleteInputProps) {
   const [open, setOpen] = React.useState(false)
-  const [query, setQuery] = React.useState('')
 
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = value.trim().toLowerCase()
     if (!q) return options
     return options.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
-  }, [options, query])
+  }, [options, value])
 
   const selected = options.find((o) => o.value.toLowerCase() === value.trim().toLowerCase())
   const leading = selected?.leading
@@ -81,10 +79,6 @@ export function AutoCompleteInput({
                 setOpen(true)
               }}
               onFocus={() => setOpen(true)}
-              onBlur={() => {
-                // задержка чтобы клик по item успел сработать
-                setTimeout(() => setOpen(false), 150)
-              }}
               className={cn(
                 showLeadingInInput && leading ? 'pl-8' : '',
                 className,
@@ -93,16 +87,17 @@ export function AutoCompleteInput({
           </div>
         }
       />
-      <PopoverContent align="start" className="w-[--anchor-width] p-0">
+      <PopoverContent
+        align="start"
+        className="w-[--anchor-width] p-0"
+        initialFocus={false}
+      >
         <Command shouldFilter={false} loop>
           <div className="flex items-center gap-2 border-b px-3">
             <SearchIcon className="size-4 text-muted-foreground" />
-            <CommandInput
-              placeholder={searchPlaceholder}
-              value={query}
-              onValueChange={setQuery}
-              className="h-9"
-            />
+            <span className="text-sm text-muted-foreground truncate flex-1">
+              {value.trim() || 'Введите для поиска'}
+            </span>
           </div>
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
@@ -115,7 +110,6 @@ export function AutoCompleteInput({
                     value={opt.value}
                     onSelect={() => {
                       onChange(opt.value)
-                      setQuery('')
                       setOpen(false)
                     }}
                     className="gap-2"
