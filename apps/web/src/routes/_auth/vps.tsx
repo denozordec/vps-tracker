@@ -373,10 +373,10 @@ function VpsPage() {
                   <Input id="vps-cur" {...register('currency')} />
                 </FormField>
                 <FormField label="Ставка/мес" htmlFor="vps-monthly">
-                  <Input id="vps-monthly" type="number" min={0} {...register('monthlyRate', { valueAsNumber: true })} />
+                  <Input id="vps-monthly" type="number" min={0} step="any" {...register('monthlyRate', { valueAsNumber: true })} />
                 </FormField>
                 <FormField label="Ставка/день" htmlFor="vps-daily">
-                  <Input id="vps-daily" type="number" min={0} {...register('dailyRate', { valueAsNumber: true })} />
+                  <Input id="vps-daily" type="number" min={0} step="any" {...register('dailyRate', { valueAsNumber: true })} />
                 </FormField>
               </div>
               <FormField label="Оплачено до" htmlFor="vps-paid">
