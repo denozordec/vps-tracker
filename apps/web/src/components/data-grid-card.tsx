@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -18,7 +18,22 @@ import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import { DataGridTableVirtual } from '@/components/reui/data-grid/data-grid-table-virtual'
 import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
+import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { EmptyState } from './empty-state'
+import type { DataTableColumn } from './data-table-card'
+
+const PAGINATION_LABELS = {
+  rowsPerPageLabel: 'Строк на странице',
+  info: '{from}–{to} из {count}',
+  previousPageLabel: 'Предыдущая страница',
+  nextPageLabel: 'Следующая страница',
+} as const
+
+function resolveHeaderTitle(header: ReactNode, headerTitle?: string): string {
+  if (headerTitle) return headerTitle
+  if (typeof header === 'string') return header
+  return ''
+}
 
 export interface DataGridCardProps<TData extends object> {
   title?: ReactNode
@@ -32,9 +47,9 @@ export interface DataGridCardProps<TData extends object> {
   emptyDescription?: string
   emptyAction?: ReactNode
   onRowClick?: (row: TData) => void
-  /** Включить пагинацию. По умолчанию true для >25 строк. */
+  /** Включить пагинацию. По умолчанию true. */
   pagination?: boolean
-  /** Размер страницы. По умолчанию 25. */
+  /** Размер страницы. По умолчанию 10. */
   pageSize?: number
   /** Footer-контент (итоги). */
   footerContent?: ReactNode
@@ -51,6 +66,14 @@ export interface DataGridCardProps<TData extends object> {
   className?: string
 }
 
+function DataGridPaginationBar() {
+  return (
+    <div className="border-t px-4 py-2.5">
+      <DataGridPagination {...PAGINATION_LABELS} />
+    </div>
+  )
+}
+
 export function DataGridCard<TData extends object>({
   title,
   description,
@@ -63,7 +86,7 @@ export function DataGridCard<TData extends object>({
   emptyAction,
   onRowClick,
   pagination,
-  pageSize = 25,
+  pageSize = 10,
   footerContent,
   dense = false,
   pinLastColumn = false,
@@ -76,16 +99,11 @@ export function DataGridCard<TData extends object>({
 
   const lastColId = pinLastColumn ? columns[columns.length - 1]?.id ?? '' : ''
 
-  const columnsWithIds = useMemo(() => {
-    if (rowId) return columns
-    return columns
-  }, [columns, rowId])
-
-  const showPagination = pagination ?? data.length > pageSize
+  const showPagination = pagination ?? true
 
   const table = useReactTable<TData>({
     data,
-    columns: columnsWithIds,
+    columns,
     state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
@@ -131,8 +149,8 @@ export function DataGridCard<TData extends object>({
           {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
         </CardHeader>
       )}
-      <CardContent className="p-0">
-        <DataGridContainer className="border-0 rounded-none">
+      <CardContent className={dense ? 'p-3' : 'p-4'}>
+        <DataGridContainer>
           <DataGrid
             table={table}
             recordCount={data.length}
@@ -154,13 +172,16 @@ export function DataGridCard<TData extends object>({
             }}
           >
             {virtualization ? (
-              <DataGridScrollArea orientation="vertical" style={{ height }}>
-                <DataGridTableVirtual height={height} footerContent={footerContent} />
-              </DataGridScrollArea>
+              <>
+                <DataGridScrollArea orientation="vertical" style={{ height }}>
+                  <DataGridTableVirtual height={height} footerContent={footerContent} />
+                </DataGridScrollArea>
+                {showPagination ? <DataGridPaginationBar /> : null}
+              </>
             ) : (
               <>
                 <DataGridTable footerContent={footerContent} />
-                {showPagination ? <DataGridPagination /> : null}
+                {showPagination ? <DataGridPaginationBar /> : null}
               </>
             )}
           </DataGrid>
@@ -170,22 +191,42 @@ export function DataGridCard<TData extends object>({
   )
 }
 
-/** Хелпер для конвертации старых DataTableColumn<T> → ColumnDef<T>. */
+/** Хелпер для конвертации DataTableColumn<T> → ColumnDef<T> с DataGridColumnHeader. */
 export function columnDefFromDataTable<T>(
-  cols: {
-    key: string
-    header: ReactNode
-    cell: (row: T, index: number) => ReactNode
-    className?: string
-    headerClassName?: string
-  }[],
+  cols: DataTableColumn<T>[],
 ): ColumnDef<T, unknown>[] {
-  return cols.map((c) => ({
-    id: c.key,
-    header: () => c.header,
-    cell: ({ row }) => c.cell(row.original, row.index),
-    meta: { className: c.className, headerClassName: c.headerClassName },
-  }))
+  return cols.map((c) => {
+    const title = resolveHeaderTitle(c.header, c.headerTitle)
+    const Icon = c.icon
+    const sortable = c.sortable ?? Boolean(Icon)
+
+    return {
+      id: c.key,
+      ...(sortable
+        ? {
+            accessorFn: c.sortValue
+              ? (row: T) => c.sortValue!(row)
+              : (row: T) => (row as Record<string, unknown>)[c.key] as string | number,
+          }
+        : {}),
+      header: Icon
+        ? ({ column }) => (
+            <DataGridColumnHeader
+              column={column}
+              title={title}
+              icon={<Icon />}
+            />
+          )
+        : () => c.header,
+      cell: ({ row }) => c.cell(row.original, row.index),
+      enableSorting: sortable,
+      meta: {
+        headerTitle: title || undefined,
+        cellClassName: c.className,
+        headerClassName: c.headerClassName,
+      },
+    }
+  })
 }
 
 /** re-export flexRender для удобства использования в колонках. */
