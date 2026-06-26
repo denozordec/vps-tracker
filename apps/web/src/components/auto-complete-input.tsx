@@ -1,11 +1,12 @@
 import * as React from 'react'
-import { CheckIcon, SearchIcon } from 'lucide-react'
+import { CheckIcon, ChevronsUpDownIcon, SearchIcon } from 'lucide-react'
 
-import { Input } from '@cfdm/ui/components/input'
+import { Button } from '@cfdm/ui/components/button'
 import {
   Command,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
 } from '@cfdm/ui/components/command'
@@ -32,8 +33,10 @@ interface AutoCompleteInputProps {
   searchPlaceholder?: string
   emptyText?: string
   className?: string
-  /** Показывать ли выбранный leading в самом Input (например флаг). */
+  /** Показывать ли выбранный leading в триггере (например флаг). */
   showLeadingInInput?: boolean
+  /** Разрешать ли произвольный ввод (не только из списка). По умолчанию true. */
+  allowFreeText?: boolean
 }
 
 export function AutoCompleteInput({
@@ -41,80 +44,99 @@ export function AutoCompleteInput({
   value,
   onChange,
   options,
-  placeholder,
-  searchPlaceholder: _searchPlaceholder = 'Поиск…',
+  placeholder = 'Выбрать…',
+  searchPlaceholder = 'Поиск…',
   emptyText = 'Ничего не найдено',
   className,
   showLeadingInInput = true,
+  allowFreeText = true,
 }: AutoCompleteInputProps) {
   const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState('')
 
   const filtered = React.useMemo(() => {
-    const q = value.trim().toLowerCase()
+    const q = query.trim().toLowerCase()
     if (!q) return options
-    return options.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
-  }, [options, value])
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
+    )
+  }, [options, query])
 
-  const selected = options.find((o) => o.value.toLowerCase() === value.trim().toLowerCase())
-  const leading = selected?.leading
+  const selected = options.find(
+    (o) => o.value.toLowerCase() === value.trim().toLowerCase(),
+  )
+  const displayLabel = selected?.label ?? value
+  const leading = showLeadingInInput ? selected?.leading : undefined
+
+  const handleSelect = (next: string) => {
+    onChange(next)
+    setQuery('')
+    setOpen(false)
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(o) => {
+      setOpen(o)
+      if (!o) setQuery('')
+    }}>
       <PopoverTrigger
         render={
-          <div className="relative">
-            {showLeadingInInput && leading ? (
-              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-base leading-none">
-                {leading}
+          <Button
+            id={id}
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn('w-full justify-between font-normal', className)}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              {leading ? <span className="text-base leading-none">{leading}</span> : null}
+              <span className={cn('truncate', !value && 'text-muted-foreground')}>
+                {value ? displayLabel : placeholder}
               </span>
-            ) : null}
-            <Input
-              id={id}
-              role="combobox"
-              aria-expanded={open}
-              placeholder={placeholder}
-              value={value}
-              onChange={(e) => {
-                onChange(e.target.value)
-                setOpen(true)
-              }}
-              onFocus={() => setOpen(true)}
-              className={cn(
-                showLeadingInInput && leading ? 'pl-8' : '',
-                className,
-              )}
-            />
-          </div>
+            </span>
+            <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+          </Button>
         }
       />
-      <PopoverContent
-        align="start"
-        className="w-[--anchor-width] p-0"
-        initialFocus={false}
-      >
+      <PopoverContent align="start" className="w-[--anchor-width] p-0">
         <Command shouldFilter={false} loop>
-          <div className="flex items-center gap-2 border-b px-3">
-            <SearchIcon className="size-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground truncate flex-1">
-              {value.trim() || 'Введите для поиска'}
-            </span>
-          </div>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={query}
+            onValueChange={setQuery}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
+              {allowFreeText && query.trim() && !filtered.some(
+                (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
+              ) ? (
+                <CommandItem
+                  value={`__free__:${query.trim()}`}
+                  onSelect={() => handleSelect(query.trim())}
+                  className="gap-2"
+                >
+                  <SearchIcon className="size-4 opacity-50" />
+                  <span className="flex-1 truncate">
+                    Использовать: <b>{query.trim()}</b>
+                  </span>
+                </CommandItem>
+              ) : null}
               {filtered.map((opt) => {
                 const isSelected = opt.value.toLowerCase() === value.trim().toLowerCase()
                 return (
                   <CommandItem
                     key={opt.value}
                     value={opt.value}
-                    onSelect={() => {
-                      onChange(opt.value)
-                      setOpen(false)
-                    }}
+                    onSelect={() => handleSelect(opt.value)}
                     className="gap-2"
                   >
-                    {opt.leading ? <span className="text-base leading-none">{opt.leading}</span> : null}
+                    {opt.leading ? (
+                      <span className="text-base leading-none">{opt.leading}</span>
+                    ) : null}
                     <span className="flex-1">{opt.label}</span>
                     {isSelected ? <CheckIcon className="size-4 opacity-60" /> : null}
                   </CommandItem>
