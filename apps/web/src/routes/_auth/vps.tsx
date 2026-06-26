@@ -4,8 +4,6 @@ import { useState, useMemo } from 'react'
 import { Controller } from 'react-hook-form'
 import { PlusIcon, PencilIcon, Trash2Icon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { format, parseISO, isValid } from 'date-fns'
-
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { vpsSchema, type VpsFormValues } from '@/lib/schemas'
@@ -17,6 +15,7 @@ import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-table-card'
 import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
+import { CountryFlag } from '@/components/country-flag'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -33,10 +32,7 @@ import {
   NumberFieldIncrement,
   NumberFieldInput,
 } from '@/components/reui/number-field'
-import {
-  DateSelector,
-  type DateSelectorValue,
-} from '@/components/reui/date-selector'
+import { FormDatePicker } from '@/components/form-date-picker'
 import {
   applyVpsFilters,
   buildDefaultVpsFilters,
@@ -45,7 +41,7 @@ import {
 import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
 
 import type { Vps } from '@/types/entities'
-import { vpsStatusLabel, tariffTypeLabel, getCountryFlagEmoji, getCountryFlagEmojiByCode } from '@/lib/format'
+import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 import { COUNTRIES, COUNTRY_BY_NAME_RU, listCities } from '@cfdm/shared/geo'
 
@@ -167,7 +163,7 @@ function VpsPage() {
         value: name,
         label: name,
         code: ref?.code,
-        leading: ref ? getCountryFlagEmojiByCode(ref.code) : getCountryFlagEmoji(name),
+        leading: <CountryFlag code={ref?.code} country={name} />,
       }
     })
   }, [snapshot?.vps])
@@ -245,14 +241,9 @@ function VpsPage() {
         const country = v.country?.trim()
         const city = v.city?.trim()
         if (!country && !city) return <span className="text-muted-foreground">—</span>
-        const countryEntry = country ? COUNTRY_BY_NAME_RU[country] : undefined
-        const flag = countryEntry
-          ? getCountryFlagEmojiByCode(countryEntry.code)
-          : country
-            ? getCountryFlagEmoji(country)
-            : null
         const primary = country || city || '—'
         const secondary = country && city ? city : undefined
+        const flag = country ? <CountryFlag country={country} /> : null
         return flag
           ? dataGridCellWithFlag(flag, primary, secondary)
           : dataGridCellStack(primary, secondary)
@@ -599,26 +590,13 @@ function VpsPage() {
                 <Controller
                   control={form.control}
                   name="paidUntil"
-                  render={({ field }) => {
-                    const strVal = (field.value as string | undefined) ?? ''
-                    const parsed = strVal ? parseISO(strVal) : undefined
-                    const dateVal: DateSelectorValue | undefined =
-                      parsed && isValid(parsed)
-                        ? { period: 'day', operator: 'is', startDate: parsed }
-                        : undefined
-                    return (
-                      <DateSelector
-                        value={dateVal}
-                        onChange={(v) => {
-                          const d = v.startDate
-                          field.onChange(d ? format(d, 'yyyy-MM-dd') : '')
-                        }}
-                        allowRange={false}
-                        defaultPeriodType="day"
-                        showInput
-                      />
-                    )
-                  }}
+                  render={({ field }) => (
+                    <FormDatePicker
+                      id="vps-paid"
+                      value={(field.value as string | undefined) ?? ''}
+                      onChange={field.onChange}
+                    />
+                  )}
                 />
               </FormField>
               <FormField label="Заметки" htmlFor="vps-notes">

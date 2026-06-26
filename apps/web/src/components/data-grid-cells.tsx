@@ -34,8 +34,8 @@ export function dataGridCellWithFlag(
   secondary?: ReactNode,
 ) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="size-4 shrink-0 leading-none">{flag}</span>
+    <div className="flex items-center gap-2.5">
+      <span className="flex size-4 shrink-0 items-center justify-center">{flag}</span>
       {secondary ? dataGridCellStack(primary, secondary) : <span className="font-medium">{primary}</span>}
     </div>
   )

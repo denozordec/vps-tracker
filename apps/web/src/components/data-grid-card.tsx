@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-table'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
+import { cn } from '@cfdm/ui/lib/utils'
 import {
   DataGrid,
   DataGridContainer,
@@ -68,9 +69,70 @@ export interface DataGridCardProps<TData extends object> {
 
 function DataGridPaginationBar() {
   return (
-    <div className="border-t px-4 py-2.5">
+    <div className="px-4 py-2.5">
       <DataGridPagination {...PAGINATION_LABELS} />
     </div>
+  )
+}
+
+function DataGridCardBody<TData extends object>({
+  table,
+  data,
+  emptyTitle,
+  onRowClick,
+  dense,
+  virtualization,
+  height,
+  footerContent,
+  showPagination,
+}: {
+  table: ReturnType<typeof useReactTable<TData>>
+  data: TData[]
+  emptyTitle: string
+  onRowClick?: (row: TData) => void
+  dense: boolean
+  virtualization: boolean
+  height: number
+  footerContent?: ReactNode
+  showPagination: boolean
+}) {
+  return (
+    <DataGridContainer border={false}>
+      <DataGrid
+        table={table}
+        recordCount={data.length}
+        onRowClick={onRowClick}
+        emptyMessage={emptyTitle}
+        tableLayout={{
+          dense,
+          rowBorder: true,
+          headerSticky: true,
+          headerBackground: true,
+          headerBorder: true,
+          width: 'auto',
+          columnsVisibility: false,
+          columnsResizable: false,
+          columnsPinnable: false,
+          columnsMovable: false,
+          rowsDraggable: false,
+          rowsPinnable: false,
+        }}
+      >
+        {virtualization ? (
+          <>
+            <DataGridScrollArea orientation="vertical" style={{ height }}>
+              <DataGridTableVirtual height={height} footerContent={footerContent} />
+            </DataGridScrollArea>
+            {showPagination ? <DataGridPaginationBar /> : null}
+          </>
+        ) : (
+          <>
+            <DataGridTable footerContent={footerContent} />
+            {showPagination ? <DataGridPaginationBar /> : null}
+          </>
+        )}
+      </DataGrid>
+    </DataGridContainer>
   )
 }
 
@@ -119,28 +181,19 @@ export function DataGridCard<TData extends object>({
     enableColumnPinning: pinLastColumn,
   })
 
-  if (data.length === 0) {
-    return (
-      <Card className={className}>
-        {(title || actions) && (
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <div className="space-y-1">
-              {title ? <CardTitle>{title}</CardTitle> : null}
-              {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-            </div>
-            {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-          </CardHeader>
-        )}
-        <CardContent className="p-4">
-          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
-        </CardContent>
-      </Card>
-    )
-  }
+  const hasHeader = Boolean(title || description || actions)
 
-  return (
-    <Card className={className}>
-      {(title || actions) && (
+  if (data.length === 0) {
+    if (!hasHeader) {
+      return (
+        <div className={className}>
+          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+        </div>
+      )
+    }
+
+    return (
+      <Card className={cn('ring-0 shadow-none', className)}>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <div className="space-y-1">
             {title ? <CardTitle>{title}</CardTitle> : null}
@@ -148,45 +201,41 @@ export function DataGridCard<TData extends object>({
           </div>
           {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
         </CardHeader>
-      )}
-      <CardContent className={dense ? 'p-3' : 'p-4'}>
-        <DataGridContainer>
-          <DataGrid
-            table={table}
-            recordCount={data.length}
-            onRowClick={onRowClick}
-            emptyMessage={emptyTitle}
-            tableLayout={{
-              dense,
-              rowBorder: true,
-              headerSticky: true,
-              headerBackground: true,
-              headerBorder: true,
-              width: 'auto',
-              columnsVisibility: false,
-              columnsResizable: false,
-              columnsPinnable: false,
-              columnsMovable: false,
-              rowsDraggable: false,
-              rowsPinnable: false,
-            }}
-          >
-            {virtualization ? (
-              <>
-                <DataGridScrollArea orientation="vertical" style={{ height }}>
-                  <DataGridTableVirtual height={height} footerContent={footerContent} />
-                </DataGridScrollArea>
-                {showPagination ? <DataGridPaginationBar /> : null}
-              </>
-            ) : (
-              <>
-                <DataGridTable footerContent={footerContent} />
-                {showPagination ? <DataGridPaginationBar /> : null}
-              </>
-            )}
-          </DataGrid>
-        </DataGridContainer>
-      </CardContent>
+        <CardContent>
+          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const gridBody = (
+    <DataGridCardBody
+      table={table}
+      data={data}
+      emptyTitle={emptyTitle}
+      onRowClick={onRowClick}
+      dense={dense}
+      virtualization={virtualization}
+      height={height}
+      footerContent={footerContent}
+      showPagination={showPagination}
+    />
+  )
+
+  if (!hasHeader) {
+    return <div className={className}>{gridBody}</div>
+  }
+
+  return (
+    <Card className={cn('ring-0 shadow-none', className)}>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/50 pb-4">
+        <div className="space-y-1">
+          {title ? <CardTitle>{title}</CardTitle> : null}
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      </CardHeader>
+      <CardContent className="p-0 pt-2">{gridBody}</CardContent>
     </Card>
   )
 }

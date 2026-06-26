@@ -30,7 +30,8 @@ import {
   saveFilterPresets,
   type VpsFilterPreset,
 } from '@/components/vps-filters'
-import { vpsStatusLabel, tariffTypeLabel, environmentLabel, getCountryFlagEmojiByCode } from '@/lib/format'
+import { vpsStatusLabel, tariffTypeLabel, environmentLabel } from '@/lib/format'
+import { CountryFlag } from '@/components/country-flag'
 import type { Provider, ProviderAccount, Vps } from '@/types/entities'
 
 interface VpsFiltersToolbarProps {
@@ -187,7 +188,7 @@ export function VpsFiltersToolbar({
     const countryOpts: FilterOption<string>[] = countryOptions.map((c) => ({
       value: c.value,
       label: c.label,
-      icon: c.code ? <span className="size-4 leading-none">{getCountryFlagEmojiByCode(c.code)}</span> : undefined,
+      icon: c.code ? <CountryFlag code={c.code} /> : <CountryFlag country={c.value} />,
       metadata: { count: count((v) => (v.country ?? '').trim() === c.value) },
     }))
 

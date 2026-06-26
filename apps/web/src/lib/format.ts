@@ -1,4 +1,9 @@
 import type { Settings, RatesData, Vps, Provider } from '@/types/entities'
+import { COUNTRIES, COUNTRY_BY_CODE, COUNTRY_BY_NAME_RU } from '@cfdm/shared/geo'
+
+const COUNTRY_BY_NAME_EN: Record<string, { code: string }> = Object.fromEntries(
+  COUNTRIES.map((c) => [c.nameEn.toLowerCase(), c]),
+)
 
 export function uid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
@@ -30,11 +35,32 @@ const COUNTRY_CODE_BY_NAME: Record<string, string> = {
   canada: 'CA', brazil: 'BR', turkey: 'TR', georgia: 'GE', kazakhstan: 'KZ',
 }
 
+/** ISO 3166-1 alpha-2 по русскому/английскому названию или коду. */
+export function resolveCountryCode(country?: string): string | undefined {
+  if (!country) return undefined
+  const normalized = country.trim()
+  const lower = normalized.toLowerCase()
+  if (/^[a-z]{2}$/i.test(normalized)) {
+    const upper = normalized.toUpperCase()
+    if (COUNTRY_BY_CODE[upper]) return upper
+  }
+  return (
+    COUNTRY_BY_NAME_RU[lower]?.code
+    ?? COUNTRY_BY_NAME_EN[lower]?.code
+    ?? COUNTRY_CODE_BY_NAME[lower]
+  )
+}
+
+/** URL SVG-флага (flagcdn). */
+export function getCountryFlagUrl(code?: string): string | undefined {
+  if (!code || code.length !== 2) return undefined
+  return `https://flagcdn.com/${code.toLowerCase()}.svg`
+}
+
 export function getCountryFlagEmoji(country?: string): string {
-  if (!country) return '🌐'
-  const code = COUNTRY_CODE_BY_NAME[country.trim().toLowerCase()]
+  const code = resolveCountryCode(country)
   if (!code) return '🌐'
-  return code.toUpperCase().split('').map((c) => String.fromCodePoint(127397 + c.charCodeAt(0))).join('')
+  return getCountryFlagEmojiByCode(code)
 }
 
 /** Флаг по ISO 3166-1 alpha-2 коду страны. */
