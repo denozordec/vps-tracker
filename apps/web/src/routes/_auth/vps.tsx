@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PlusIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -20,6 +20,14 @@ import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { SelectField } from '@/components/select-field'
 import { Textarea } from '@cfdm/ui/components/textarea'
+import {
+  VpsFilters,
+  applyVpsFilters,
+  buildDefaultVpsFilters,
+  loadFilterPresets,
+  type VpsFiltersState,
+  type VpsFilterPreset,
+} from '@/components/vps-filters'
 
 import type { Vps } from '@/types/entities'
 import { vpsStatusLabel, tariffTypeLabel, formatInBaseCurrency } from '@/lib/format'
@@ -43,6 +51,8 @@ function VpsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [defaultValues, setDefaultValues] = useState<VpsFormValues>(EMPTY_FORM)
+  const [filters, setFilters] = useState<VpsFiltersState>(buildDefaultVpsFilters())
+  const [presets, setPresets] = useState<VpsFilterPreset[]>(() => loadFilterPresets())
 
   const createMutation = useMutation({
     mutationFn: (record: VpsFormValues) => api.create('vps', record as unknown as Vps),
@@ -102,6 +112,47 @@ function VpsPage() {
   }
 
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
+
+  const projectNameOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const p of snapshot?.serverProjects ?? []) {
+      const name = (p as { name?: string }).name?.trim()
+      if (name) names.add(name)
+    }
+    for (const v of snapshot?.vps ?? []) {
+      const p = (v.project || '').trim()
+      if (p) names.add(p)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru'))
+  }, [snapshot])
+
+  const filteredVps = useMemo(
+    () => applyVpsFilters(snapshot?.vps ?? [], filters),
+    [snapshot?.vps, filters],
+  )
+
+  const tableSections = useMemo(() => {
+    if (!filters.groupByProject) {
+      return [{ key: '_flat', label: null as string | null, items: filteredVps }]
+    }
+    const map = new Map<string, Vps[]>()
+    for (const item of filteredVps) {
+      const key = (item.project || '').trim() || '__none__'
+      const arr = map.get(key) ?? []
+      arr.push(item)
+      map.set(key, arr)
+    }
+    const keys = [...map.keys()].sort((a, b) => {
+      if (a === '__none__') return 1
+      if (b === '__none__') return -1
+      return a.localeCompare(b, 'ru')
+    })
+    return keys.map((key) => ({
+      key,
+      label: key === '__none__' ? 'Без проекта' : key,
+      items: map.get(key) ?? [],
+    }))
+  }, [filteredVps, filters.groupByProject])
 
   const columns: DataTableColumn<Vps>[] = [
     {
@@ -213,12 +264,27 @@ function VpsPage() {
         }
       >
         {(snap) => (
-          <DataTableCard
-            columns={columns}
-            data={snap.vps}
-            rowKey={(v) => v.id}
-            emptyTitle="VPS не найдены"
-          />
+          <div className="flex flex-col gap-4">
+            <VpsFilters
+              filters={filters}
+              onChange={setFilters}
+              providers={snap.providers}
+              providerAccounts={snap.providerAccounts}
+              projectNameOptions={projectNameOptions}
+              presets={presets}
+              onPresetsChange={setPresets}
+            />
+            {tableSections.map((section) => (
+              <DataTableCard
+                key={section.key}
+                title={section.label ?? undefined}
+                columns={columns}
+                data={section.items}
+                rowKey={(v) => v.id}
+                emptyTitle="VPS не найдены"
+              />
+            ))}
+          </div>
         )}
       </QueryState>
 

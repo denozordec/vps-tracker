@@ -72,6 +72,14 @@ export function tariffTypeLabel(type: string): string {
   return TARIFF_TYPE_LABELS[type] ?? type
 }
 
+const ENVIRONMENT_LABELS: Record<string, string> = {
+  prod: 'Production', dev: 'Development', staging: 'Staging',
+}
+
+export function environmentLabel(env: string): string {
+  return ENVIRONMENT_LABELS[env] ?? env
+}
+
 const CURRENCY_SYMBOL_MAP: Record<string, string> = {
   '€': 'EUR', '$': 'USD', '₽': 'RUB', '£': 'GBP', '¥': 'JPY', '₴': 'UAH', '₸': 'KZT',
 }
