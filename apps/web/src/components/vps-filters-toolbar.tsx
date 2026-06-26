@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from '@cfdm/ui/components/popover'
 import { Slider } from '@cfdm/ui/components/slider'
+import { PlusIcon } from 'lucide-react'
 
 import {
   Filters,
@@ -347,6 +348,12 @@ export function VpsFiltersToolbar({
         i18n={RU_I18N}
         size="sm"
         allowMultiple={false}
+        trigger={
+          <Button variant="outline" size="sm">
+            <PlusIcon data-icon="inline-start" />
+            Фильтр
+          </Button>
+        }
       />
 
       <Popover>
