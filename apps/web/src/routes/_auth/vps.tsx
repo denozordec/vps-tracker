@@ -20,6 +20,7 @@ import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { SelectField } from '@/components/select-field'
+import { AutoCompleteInput } from '@/components/auto-complete-input'
 import { Textarea } from '@cfdm/ui/components/textarea'
 import {
   VpsFilters,
@@ -31,7 +32,7 @@ import {
 } from '@/components/vps-filters'
 
 import type { Vps } from '@/types/entities'
-import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
+import { vpsStatusLabel, tariffTypeLabel, getCountryFlagEmoji } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 
 export const Route = createFileRoute('/_auth/vps')({
@@ -137,6 +138,31 @@ function VpsPage() {
     () => applyVpsFilters(snapshot?.vps ?? [], filters),
     [snapshot?.vps, filters],
   )
+
+  const countryOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const v of snapshot?.vps ?? []) {
+      const c = (v.country || '').trim()
+      if (c) names.add(c)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => ({
+      value: name,
+      label: name,
+      leading: getCountryFlagEmoji(name),
+    }))
+  }, [snapshot?.vps])
+
+  const cityOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const v of snapshot?.vps ?? []) {
+      const c = (v.city || '').trim()
+      if (c) names.add(c)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => ({
+      value: name,
+      label: name,
+    }))
+  }, [snapshot?.vps])
 
   const tableSections = useMemo(() => {
     if (!filters.groupByProject) {
@@ -278,6 +304,8 @@ function VpsPage() {
               providers={snap.providers}
               providerAccounts={snap.providerAccounts}
               projectNameOptions={projectNameOptions}
+              countryOptions={countryOptions}
+              cityOptions={cityOptions}
               presets={presets}
               onPresetsChange={setPresets}
             />
@@ -341,10 +369,27 @@ function VpsPage() {
               </FormField>
               <div className="grid grid-cols-3 gap-3">
                 <FormField label="Страна" htmlFor="vps-country">
-                  <Input id="vps-country" {...register('country')} />
+                  <AutoCompleteInput
+                    id="vps-country"
+                    placeholder="Любая"
+                    value={watch('country') ?? ''}
+                    onChange={(v) => setValue('country', v)}
+                    options={countryOptions}
+                    searchPlaceholder="Поиск страны…"
+                    emptyText="Нет вариантов"
+                  />
                 </FormField>
                 <FormField label="Город" htmlFor="vps-city">
-                  <Input id="vps-city" {...register('city')} />
+                  <AutoCompleteInput
+                    id="vps-city"
+                    placeholder="Любой"
+                    value={watch('city') ?? ''}
+                    onChange={(v) => setValue('city', v)}
+                    options={cityOptions}
+                    searchPlaceholder="Поиск города…"
+                    emptyText="Нет вариантов"
+                    showLeadingInInput={false}
+                  />
                 </FormField>
                 <FormField label="Дата-центр" htmlFor="vps-dc">
                   <Input id="vps-dc" {...register('datacenter')} />

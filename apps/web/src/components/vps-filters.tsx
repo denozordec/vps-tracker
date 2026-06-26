@@ -15,6 +15,7 @@ import {
 } from '@cfdm/ui/components/dropdown-menu'
 
 import { SelectField } from '@/components/select-field'
+import { AutoCompleteInput, type AutoCompleteOption } from '@/components/auto-complete-input'
 import { vpsStatusLabel, tariffTypeLabel, environmentLabel } from '@/lib/format'
 import type { Provider, ProviderAccount, Vps } from '@/types/entities'
 
@@ -185,6 +186,8 @@ interface VpsFiltersProps {
   providers: Provider[]
   providerAccounts: ProviderAccount[]
   projectNameOptions: string[]
+  countryOptions: AutoCompleteOption[]
+  cityOptions: AutoCompleteOption[]
   presets: VpsFilterPreset[]
   onPresetsChange: (presets: VpsFilterPreset[]) => void
 }
@@ -195,6 +198,8 @@ export function VpsFilters({
   providers,
   providerAccounts,
   projectNameOptions,
+  countryOptions,
+  cityOptions,
   presets,
   onPresetsChange,
 }: VpsFiltersProps) {
@@ -333,21 +338,28 @@ export function VpsFilters({
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <Label htmlFor="flt-country" className="text-xs text-muted-foreground">Страна</Label>
-            <Input
+            <AutoCompleteInput
               id="flt-country"
               placeholder="Любая"
               value={filters.country}
-              onChange={(e) => update('country', e.target.value)}
+              onChange={(v) => update('country', v)}
+              options={countryOptions}
+              searchPlaceholder="Поиск страны…"
+              emptyText="Нет вариантов"
               className="w-36"
             />
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="flt-city" className="text-xs text-muted-foreground">Город</Label>
-            <Input
+            <AutoCompleteInput
               id="flt-city"
               placeholder="Любой"
               value={filters.city}
-              onChange={(e) => update('city', e.target.value)}
+              onChange={(v) => update('city', v)}
+              options={cityOptions}
+              searchPlaceholder="Поиск города…"
+              emptyText="Нет вариантов"
+              showLeadingInInput={false}
               className="w-36"
             />
           </div>
