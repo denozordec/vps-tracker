@@ -421,34 +421,32 @@ function VpsPage() {
               <FormField label="Проект" htmlFor="vps-project">
                 <Input id="vps-project" {...register('project')} />
               </FormField>
-              <div className="grid grid-cols-3 gap-3">
-                <FormField label="Страна" htmlFor="vps-country">
-                  <AutoCompleteInput
-                    id="vps-country"
-                    placeholder="Любая"
-                    value={watch('country') ?? ''}
-                    onChange={(v) => setValue('country', v)}
-                    options={countryOptions}
-                    searchPlaceholder="Поиск страны…"
-                    emptyText="Нет вариантов"
-                  />
-                </FormField>
-                <FormField label="Город" htmlFor="vps-city">
-                  <AutoCompleteInput
-                    id="vps-city"
-                    placeholder="Любой"
-                    value={watch('city') ?? ''}
-                    onChange={(v) => setValue('city', v)}
-                    options={cityOptions}
-                    searchPlaceholder="Поиск города…"
-                    emptyText="Нет вариантов"
-                    showLeadingInInput={false}
-                  />
-                </FormField>
-                <FormField label="Дата-центр" htmlFor="vps-dc">
-                  <Input id="vps-dc" {...register('datacenter')} />
-                </FormField>
-              </div>
+              <FormField label="Страна" htmlFor="vps-country">
+                <AutoCompleteInput
+                  id="vps-country"
+                  placeholder="Любая"
+                  value={watch('country') ?? ''}
+                  onChange={(v) => setValue('country', v)}
+                  options={countryOptions}
+                  searchPlaceholder="Поиск страны…"
+                  emptyText="Нет вариантов"
+                />
+              </FormField>
+              <FormField label="Город" htmlFor="vps-city">
+                <AutoCompleteInput
+                  id="vps-city"
+                  placeholder="Любой"
+                  value={watch('city') ?? ''}
+                  onChange={(v) => setValue('city', v)}
+                  options={cityOptions}
+                  searchPlaceholder="Поиск города…"
+                  emptyText="Нет вариантов"
+                  showLeadingInInput={false}
+                />
+              </FormField>
+              <FormField label="Дата-центр" htmlFor="vps-dc">
+                <Input id="vps-dc" {...register('datacenter')} />
+              </FormField>
               <div className="grid grid-cols-3 gap-3">
                 <FormField label="vCPU" htmlFor="vps-vcpu" error={errors.vcpu?.message}>
                   <Controller

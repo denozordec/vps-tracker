@@ -1,26 +1,22 @@
-import * as React from 'react'
-import { CheckIcon, ChevronsUpDownIcon, SearchIcon } from 'lucide-react'
+'use client'
 
-import { Button } from '@cfdm/ui/components/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@cfdm/ui/components/command'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@cfdm/ui/components/popover'
+import * as React from 'react'
+import { CheckIcon } from 'lucide-react'
+
 import { cn } from '@cfdm/ui/lib/utils'
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteEmpty,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from '@/components/reui/autocomplete'
 
 export interface AutoCompleteOption {
   value: string
   label: string
-  /** Левый префикс (например эмодзи-флаг). */
+  /** Левый префикс (например флаг страны). */
   leading?: React.ReactNode
 }
 
@@ -33,7 +29,7 @@ interface AutoCompleteInputProps {
   searchPlaceholder?: string
   emptyText?: string
   className?: string
-  /** Показывать ли выбранный leading в триггере (например флаг). */
+  /** Показывать ли выбранный leading в поле (например флаг). */
   showLeadingInInput?: boolean
   /** Разрешать ли произвольный ввод (не только из списка). По умолчанию true. */
   allowFreeText?: boolean
@@ -45,107 +41,88 @@ export function AutoCompleteInput({
   onChange,
   options,
   placeholder = 'Выбрать…',
-  searchPlaceholder = 'Поиск…',
+  searchPlaceholder,
   emptyText = 'Ничего не найдено',
   className,
   showLeadingInInput = true,
   allowFreeText = true,
 }: AutoCompleteInputProps) {
-  const [open, setOpen] = React.useState(false)
-  const [query, setQuery] = React.useState('')
+  const trimmedValue = value.trim()
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return options
-    return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
-    )
-  }, [options, query])
-
-  const selected = options.find(
-    (o) => o.value.toLowerCase() === value.trim().toLowerCase(),
+  const selected = React.useMemo(
+    () => options.find((o) => o.value.toLowerCase() === trimmedValue.toLowerCase()),
+    [options, trimmedValue],
   )
-  const displayLabel = selected?.label ?? value
   const leading = showLeadingInInput ? selected?.leading : undefined
 
-  const handleSelect = (next: string) => {
-    onChange(next)
-    setQuery('')
-    setOpen(false)
-  }
+  const inputPlaceholder = searchPlaceholder ?? placeholder
+
+  const handleValueChange = React.useCallback(
+    (inputVal: string) => {
+      const q = inputVal.trim()
+      const match = options.find(
+        (o) =>
+          o.label.toLowerCase() === q.toLowerCase() ||
+          o.value.toLowerCase() === q.toLowerCase(),
+      )
+      if (match) {
+        onChange(match.value)
+        return
+      }
+      if (allowFreeText) {
+        onChange(inputVal)
+      }
+    },
+    [options, onChange, allowFreeText],
+  )
 
   return (
-    <Popover open={open} onOpenChange={(o) => {
-      setOpen(o)
-      if (!o) setQuery('')
-    }}>
-      <PopoverTrigger
-        render={
-          <Button
-            id={id}
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn('w-full justify-between font-normal', className)}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              {leading ? <span className="size-4 shrink-0 leading-none">{leading}</span> : null}
-              <span className={cn('truncate', !value && 'text-muted-foreground')}>
-                {value ? displayLabel : placeholder}
-              </span>
-            </span>
-            <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
-          </Button>
-        }
-      />
-      <PopoverContent align="start" className="w-[--anchor-width] min-w-[220px] p-0">
-        <Command shouldFilter={false} loop>
-          <CommandInput
-            placeholder={searchPlaceholder}
-            value={query}
-            onValueChange={setQuery}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <CommandList className="py-1">
-            <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {allowFreeText && query.trim() && !filtered.some(
-                (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
-              ) ? (
-                <CommandItem
-                  value={`__free__:${query.trim()}`}
-                  onSelect={() => handleSelect(query.trim())}
-                  className="gap-2.5"
-                >
-                  <SearchIcon className="size-4 opacity-50" />
-                  <span className="flex-1 truncate">
-                    Использовать: <b>{query.trim()}</b>
-                  </span>
-                </CommandItem>
-              ) : null}
-              {filtered.map((opt) => {
-                const isSelected = opt.value.toLowerCase() === value.trim().toLowerCase()
-                return (
-                  <CommandItem
-                    key={opt.value}
-                    value={opt.value}
-                    onSelect={() => handleSelect(opt.value)}
-                    className="gap-2.5"
-                  >
-                    {opt.leading ? (
-                      <span className="size-4 shrink-0 leading-none">{opt.leading}</span>
-                    ) : null}
-                    <span className="flex-1">{opt.label}</span>
-                    {isSelected ? <CheckIcon className="size-4 opacity-60" /> : null}
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <Autocomplete
+      items={options}
+      value={value}
+      onValueChange={handleValueChange}
+      itemToStringValue={(item) => item.label}
+      mode="list"
+      autoHighlight
+      openOnInputClick
+    >
+      <div className="relative w-full">
+        {leading ? (
+          <span className="pointer-events-none absolute start-2.5 top-1/2 z-10 size-4 -translate-y-1/2 [&_svg]:size-full">
+            {leading}
+          </span>
+        ) : null}
+        <AutocompleteInput
+          id={id}
+          placeholder={trimmedValue ? undefined : inputPlaceholder}
+          showTrigger
+          showClear={Boolean(trimmedValue)}
+          className={cn(leading && 'ps-8', className)}
+        />
+      </div>
+      <AutocompleteContent>
+        <AutocompleteEmpty>{emptyText}</AutocompleteEmpty>
+        <AutocompleteList>
+          {(item) => {
+            const isSelected = item.value.toLowerCase() === trimmedValue.toLowerCase()
+            return (
+              <AutocompleteItem
+                key={item.value}
+                value={item}
+                className="gap-2.5 px-2 py-1.5"
+              >
+                {item.leading ? (
+                  <span className="relative z-1 size-4 shrink-0">{item.leading}</span>
+                ) : null}
+                <span className="relative z-1 min-w-0 flex-1 truncate">{item.label}</span>
+                {isSelected ? (
+                  <CheckIcon className="relative z-1 size-4 shrink-0 opacity-60" />
+                ) : null}
+              </AutocompleteItem>
+            )
+          }}
+        </AutocompleteList>
+      </AutocompleteContent>
+    </Autocomplete>
   )
 }
