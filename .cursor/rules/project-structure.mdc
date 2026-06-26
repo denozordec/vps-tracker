@@ -1,26 +1,81 @@
 ---
-description: Структура проекта vps-tracker и соглашения по именованию
+description: Структура vps-tracker — pnpm monorepo (apps/web, apps/api, packages/ui, packages/shared, packages/db)
 alwaysApply: true
 ---
 
 # Структура проекта vps-tracker
 
-## Папки
+pnpm workspaces monorepo. Frontend — shadcn/ui + TanStack Router/Query + TS. Backend — Fastify + Drizzle + better-sqlite3 + TS.
 
-- `server/` — Express backend, SQLite (sql.js)
-- `src/` — React frontend (Vite)
-- `server/adapters/` — один адаптер на провайдера API (billmanager)
-- `server/routes/` — Express роутеры по сущностям
-- `server/db/` — схема, миграции, seed
+## Layout
+
+```
+vps-tracker/
+├── apps/
+│   ├── web/              # Vite SPA (TSX) — TanStack Router + Query, shadcn/ui
+│   └── api/              # Fastify 5 API (TS) — @fastify/* + Drizzle
+├── packages/
+│   ├── ui/               # @cfdm/ui — shadcn primitives (output `shadcn add`)
+│   ├── shared/           # @cfdm/shared — Zod-схемы контрактов, общие типы
+│   └── db/               # @cfdm/db — Drizzle schema, repositories, миграции
+├── data/                 # SQLite база (том Docker, gitignored)
+├── pnpm-workspace.yaml
+├── package.json
+└── tsconfig.base.json
+```
+
+## apps/web
+
+```
+apps/web/
+├── components.json       # ui alias → @cfdm/ui/components
+├── vite.config.ts        # React + TanStack Router plugin, proxy /api → apps/api
+├── tsconfig.json
+└── src/
+    ├── main.tsx          # QueryClientProvider, createRouter, import '@cfdm/ui/globals.css'
+    ├── routes/           # file-based routes (__root.tsx, _auth/...)
+    ├── queries/          # queryOptions + key factories по сущностям
+    ├── components/       # shared + layout + domain (blocks)
+    └── lib/              # api-client, queryClient, router, schemas
+```
+
+## apps/api
+
+```
+apps/api/
+└── src/
+    ├── index.ts          # buildApp()
+    ├── config.ts         # env через Zod
+    ├── routes/           # тонкие Fastify plugins
+    ├── services/         # бизнес-логика + адаптеры (billmanager/*)
+    └── plugins/          # @fastify/* registration
+```
+
+## packages/db
+
+```
+packages/db/src/
+├── schema/               # Drizzle tables по сущностям
+├── repositories/         # typed queries (inArray, JOIN, transaction)
+└── migrations/           # drizzle-kit generate/migrate
+```
 
 ## Именование
 
-- Файлы: kebab-case (provider-accounts.js, row-mappers.js)
-- Роуты: `/api/vps`, `/api/provider-accounts`, `/api/sync/:accountId`
+- Файлы: kebab-case (`provider-accounts.ts`, `row-mappers.ts`)
+- Компоненты: PascalCase (`PageHeader.tsx`)
+- Роуты API: `/api/vps`, `/api/provider-accounts`, `/api/sync/:accountId`
 - ID записей: `vps-bm-{accountId}-{externalId}`, `pay-bm-{accountId}-{externalId}`
 
 ## Barrel exports
 
-Модули с несколькими файлами экспортируют через `index.js`:
-- `server/adapters/billmanager/index.js` — testConnection, syncFromBillmanager, fetchDashboardInfo
-- `server/db/index.js` — initDb, getDb, saveDb
+- `packages/ui` — `@cfdm/ui/components/*`, `@cfdm/ui/lib/utils`, `@cfdm/ui/hooks/*`, `@cfdm/ui/globals.css`
+- `packages/shared` — `@cfdm/shared/contracts/*` (Zod), `@cfdm/shared/types/*`
+- `packages/db` — `@cfdm/db/schema`, `@cfdm/db/repositories/*`
+- `apps/api/src/services/billmanager/index.ts` — `testConnection`, `syncFromBillmanager`, `fetchDashboardInfo`
+
+## Скоупы правил
+
+- Frontend (`apps/web`, `packages/ui`) — [`frontend-monorepo.mdc`](frontend-monorepo.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc), [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`shadcn-ui-production.mdc`](shadcn-ui-production.mdc)
+- Backend (`apps/api`, `packages/db`, `packages/shared`) — [`backend-fastify.mdc`](backend-fastify.mdc), [`backend-drizzle.mdc`](backend-drizzle.mdc), [`backend-mcp.mdc`](backend-mcp.mdc), [`backend-testing.mdc`](backend-testing.mdc), [`backend-api-ui.mdc`](backend-api-ui.mdc), [`sqlite.mdc`](sqlite.mdc)
+- API + UI-связка — [`backend-api-ui.mdc`](backend-api-ui.mdc)

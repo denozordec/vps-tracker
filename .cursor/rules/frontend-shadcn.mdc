@@ -1,0 +1,197 @@
+---
+description: Frontend — ТОЛЬКО shadcn/ui docs (Components, Blocks, Installation); best practices, CLI-first
+globs: apps/web/**/*,packages/ui/**/*
+alwaysApply: false
+---
+
+# Frontend — shadcn/ui (обязательно)
+
+**Источник истины — MCP shadcn + официальная документация.** Не выдумывать UI, не писать кастомный CSS, не обходить MCP и CLI.
+
+Monorepo layout — [`frontend-monorepo.mdc`](frontend-monorepo.mdc). MCP workflow — [`shadcn-mcp.mdc`](shadcn-mcp.mdc). UI patterns — [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc).
+
+| Документ | URL |
+|----------|-----|
+| **Components (primary catalog)** | https://ui.shadcn.com/docs/components |
+| **Blocks** | https://ui.shadcn.com/blocks |
+| **Installation** | https://ui.shadcn.com/docs/installation |
+| **Monorepo** | https://ui.shadcn.com/docs/monorepo |
+| **Theming** | https://ui.shadcn.com/docs/theming |
+| **Dark Mode** | https://ui.shadcn.com/docs/dark-mode |
+| **Forms (RHF)** | https://ui.shadcn.com/docs/forms/react-hook-form |
+
+## Шаг 0 — перед любым UI-кодом
+
+0. **Codegraph** `codegraph_explore` — найти существующие реализации
+1. **MCP `plugin-shadcn-shadcn`:** `search_items_in_registries` → `get_item_examples_from_registries` → `get_add_command_for_items` ([`shadcn-mcp.mdc`](shadcn-mcp.mdc))
+2. Открыть **Components** или **Blocks** — найти готовое решение
+3. `cd apps/web && pnpm dlx shadcn@latest docs <component>` — сверить API с [Components](https://ui.shadcn.com/docs/components)
+4. Сверить MCP examples ↔ docs API — только потом писать код
+5. `cd apps/web && pnpm dlx shadcn@latest search "@shadcn/<query>"` — если MCP не дал результат
+
+**Новая страница** → сначала [Blocks](https://ui.shadcn.com/blocks), потом `pnpm dlx shadcn@latest add <block-id>`.
+
+## Docs workflow
+
+1. MCP `plugin-shadcn-shadcn` — search → examples → add command
+2. `pnpm dlx shadcn@latest docs <component>` — fetch URLs, сверить API
+3. Skill `.agents/skills/shadcn/SKILL.md` — critical rules
+4. Context7 — только TanStack / Recharts
+
+## Shared components (обязательно)
+
+| Component | Файл |
+|-----------|------|
+| `PageShell` | `page-shell.tsx` |
+| `PageHeader` | `page-header.tsx` |
+| `EmptyState` | `empty-state.tsx` |
+| `QueryState` | `query-state.tsx` |
+| `ConfirmDialog` | `confirm-dialog.tsx` |
+| `DataTableCard` | `data-table-card.tsx` |
+| `SectionCards` | `section-cards.tsx` |
+| `StatusBadge` | `status-badge.tsx` |
+| `FormSheet` | `form-sheet.tsx` |
+| `FormField` | `form-field.tsx` |
+| `TableCard` | `table-card.tsx` |
+| `LoadingButton` | `loading-button.tsx` |
+| `SectionCardsSkeleton` | `section-cards-skeleton.tsx` |
+| `TableSkeleton` | `table-skeleton.tsx` |
+
+**Overlay:** Sheet — forms; AlertDialog — destructive confirm.
+
+## Шаг 1 — CLI (обязательно)
+
+```bash
+cd apps/web
+pnpm dlx shadcn@latest add table select badge card field input button ...
+pnpm dlx shadcn@latest add sidebar-07    # layout
+pnpm dlx shadcn@latest add dashboard-01 # dashboard
+pnpm dlx shadcn@latest add login-03     # auth
+pnpm dlx shadcn@latest apply b2fA --only theme -y   # тема — ТОЛЬКО так
+```
+
+- Копипаст с сайта **без** CLI — запрещено
+- `packages/ui/src/components/*` — только registry; domain-логика → `apps/web/src/components/<name>.tsx`
+
+## Шаг 2 — композиция (best practices)
+
+### Приоритет
+
+1. Установленный `@cfdm/ui/components/*`
+2. Block из registry (адаптация под TanStack Router)
+3. Shared проекта: `PageShell`, `PageHeader`, `EmptyState`, `QueryState`, `ConfirmDialog`, `DataTableCard`, `SectionCards`, `StatusBadge`
+4. Domain-обёртка — последний уровень кастомизации
+
+### Запрещено в apps/web
+
+| ❌ | ✅ |
+|----|---|
+| `<table>`, `<select>`, `<hr>` | `Table`, `Select`, `Separator` из [Components](https://ui.shadcn.com/docs/components) |
+| `bg-emerald-*`, `text-blue-500`, hex в className | `bg-primary`, `text-muted-foreground`, `Badge variant` |
+| Ручной `globals.css`, `.css` модули | CLI `apply b2fA --only theme` |
+| `space-y-*` / `space-x-*` | `flex` + `gap-*` |
+| `w-10 h-10` | `size-10` |
+| `className` для цветов Button/Badge | `variant`, `size` |
+| `useState` для полей формы | `FieldGroup` + RHF + Zod |
+| Styled `<Link>` | `Button variant="link"` + `render={<Link />}` |
+| `inline style={{}}` в routes | layout Tailwind |
+| `animate-pulse` div | `Skeleton` |
+| кастомный toast | `sonner` → `toast()` |
+| `@/components/ui/*` | `@cfdm/ui/components/*` |
+
+### Устаревшие библиотеки (миграция с Tabler)
+
+| ❌ удалить | ✅ заменить на |
+|-----------|----------------|
+| `@tabler/core` (CSS-фреймворк) | Tailwind v4 + shadcn tokens |
+| `import '@tabler/core/dist/css/tabler.min.css'` в `main.tsx` | `import '@cfdm/ui/globals.css'` |
+| `@tabler/icons-react` (`Icon*`) | `lucide-react` (`<PlusIcon />` и т.п.) |
+| `chart.js` | `recharts` через shadcn `Chart`/`ChartContainer` |
+| `react-router-dom` (`<BrowserRouter>`, `<Routes>`, `useNavigate`) | TanStack Router (`createFileRoute`, `<Link>`, `useNavigate`) |
+| Bootstrap-классы Tabler (`page`, `navbar-vertical`, `nav-link`, `container-tight`, `spinner-border`, `d-lg-none`) | shadcn `AppShell` (sidebar-07), `Button`, `Skeleton` |
+| Prop-drilling `db` + `actions` из `App.jsx` | `useQuery`/`useMutation` + key factories в `queries/` |
+| `useState` + `loadDataSet()` в корне | `QueryClient` + route loaders (`ensureQueryData`) |
+
+### Формы
+
+По https://ui.shadcn.com/docs/forms/react-hook-form:
+
+```tsx
+<FieldGroup>
+  <Field data-invalid={!!errors.name}>
+    <FieldLabel htmlFor="name">Имя</FieldLabel>
+    <Input id="name" aria-invalid={!!errors.name} {...register('name')} />
+  </Field>
+</FieldGroup>
+```
+
+### Card
+
+`CardHeader` / `CardTitle` / `CardDescription` / `CardContent` / `CardFooter` — полная композиция из docs.
+
+### Таблицы
+
+`Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` — из docs.  
+Сложная таблица → [Data Table](https://ui.shadcn.com/docs/components/data-table) + block `dashboard-01`.
+
+### Графики
+
+`Chart` + `ChartContainer` + `chartConfig` с `var(--chart-1)` — не raw recharts без обёртки.
+
+### Иконки в Button
+
+```tsx
+<Button>
+  <PlusIcon data-icon="inline-start" />
+  Создать
+</Button>
+```
+
+Без `size-4` на иконке внутри shadcn-компонента.
+
+## Стек (не shadcn, но обязателен)
+
+TanStack Router + Query — [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc).
+
+- Preset: **base-nova** + **neutral** — [`apps/web/components.json`](apps/web/components.json), [`packages/ui/components.json`](packages/ui/components.json)
+- `@base-ui/react` → `render` prop (не Radix `asChild`)
+- **Не Next.js** — нет Server Components, `'use client'`
+
+## Эталоны проекта
+
+| Зона | Файл | Block |
+|------|------|-------|
+| Shell | `apps/web/src/components/layout/app-shell.tsx` | [sidebar-07](https://ui.shadcn.com/blocks) |
+| Login | `apps/web/src/routes/login.tsx` | [login-03](https://ui.shadcn.com/blocks) |
+| Dashboard | `apps/web/src/routes/_auth/index.tsx` | [dashboard-01](https://ui.shadcn.com/blocks) |
+| CRUD | `routes/_auth/services.tsx`, `domains/index.tsx` | Card + Field + Table |
+
+## Структура файлов
+
+```
+apps/web/src/
+  components/        ← domain + layout + shared (blocks)
+  routes/            ← страницы (композиция @cfdm/ui, без raw HTML)
+  queries/           ← queryOptions (не inline в routes)
+  lib/schemas.ts     ← Zod для форм
+
+packages/ui/src/
+  components/        ← только CLI (не трогать под кейс)
+  hooks/             ← registry hooks (use-mobile)
+  lib/utils.ts       ← cn()
+  styles/globals.css ← только output shadcn CLI
+```
+
+## Чеклист перед завершением задачи
+
+- [ ] MCP shadcn: search + examples (+ add command при новых примитивах)
+- [ ] Решение есть в https://ui.shadcn.com/docs/components или /blocks
+- [ ] Компоненты добавлены через `pnpm dlx shadcn@latest add` из `apps/web`
+- [ ] Нет кастомного CSS и raw HTML-примитивов
+- [ ] Semantic tokens, `variant`/`size` вместо переопределения className
+- [ ] UI-импорты через `@cfdm/ui/components/*`
+- [ ] `pnpm --filter web build` без ошибок
+
+## Язык
+
+Ответы пользователю — русский. Commits — [`commit-messages-ru.mdc`](commit-messages-ru.mdc).

@@ -1,0 +1,41 @@
+---
+description: shadcn/ui — глобальные UI-принципы проекта; frontend см. frontend-shadcn.mdc
+alwaysApply: true
+---
+
+# shadcn/ui — правила проекта
+
+UI строится **исключительно** по [shadcn/ui](https://ui.shadcn.com/docs/installation): [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks), [Monorepo](https://ui.shadcn.com/docs/monorepo).
+
+**Первый шаг любой UI-задачи — MCP `plugin-shadcn-shadcn`** (см. [`shadcn-mcp.mdc`](shadcn-mcp.mdc)): search → examples → add command → CLI.
+
+## Разработка frontend
+
+**Все правила frontend** — в [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc) и [`frontend-monorepo.mdc`](frontend-monorepo.mdc) (globs: `apps/web/**`, `packages/ui/**`).
+
+Кратко: docs → CLI из `apps/web` → Block → композиция → `pnpm --filter web build`. Кастомный CSS и самописные примитивы **запрещены**.
+
+## Стек
+
+- Monorepo: `apps/web` + `packages/ui` (`@cfdm/ui`), pnpm workspaces
+- Vite + TanStack Router/Query + shadcn **base-nova**
+- Конфиг: [`apps/web/components.json`](apps/web/components.json), [`packages/ui/components.json`](packages/ui/components.json)
+- Тема: `pnpm dlx shadcn@latest apply b2fA --only theme -y` — единственный способ менять `packages/ui/src/styles/globals.css`
+
+## Backend → UI
+
+При правках API с экранами: [`backend-api-ui.mdc`](backend-api-ui.mdc). Backend: `apps/api` (Fastify + Drizzle).
+
+## Устаревший стек (запрещён в apps/web)
+
+Проект мигрирует с Tabler-стека на shadcn/ui. **Не использовать**:
+
+- `@tabler/core` и `@tabler/core/dist/css/tabler.min.css` — заменить на `@cfdm/ui/globals.css`
+- `@tabler/icons-react` — иконки только `lucide-react`
+- `chart.js` — графики только `recharts` через shadcn `Chart`/`ChartContainer`
+- `react-router-dom` — роутинг только TanStack Router (`createFileRoute`, file-based routes)
+- Bootstrap/Tabler utility-классы (`page`, `navbar-vertical`, `nav-link`, `container-tight`, `spinner-border`, `d-lg-none`, `page-wrapper`) — layout через Tailwind + shadcn blocks (sidebar-07)
+
+## Язык
+
+Русский. Commits: [`commit-messages-ru.mdc`](commit-messages-ru.mdc).

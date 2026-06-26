@@ -1,0 +1,49 @@
+---
+description: ВСЕГДА использовать MCP-плагин shadcn UI перед любым UI-кодом
+alwaysApply: true
+---
+
+# shadcn MCP — обязательно
+
+Перед **любой** задачей с UI (новый экран, компонент, стили, рефакторинг внешнего вида) — **сначала MCP** `plugin-shadcn-shadcn`, не память и не веб-поиск.
+
+CLI и docs — **после** MCP, по команде из `get_add_command_for_items`.
+
+## Порядок (строго)
+
+0. **Codegraph** `codegraph_explore` — найти существующие реализации и shared-обёртки (один вызов перед правками)
+1. **`get_project_registries`** — какие registry доступны в проекте
+2. **`search_items_in_registries`** — компонент, block, example (`query`: `"card"`, `"tabs demo"`, `"dashboard"`, `"scroll-area"`)
+3. **`get_item_examples_from_registries`** — полный код примера перед написанием JSX
+4. **`get_add_command_for_items`** — точная CLI-команда `pnpm dlx shadcn@latest add ...`
+5. Выполнить add из `apps/web` (см. [`frontend-monorepo.mdc`](frontend-monorepo.mdc))
+6. **CLI docs (обязательно):** `cd apps/web && pnpm dlx shadcn@latest docs <component>` — сверить API/props с [ui.shadcn.com/docs/components](https://ui.shadcn.com/docs/components)
+7. Сверить examples из MCP с API из docs CLI — реализовать только после совпадения
+8. Адаптировать пример под TanStack Router / Query → `apps/web/src/`
+9. **Context7** — только TanStack / Recharts / не-shadcn (не заменяет шаги 1–8 для примитивов)
+10. **`get_audit_checklist`** — перед merge PR
+11. **Codegraph** `codegraph_status` — Pending sync пустой после правок
+
+## Когда вызывать MCP
+
+| Задача | MCP |
+|--------|-----|
+| Новая страница / layout | `search` → `types: ["block"]` → examples → add block |
+| Нет примитива в `@cfdm/ui` | `search` → `get_add_command_for_items` → add |
+| Сомнение в API/props | `get_item_examples_from_registries` |
+| Ревью UI перед сдачей | `get_audit_checklist` |
+
+## Запрещено
+
+- Писать UI по памяти, не проверив MCP
+- Копипаст с ui.shadcn.com без examples/add из MCP
+- Самописные примитивы, если есть item в registry
+- Пропускать MCP «потому что компонент простой»
+
+## Сервер и инструменты
+
+- **MCP server:** `plugin-shadcn-shadcn`
+- **Инструменты:** `get_project_registries`, `search_items_in_registries`, `get_item_examples_from_registries`, `get_add_command_for_items`, `view_items_in_registries`, `list_items_in_registries`, `get_audit_checklist`
+- Перед вызовом — прочитать schema в `mcps/plugin-shadcn-shadcn/tools/`
+
+Связанные правила: [`shadcn-ui-production.mdc`](shadcn-ui-production.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc).

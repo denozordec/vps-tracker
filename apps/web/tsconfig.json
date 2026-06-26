@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@cfdm/ui/components/*": ["../../packages/ui/src/components/*"],
+      "@cfdm/ui/hooks/*": ["../../packages/ui/src/hooks/*"],
+      "@cfdm/ui/lib/utils": ["../../packages/ui/src/lib/utils.ts"],
+      "@cfdm/ui/globals.css": ["../../packages/ui/src/styles/globals.css"],
+      "@cfdm/shared": ["../../packages/shared/src/index.ts"],
+      "@cfdm/shared/contracts/*": ["../../packages/shared/src/contracts/*"],
+      "@cfdm/shared/types/*": ["../../packages/shared/src/types/*"],
+      "@cfdm/db": ["../../packages/db/src/index.ts"],
+      "@cfdm/db/schema": ["../../packages/db/src/schema/index.ts"],
+      "@cfdm/db/repositories/*": ["../../packages/db/src/repositories/*"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

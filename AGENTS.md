@@ -4,33 +4,47 @@
 
 VPS Tracker — приложение для учёта виртуальных серверов (VPS), провайдеров, аккаунтов, платежей и балансов. Поддерживает синхронизацию с BILLmanager 6 API.
 
+## Стек
+
+- **Monorepo:** pnpm workspaces (`apps/*`, `packages/*`)
+- **Frontend** (`apps/web`): Vite + React 19 + TypeScript, TanStack Router v1 + Query v5, shadcn/ui (`@cfdm/ui`), Tailwind v4, lucide-react, Recharts (через shadcn Chart), react-hook-form + Zod
+- **Backend** (`apps/api`): Fastify 5 + TypeScript, `@fastify/*` plugins, контракты через `@cfdm/shared` (Zod)
+- **DB** (`packages/db`): Drizzle ORM + better-sqlite3 (WAL, `foreign_keys=ON`)
+- **Тесты:** Vitest (`app.inject()` для backend, `happy-dom` для frontend)
+
 ## Структура проекта
 
 ```
 vps-tracker/
-├── server/                 # Express backend
-│   ├── index.js            # Точка входа, подключение роутов
-│   ├── db/                 # База данных (SQLite via sql.js)
-│   │   ├── schema.js       # CREATE TABLE
-│   │   ├── migrations.js   # Миграции схемы
-│   │   ├── seed.js         # Начальные данные из public/data
-│   │   └── index.js        # initDb, getDb, saveDb
-│   ├── adapters/           # Интеграции с внешними API
-│   │   └── billmanager/    # BILLmanager 6 API
-│   │       ├── client.js   # HTTP-запросы
-│   │       ├── parsers.js  # Парсинг ответов API
-│   │       ├── mappers.js  # Маппинг в модель vps-tracker
-│   │       ├── operations.js # fetchVds, fetchPayments и т.д.
-│   │       ├── sync.js     # syncFromBillmanager
-│   │       └── index.js    # Barrel export
-│   ├── routes/             # Express роутеры
-│   ├── utils/              # row-mappers и др.
-│   └── sync-scheduler.js   # Планировщик синка
-├── src/                    # React frontend (Vite)
-│   ├── pages/              # Страницы приложения
-│   ├── components/         # UI-компоненты
-│   └── lib/                # api.js, utils.js
-└── public/data/            # JSON для seed (providers, vps, payments...)
+├── apps/
+│   ├── web/              # Vite SPA (TSX) — TanStack + shadcn/ui
+│   │   └── src/
+│   │       ├── routes/           # file-based (TanStack Router)
+│   │       ├── queries/          # queryOptions + key factories
+│   │       ├── components/       # shared + layout + domain
+│   │       └── lib/              # api-client, queryClient, router, schemas
+│   └── api/              # Fastify 5 API (TS)
+│       └── src/
+│           ├── routes/           # тонкие plugins
+│           ├── services/         # бизнес-логика + billmanager/
+│           │   └── billmanager/  # client, parsers, mappers, operations, sync
+│           └── plugins/          # @fastify/* registration
+├── packages/
+│   ├── ui/               # @cfdm/ui — shadcn primitives
+│   │   └── src/
+│   │       ├── components/       # output `shadcn add` (не трогать под кейс)
+│   │       ├── hooks/            # use-mobile и др.
+│   │       ├── lib/utils.ts      # cn()
+│   │       └── styles/globals.css # только output `shadcn apply --only theme`
+│   ├── shared/           # @cfdm/shared — Zod-контракты, общие типы
+│   └── db/               # @cfdm/db — Drizzle schema, repositories, миграции
+│       └── src/
+│           ├── schema/           # tables по сущностям
+│           ├── repositories/     # typed queries
+│           └── migrations/       # drizzle-kit
+├── data/                 # SQLite база (том Docker, gitignored)
+├── pnpm-workspace.yaml
+└── package.json
 ```
 
 ## Основные сущности
@@ -47,11 +61,13 @@ vps-tracker/
 
 ## Где искать код по доменам
 
-- **Sync (BILLmanager)** — `server/adapters/billmanager/`, `server/routes/sync.js`, `server/sync-scheduler.js`
-- **Тарифы** — `server/adapters/billmanager/operations.js` (fetchVdsOrderPricelist), `server/adapters/billmanager/sync.js`
-- **VPS CRUD** — `server/routes/vps.js`
-- **Платежи/баланс** — `server/routes/payments.js`, `server/routes/balance-ledger.js`
-- **Курсы валют** — `src/lib/utils.js` (convertCurrency, formatInBaseCurrency), настройки в settings.ratesUrl
+- **Sync (BILLmanager)** — `apps/api/src/services/billmanager/`, `apps/api/src/routes/sync.ts`, scheduler в `apps/api/src/services/`
+- **Тарифы** — `apps/api/src/services/billmanager/operations.ts` (fetchVdsOrderPricelist), `apps/api/src/services/billmanager/sync.ts`
+- **VPS CRUD** — `apps/api/src/routes/vps.ts`, `packages/db/src/repositories/vps.ts`
+- **Платежи/баланс** — `apps/api/src/routes/payments.ts`, `apps/api/src/routes/balance-ledger.ts`
+- **Курсы валют** — `apps/web/src/lib/format.ts` (convertCurrency, formatInBaseCurrency), настройки в `settings.ratesUrl`
+- **UI shared** — `apps/web/src/components/` (PageShell, PageHeader, EmptyState, QueryState, ConfirmDialog, DataTableCard, SectionCards, StatusBadge, FormSheet, FormField, TableCard, LoadingButton)
+- **UI primitives** — `packages/ui/src/components/*` (только output `shadcn add`)
 
 ## BILLmanager API
 
@@ -60,3 +76,21 @@ vps-tracker/
 - [Payments API](https://www.ispsystem.com/docs/b6c/developer-section/billmanager-api/payments-payment)
 
 Формат запроса: `?authinfo=user:pass&out=bjson&func=vds|payment|dashboard.info|vds.order`
+
+## Команды
+
+```bash
+pnpm install
+pnpm --filter web dev          # frontend dev
+pnpm --filter api dev          # backend dev
+pnpm --filter web build        # production build frontend
+pnpm --filter api test         # Vitest backend
+pnpm --filter web test         # Vitest frontend
+```
+
+## Соглашения
+
+- UI — только [shadcn/ui](https://ui.shadcn.com) через MCP `plugin-shadcn-shadcn` (см. [`shadcn-mcp.mdc`](.cursor/rules/shadcn-mcp.mdc))
+- Коммиты — на русском, см. [`commit-messages-ru.mdc`](.cursor/rules/commit-messages-ru.mdc)
+- Gitflow — см. [`gitflow.mdc`](.cursor/rules/gitflow.mdc)
+- Структура — см. [`project-structure.mdc`](.cursor/rules/project-structure.mdc)

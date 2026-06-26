@@ -1,0 +1,120 @@
+---
+description: Vite + TanStack Router v1 + TanStack Query v5 — routing, loaders, queries, mutations
+globs: apps/web/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Vite + TanStack Router + Query
+
+Фронтенд: **Vite SPA**, не Next.js. Нет Server Components, App Router, `'use client'`.
+
+## Структура
+
+```
+apps/web/src/
+  routes/           # file-based routes (__root.tsx, _auth/, ...)
+  queries/          # queryOptions factories + key factories
+  lib/              # api-client, queryClient, auth, schemas
+  components/       # domain + layout (UI primitives → @cfdm/ui)
+  main.tsx
+```
+
+## Архитектура
+
+- **Router** — маршрутизация, URL state, navigation, loaders
+- **Query** — server state, cache, mutations
+- **Loader** — `queryClient.ensureQueryData()` до рендера → без спиннеров на route data
+- **Компоненты** — UI; данные из Query cache
+
+## QueryClient + Router
+
+```ts
+// lib/queryClient.ts
+export const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000 } },
+})
+
+// lib/router.ts
+export const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  defaultPreload: 'intent',
+})
+
+declare module '@tanstack/react-router' {
+  interface Register { router: typeof router }
+}
+```
+
+## Query definitions
+
+- `queryOptions` factories в `queries/`, не inline в компонентах
+- Key factories: `all` → `lists` / `details` → `list(filters)` / `detail(id)`
+
+```ts
+export const serviceKeys = {
+  all: ['services'] as const,
+  list: () => [...serviceKeys.all, 'list'] as const,
+}
+
+export const servicesQueryOptions = () =>
+  queryOptions({
+    queryKey: serviceKeys.list(),
+    queryFn: () => api.get('/api/v1/services'),
+  })
+```
+
+## Loader + component
+
+```tsx
+export const Route = createFileRoute('/_auth/services')({
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData(servicesQueryOptions()),
+  component: ServicesPage,
+})
+
+function ServicesPage() {
+  const { data } = useQuery(servicesQueryOptions()) // из cache loader
+  return ...
+}
+```
+
+## Search params
+
+- Zod + `validateSearch`; доступ через `Route.useSearch()`
+- Search params = source of truth для фильтров/пагинации
+- Передавать в `queryOptions` для query key и fetcher
+
+## Mutations
+
+```ts
+onSuccess: (newItem) => {
+  queryClient.setQueryData(keys.detail(newItem.id), newItem)
+  queryClient.invalidateQueries({ queryKey: keys.lists() })
+}
+```
+
+- `setQueryData` + `invalidateQueries`, не только invalidate
+- Навигация после create — когда cache уже тёплый
+
+## Routing
+
+- `createFileRoute` для file-based routes
+- `<Link>` для внутренней навигации, не `<a href>`
+- Pathless layouts: `_auth/` для protected routes
+- Auth guard в `beforeLoad` pathless route
+
+## Запреты
+
+- `useEffect` для fetch данных — только loader / `useQuery`
+- Inline `queryKey` в компонентах — только factories из `queries/`
+- `useQuery` с позиционными аргументами (v5 — только options object)
+- `window.location` для search params
+
+## Prefetch
+
+`onMouseEnter` на `<Link>` → `queryClient.prefetchQuery(detailOptions(id))`
+
+## DevTools
+
+Только в dev: `TanStackRouterDevtools`, `ReactQueryDevtools`

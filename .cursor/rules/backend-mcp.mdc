@@ -1,0 +1,28 @@
+---
+description: Обязательный порядок MCP перед backend-кодом (Fastify, Drizzle, Cloudflare API)
+globs: apps/api/**/*,packages/db/**/*,packages/shared/**/*
+alwaysApply: false
+---
+
+# Backend MCP — обязательно
+
+Перед **любой** задачей в `apps/api`, `packages/db`, `packages/shared` — сначала MCP, не training data.
+
+## Порядок
+
+| Задача | MCP |
+|--------|-----|
+| Fastify plugins, routes, hooks | **Context7** `resolve-library-id` → `query-docs` (`fastify`, `@fastify/jwt`, `@fastify/type-provider-zod`) |
+| Drizzle schema, queries, migrations | **Context7** (`drizzle-orm`, `drizzle-kit`, `better-sqlite3`) |
+| Cloudflare DNS/Zones API | **`plugin-cloudflare-cloudflare-docs`** `search_cloudflare_documentation` |
+| API + UI | `packages/shared` → **shadcn MCP** ([`shadcn-mcp.mdc`](shadcn-mcp.mdc)) |
+| E2E / cutover | **cursor-ide-browser** |
+| Неизвестный инструмент | **user-mcp-on-demand** `search_tools` |
+
+## Запрещено
+
+- Угадывать API Fastify/Drizzle/CF из памяти
+- Самописные аналоги `@fastify/*` (CORS, static, JWT, rate-limit)
+- Дублировать Zod schemas вне `@cfdm/shared`
+
+Связанные: [`backend-fastify.mdc`](backend-fastify.mdc), [`backend-drizzle.mdc`](backend-drizzle.mdc), [`backend-testing.mdc`](backend-testing.mdc).

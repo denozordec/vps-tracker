@@ -1,0 +1,30 @@
+{
+  "name": "@cfdm/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./repositories/providers": "./src/repositories/providers.ts",
+    "./repositories/provider-accounts": "./src/repositories/provider-accounts.ts",
+    "./repositories/vps": "./src/repositories/vps.ts",
+    "./repositories/projects": "./src/repositories/projects.ts",
+    "./repositories/payments": "./src/repositories/payments.ts",
+    "./repositories/balance-ledger": "./src/repositories/balance-ledger.ts",
+    "./repositories/settings": "./src/repositories/settings.ts",
+    "./repositories/tariffs": "./src/repositories/tariffs.ts",
+    "./repositories/snapshot": "./src/repositories/snapshot.ts",
+    "./repositories/utils": "./src/repositories/utils.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.40.0",
+    "better-sqlite3": "^11.10.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.0",
+    "@types/better-sqlite3": "^7.6.13"
+  }
+}

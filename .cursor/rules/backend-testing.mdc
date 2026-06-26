@@ -1,0 +1,26 @@
+---
+description: Backend Vitest + Fastify inject
+globs: apps/api/**/*,packages/db/**/*,packages/shared/**/*
+alwaysApply: false
+---
+
+# Backend Testing
+
+Vitest + `app.inject()` (встроено в Fastify).
+
+## Требования
+
+- Каждый route plugin → минимум 1 integration test
+- Sync/DNS → parity fixtures
+- `:memory:` SQLite для unit; file DB для integration
+- `beforeEach` — fresh schema migrate
+
+## Паттерн
+
+```ts
+const app = await buildApp({ db: testDb })
+const res = await app.inject({ method: 'GET', url: '/health' })
+expect(res.statusCode).toBe(200)
+```
+
+См. [`vitest-best-practices.mdc`](vitest-best-practices.mdc).

@@ -1,0 +1,10 @@
+{
+  "plugins": {
+    "cloudflare": {
+      "enabled": true
+    },
+    "claude-plugins-official/typescript-lsp": {
+      "enabled": true
+    }
+  }
+}

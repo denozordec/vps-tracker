@@ -1,0 +1,83 @@
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import sensible from '@fastify/sensible'
+import staticPlugin from '@fastify/static'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import { getDb } from '@cfdm/db'
+
+import { dataRoutes } from './routes/data.js'
+import { vpsRoutes } from './routes/vps.js'
+import { providersRoutes } from './routes/providers.js'
+import { providerAccountsRoutes } from './routes/provider-accounts.js'
+import { paymentsRoutes } from './routes/payments.js'
+import { balanceLedgerRoutes } from './routes/balance-ledger.js'
+import { settingsRoutes } from './routes/settings.js'
+import { syncRoutes } from './routes/sync.js'
+import { projectsRoutes } from './routes/projects.js'
+import { backupRoutes } from './routes/backup.js'
+import { ratesProxyRoutes } from './routes/rates-proxy.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+export interface BuildAppOptions {
+  dbPath?: string
+  staticDir?: string
+}
+
+export async function buildApp(opts: BuildAppOptions = {}) {
+  if (opts.dbPath) process.env.DB_PATH = opts.dbPath
+  getDb()
+
+  const app = Fastify({
+    logger: process.env.NODE_ENV !== 'production',
+  })
+
+  await app.register(cors, { origin: true })
+  await app.register(sensible)
+
+  await app.register(dataRoutes)
+  await app.register(vpsRoutes)
+  await app.register(providersRoutes)
+  await app.register(providerAccountsRoutes)
+  await app.register(paymentsRoutes)
+  await app.register(balanceLedgerRoutes)
+  await app.register(settingsRoutes)
+  await app.register(syncRoutes)
+  await app.register(projectsRoutes)
+  await app.register(backupRoutes)
+  await app.register(ratesProxyRoutes)
+
+  const staticDir = opts.staticDir ?? join(__dirname, '..', '..', 'web', 'dist')
+  if (existsSync(staticDir)) {
+    await app.register(staticPlugin, {
+      root: staticDir,
+      prefix: '/',
+      wildcard: false,
+    })
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api')) {
+        reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
+        return
+      }
+      reply.sendFile('index.html')
+    })
+  }
+
+  return app
+}
+
+async function start() {
+  const port = Number(process.env.PORT ?? 3001)
+  const app = await buildApp()
+  try {
+    await app.listen({ port, host: '0.0.0.0' })
+  } catch (err) {
+    app.log.error(err)
+    process.exit(1)
+  }
+}
+
+void start()

@@ -7,5 +7,20 @@ services:
       - "3001:3001"
     environment:
       PORT: "3001"
+      # RUNTIME: "express" (по умолчанию, legacy) | "fastify" (новый стек)
+      RUNTIME: "express"
     volumes:
       - ./data:/app/data
+
+  # Раскомментируйте для локальной сборки вместо pull образа:
+  # app-build:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     PORT: "3001"
+  #     RUNTIME: "express"
+  #   volumes:
+  #     - ./data:/app/data

@@ -1,0 +1,37 @@
+---
+description: Backend API — при изменениях, затрагивающих UI, строго следовать shadcn Components/Blocks
+globs: apps/api/**/*,packages/shared/**/*
+alwaysApply: false
+---
+
+# Backend API + shadcn/ui
+
+Fastify backend: `apps/api/`. Контракты — `@cfdm/shared` (Zod). Frontend — TanStack Query.
+
+## Обязательный порядок
+
+1. **Backend** — route, service, Vitest (`app.inject()`)
+2. **Схемы** — `@cfdm/shared` (не дублировать в `apps/web/src/lib/schemas.ts`)
+3. **UI** — shadcn MCP ([`shadcn-mcp.mdc`](shadcn-mcp.mdc))
+
+## Запрещено на frontend при доработке API
+
+- Новые raw `<table>` / `<select>` / кастомные badge-цвета
+- Дублирование Zod schemas в `apps/web` — только re-export из `@cfdm/shared`
+- Самописные формы без `Field` + RHF + Zod
+
+## shadcn-паттерны
+
+| API-данные | UI |
+|------------|-----|
+| Список | `Table` / `DataTableCard` |
+| Создание | `Card` + `FieldGroup` + RHF |
+| Статус | `Badge` variants |
+| Ошибка | `sonner` `toast.error` |
+
+## Согласованность
+
+- JSON поля — snake_case как в существующем API
+- Новый endpoint → `queryOptions` в `apps/web/src/queries/`
+
+MCP backend: [`backend-mcp.mdc`](backend-mcp.mdc) · Fastify: [`backend-fastify.mdc`](backend-fastify.mdc)

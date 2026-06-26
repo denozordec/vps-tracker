@@ -1,0 +1,111 @@
+---
+description: Единые UI-паттерны web — shared components, docs workflow, матрица стандартизации
+globs: apps/web/**/*
+alwaysApply: false
+---
+
+# Frontend UI Patterns
+
+См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks).
+
+## Docs workflow (обязательно)
+
+0. Codegraph `codegraph_explore` — найти существующие shared/domain-компоненты
+1. Skill [`.agents/skills/shadcn/SKILL.md`](../.agents/skills/shadcn/SKILL.md) — component selection
+2. MCP `plugin-shadcn-shadcn` — search → examples → add command
+3. CLI: `cd apps/web && pnpm dlx shadcn@latest docs <component>` → сверить API с [Components](https://ui.shadcn.com/docs/components)
+4. Код по examples + docs API (только после совпадения MCP ↔ docs)
+5. Context7 — **только** TanStack Router/Query, Recharts (не shadcn primitives)
+6. MCP `get_audit_checklist` — перед merge
+7. Codegraph `codegraph_status` — Pending sync пустой
+
+## Иерархия компонентов
+
+```
+@cfdm/ui/components/*     ← только CLI (packages/ui)
+apps/web/src/components/  ← shared + domain + layout
+  page-shell.tsx          ← обёртка страницы
+  page-header.tsx
+  empty-state.tsx
+  query-state.tsx
+  confirm-dialog.tsx
+  data-table-card.tsx
+  section-cards.tsx
+  status-badge.tsx
+  form-sheet.tsx          ← Sheet + RHF FormProvider
+  form-field.tsx          ← Field + Controller + aria-invalid
+  table-card.tsx          ← Card + Table wrapper
+  loading-button.tsx      ← Button + Spinner + label swap
+  section-cards-skeleton.tsx
+  table-skeleton.tsx
+  layout/                 ← app-shell, site-header
+  domain-*                ← бизнес-компоненты
+```
+
+## Матрица стандартизации
+
+| Элемент | Shared | Primitive |
+|---------|--------|-----------|
+| Page wrapper | `PageShell` | — |
+| Page title | `PageHeader` | — |
+| Stat metrics | `SectionCards` | `Card` |
+| Data list | `DataTableCard` | `Table`, `InputGroup` |
+| Empty | `EmptyState` | `Empty` |
+| Loading / Error | `QueryState` | `Skeleton`, `Alert` |
+| Status | `StatusBadge` | `Badge` |
+| Create/Edit | `FormSheet` + `*-edit-sheet.tsx` | `Sheet`, `Field` |
+| Form field | `FormField` | `Field`, `Input`, `Select` |
+| Submit button | `LoadingButton` | `Button`, `Spinner` |
+| Table wrapper | `TableCard` | `Table`, `Card` |
+| Delete confirm | `ConfirmDialog` | `AlertDialog` |
+| List row | — | `Item variant="outline" size="sm"` |
+| Nav | `AppSidebar` | `Sidebar` |
+| Breadcrumbs | `SiteHeader` | `Breadcrumb` |
+| Dates | `lib/format.ts` | — |
+
+## Overlay selection
+
+| Сценарий | Компонент |
+|----------|-----------|
+| Create/edit форма | `Sheet` |
+| Destructive confirm | `AlertDialog` via `ConfirmDialog` |
+| Modal preview | `Dialog` |
+
+## Block registry
+
+| Зона | Block |
+|------|-------|
+| Shell | sidebar-07 |
+| Dashboard | dashboard-01 |
+| Login | login-03 |
+
+## Spacing
+
+```
+PageShell:     gap-4 md:gap-6, px-4 lg:px-6 py-4 md:py-6
+Card grid:     gap-4
+FieldGroup:    gap-4
+Item list:     gap-2
+Toolbar:       gap-2
+```
+
+**Запрещено:** `space-y-*`, raw colors (`bg-emerald-*`), custom empty divs, page-level Spinner.
+
+## UX/UI 2026 (состояния данных)
+
+Каждый блок: **default, hover, focus, disabled, empty, loading, error**.
+
+- **Loading** — `Skeleton` с размерами финального контента (`QueryState skeleton={…}`), не Spinner на странице
+- **Empty** — `EmptyState` с CTA (кнопка создания)
+- **Zero-results** — отдельный empty с «Сбросить фильтр» (не «Создать»)
+- **Error** — `QueryState` + `onRetry` + иконка + текст
+- **Overflow** — `truncate`, `max-w-*`, `Tooltip`; `tabular-nums` для чисел
+- **Density** — таблицы `h-10 text-sm`; max 1 primary CTA на экран
+- **A11y** — `aria-invalid` на полях, `aria-label`/`sr-only` на icon-only кнопках, цвет не единственный сигнал статуса
+
+## Button hierarchy (max 1 primary per screen)
+
+1. `default` — главный CTA
+2. `outline` — вторичные действия
+3. `ghost` / `link` — навигация, cancel
+4. `destructive` — только с `ConfirmDialog`

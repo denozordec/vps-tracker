@@ -1,0 +1,26 @@
+---
+description: Drizzle ORM + SQLite — schema, migrations, queries
+globs: packages/db/**/*,apps/api/src/services/**/*
+alwaysApply: false
+---
+
+# Backend Drizzle
+
+MCP Context7 (`drizzle-orm`, `drizzle-kit`) — [`backend-mcp.mdc`](backend-mcp.mdc).
+
+## Schema
+
+- `packages/db/src/schema/` — source of truth
+- Migrations: `drizzle-kit generate` / `migrate`
+- WAL + `foreign_keys` при открытии SQLite
+- Индекс `idx_dns_records_domain_cf_id` на `(domain_id, cf_record_id)`
+
+## Queries
+
+- Batch queries (`inArray`, JOINs) — не N+1 loops
+- UNIQUE violations → `CONFLICT` (409)
+- Multi-step → `db.transaction()`
+
+## SQLite
+
+См. [`sqlite.mdc`](sqlite.mdc).

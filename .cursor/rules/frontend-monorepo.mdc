@@ -1,0 +1,103 @@
+---
+description: shadcn/ui Monorepo — структура apps/web + packages/ui, CLI workflow, импорты @cfdm/ui
+globs: apps/web/**/*,packages/ui/**/*
+alwaysApply: false
+---
+
+# Frontend Monorepo (shadcn/ui)
+
+**Обязательный стандарт структуры** — [Monorepo docs](https://ui.shadcn.com/docs/monorepo).
+
+## Layout
+
+```
+apps/web/              # Vite SPA (routes, queries, domain components)
+apps/api/              # Fastify API + static SPA in prod
+packages/ui/           # @cfdm/ui — shadcn primitives
+packages/shared/       # @cfdm/shared — Zod schemas, parse-fqdn
+packages/db/           # @cfdm/db — Drizzle schema, repositories
+```
+
+## Два components.json
+
+| Файл | Назначение |
+|------|------------|
+| [`apps/web/components.json`](apps/web/components.json) | App aliases; `ui` → `@cfdm/ui/components` |
+| [`packages/ui/components.json`](packages/ui/components.json) | UI package aliases |
+
+**Синхронизировать:** `style`, `iconLibrary`, `baseColor` в обоих файлах.
+
+## CLI — только из apps/web
+
+```bash
+cd apps/web
+pnpm dlx shadcn@latest docs button
+pnpm dlx shadcn@latest add button
+pnpm dlx shadcn@latest add sidebar-07
+pnpm dlx shadcn@latest add login-03
+pnpm dlx shadcn@latest apply b2fA --only theme -y
+```
+
+Перед обновлением существующих компонентов:
+
+```bash
+pnpm dlx shadcn@latest add button --dry-run
+pnpm dlx shadcn@latest add button --diff
+pnpm dlx shadcn@latest info --json
+```
+
+## Куда CLI кладёт файлы
+
+| Команда | Куда |
+|---------|------|
+| `add button` | `packages/ui/src/components/button.tsx` |
+| `add login-03` | примитивы → `packages/ui`, block → `apps/web/src/components/` |
+
+## Импорты
+
+```tsx
+import { Button } from '@cfdm/ui/components/button'
+import { cn } from '@cfdm/ui/lib/utils'
+import { useIsMobile } from '@cfdm/ui/hooks/use-mobile'
+import '@cfdm/ui/globals.css'   // только в main.tsx
+```
+
+| Запрещено | Разрешено |
+|-----------|-----------|
+| `@/components/ui/*` | `@cfdm/ui/components/*` |
+| `apps/web/src/components/ui/` | `packages/ui/src/components/` |
+| Ручное редактирование `globals.css` | `pnpm dlx shadcn@latest apply b2fA --only theme` |
+
+Community registry: переписывать импорты на `@cfdm/ui/...`.
+
+## Разделение ответственности
+
+- **`packages/ui`** — только output `shadcn add` (примитивы, registry hooks, `cn`)
+- **`apps/web/src/components`** — blocks, layout, domain (`login-form`, `app-shell`, `PageHeader`)
+
+## Стили (Tailwind v4 monorepo)
+
+`packages/ui/src/styles/globals.css` — единственный CSS-файл. **Обязательно** `@source` для обоих workspace:
+
+```css
+@source "../";                      /* packages/ui/src */
+@source "../../../apps/web/src";   /* apps/web/src */
+```
+
+Без `@source` Tailwind не видит классы из `packages/ui` и `apps/web` — UI ломается (нет sidebar, card, и т.д.).
+
+```bash
+pnpm install
+pnpm --filter web dev
+pnpm --filter web build
+```
+
+## Чеклист
+
+- [ ] Два `components.json` согласованы
+- [ ] `shadcn add` из `apps/web`
+- [ ] UI-импорты через `@cfdm/ui/components/*`
+- [ ] Нет `apps/web/src/components/ui/`
+- [ ] `pnpm --filter web build` без ошибок
+
+См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc).

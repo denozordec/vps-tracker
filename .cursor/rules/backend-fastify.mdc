@@ -1,0 +1,43 @@
+---
+description: Fastify API — слои, плагины, контракт ошибок
+globs: apps/api/**/*
+alwaysApply: false
+---
+
+# Backend Fastify
+
+Стек: **Node.js 22**, **Fastify 5**, `@fastify/*` plugins, `@cfdm/shared`, `@cfdm/db`.
+
+MCP — [`backend-mcp.mdc`](backend-mcp.mdc).
+
+## Слои
+
+```
+routes/ → services/ → @cfdm/db (repositories)
+              ↘ lib/cf-client.ts
+```
+
+- Routes — тонкие Fastify plugins (`fastify-plugin`)
+- **Запрещено:** SQL в routes, `fetch` к CF вне `cf-client`
+
+## Плагины (официальные)
+
+`@fastify/jwt`, `@fastify/cors`, `@fastify/sensible`, `@fastify/static`, `@fastify/helmet`, `@fastify/rate-limit`, `@fastify/type-provider-zod`, `fastify-plugin`
+
+## Ошибки
+
+Формат: `{ error: { code, message } }`
+
+Коды: `NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `CLOUDFLARE_ERROR`, `INTERNAL_ERROR`
+
+## Правила
+
+- Zod schemas только из `@cfdm/shared`
+- `db.transaction()` для multi-step writes
+- Операции >2s → async job (`sync_jobs` + `p-queue`)
+- Env через Zod в `config.ts`; prod fail-fast на dev `JWT_SECRET`
+- TypeScript strict; `function` для handlers/services
+
+## API + UI
+
+[`backend-api-ui.mdc`](backend-api-ui.mdc)
