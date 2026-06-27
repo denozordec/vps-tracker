@@ -1,7 +1,13 @@
 {
   "plugins": {
-    "cloudflare": {
+    "shadcn": {
       "enabled": true
+    },
+    "context7-plugin": {
+      "enabled": true
+    },
+    "cloudflare": {
+      "enabled": false
     },
     "claude-plugins-official/typescript-lsp": {
       "enabled": true

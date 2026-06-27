@@ -1,5 +1,5 @@
 ---
-description: Обязательный порядок MCP перед backend-кодом (Fastify, Drizzle, Cloudflare API)
+description: Обязательный порядок MCP перед backend-кодом (Fastify, Drizzle, SQLite)
 globs: apps/api/**/*,packages/db/**/*,packages/shared/**/*
 alwaysApply: false
 ---
@@ -8,20 +8,34 @@ alwaysApply: false
 
 Перед **любой** задачей в `apps/api`, `packages/db`, `packages/shared` — сначала MCP, не training data.
 
+## Рекомендуемые MCP для проекта
+
+| Назначение | Где включить |
+|------------|--------------|
+| Context7 (Fastify, Drizzle, Vitest, Zod) | `.cursor/settings.json` → `context7-plugin` |
+| shadcn/ui (экраны с API) | `.cursor/settings.json` → `shadcn` |
+| Codegraph (поиск по кодовой базе) | `.cursor/mcp.json` → `codegraph` |
+| E2E / smoke UI | Cursor Settings → `cursor-ide-browser` |
+| Поиск неизвестного MCP | `user-mcp-on-demand` |
+
+**Cloudflare не использовать** — стек проекта: Docker + Node + SQLite, без Workers.
+
 ## Порядок
 
 | Задача | MCP |
 |--------|-----|
-| Fastify plugins, routes, hooks | **Context7** `resolve-library-id` → `query-docs` (`fastify`, `@fastify/jwt`, `@fastify/type-provider-zod`) |
+| Поиск существующего кода | **Codegraph** `codegraph_explore` |
+| Fastify plugins, routes, hooks | **Context7** (`fastify`, `@fastify/jwt`, `@fastify/type-provider-zod`) |
 | Drizzle schema, queries, migrations | **Context7** (`drizzle-orm`, `drizzle-kit`, `better-sqlite3`) |
-| Cloudflare DNS/Zones API | **`plugin-cloudflare-cloudflare-docs`** `search_cloudflare_documentation` |
+| Zod contracts (`packages/shared`) | **Context7** (`zod`) |
+| Vitest (`app.inject()`) | **Context7** (`vitest`, `fastify`) |
 | API + UI | `packages/shared` → **shadcn MCP** ([`shadcn-mcp.mdc`](shadcn-mcp.mdc)) |
-| E2E / cutover | **cursor-ide-browser** |
+| E2E / smoke UI | **cursor-ide-browser** |
 | Неизвестный инструмент | **user-mcp-on-demand** `search_tools` |
 
 ## Запрещено
 
-- Угадывать API Fastify/Drizzle/CF из памяти
+- Угадывать API Fastify/Drizzle из памяти
 - Самописные аналоги `@fastify/*` (CORS, static, JWT, rate-limit)
 - Дублировать Zod schemas вне `@cfdm/shared`
 
