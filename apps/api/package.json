@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "pnpm --filter @cfdm/shared build && pnpm --filter @cfdm/db build && tsx watch src/index.ts",
     "dev:legacy": "node index.js",
-    "build": "tsc -p tsconfig.json",
+    "build": "pnpm --filter @cfdm/shared build && pnpm --filter @cfdm/db build && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "start:legacy": "node index.js",
     "test": "vitest run"

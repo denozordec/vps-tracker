@@ -16,10 +16,12 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm pnpm install --frozen-lock
 
 COPY apps ./apps
 COPY packages ./packages
-RUN pnpm --filter web build \
+RUN pnpm --filter @cfdm/shared build \
+ && pnpm --filter @cfdm/db build \
+ && pnpm --filter web build \
  && pnpm --filter api build \
  && pnpm prune --prod \
- && rm -rf apps/web/src apps/api/src \
+ && rm -rf apps/web/src apps/api/src packages/db/src packages/shared/src \
           apps/web/node_modules/.vite-temp \
           apps/web/tsconfig.json apps/api/tsconfig.json \
  && find node_modules apps/*/node_modules packages/*/node_modules -type f \( \

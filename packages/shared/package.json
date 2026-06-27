@@ -3,16 +3,37 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./contracts/*": "./src/contracts/*.ts",
-    "./types/*": "./src/types/*.ts",
-    "./geo": "./src/geo/index.ts",
-    "./geo/*": "./src/geo/*.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contracts/*": {
+      "types": "./dist/contracts/*.d.ts",
+      "default": "./dist/contracts/*.js"
+    },
+    "./types/*": {
+      "types": "./dist/types/*.d.ts",
+      "default": "./dist/types/*.js"
+    },
+    "./geo": {
+      "types": "./dist/geo/index.d.ts",
+      "default": "./dist/geo/index.js"
+    },
+    "./geo/*": {
+      "types": "./dist/geo/*.d.ts",
+      "default": "./dist/geo/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
   }
 }
