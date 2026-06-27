@@ -96,7 +96,6 @@ export function computeDashboardStats(): DashboardStats {
   }).length
 
   let issuesCount = 0
-  if (activeVps.some((v) => !(v.project || '').trim())) issuesCount++
   if (
     activeVps.some((v) => {
       const dr = Number(v.dailyRate || 0)

@@ -339,6 +339,9 @@ export function VpsFiltersToolbar({
           value={filters.search}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
           className="pl-8"
+          autoComplete="off"
+          name="vps-inventory-search"
+          spellCheck={false}
         />
       </div>
 

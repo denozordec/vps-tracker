@@ -203,9 +203,7 @@ function VpsPage() {
       balanceLedger: snapshot.balanceLedger,
       now,
     }
-    if (health === 'no-project') {
-      rows = rows.filter((v) => v.status === 'active' && !(v.project || '').trim())
-    } else if (health === 'no-rate') {
+    if (health === 'no-rate') {
       rows = rows.filter((v) => {
         if (v.status !== 'active') return false
         const dr = Number(v.dailyRate || 0)
@@ -224,16 +222,17 @@ function VpsPage() {
     return rows
   }, [snapshot, filters, health])
 
-  const countryOptions = useMemo(() => {
+  const dbCountryNames = useMemo(() => {
     const names = new Set<string>()
-    // Из существующих VPS — могут быть произвольные строки
     for (const v of snapshot?.vps ?? []) {
       const c = (v.country || '').trim()
       if (c) names.add(c)
     }
-    // Из стандартизированного справочника
-    for (const c of COUNTRIES) names.add(c.name)
-    return [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => {
+    return names
+  }, [snapshot?.vps])
+
+  const mapCountryOptions = (names: Iterable<string>) =>
+    [...names].sort((a, b) => a.localeCompare(b, 'ru')).map((name) => {
       const ref = COUNTRY_BY_NAME_RU[name.toLowerCase()]
       return {
         value: name,
@@ -242,10 +241,20 @@ function VpsPage() {
         leading: <CountryFlag code={ref?.code} country={name} />,
       }
     })
-  }, [snapshot?.vps])
 
-  const cityOptions = useMemo(
-    () => buildCityOptions(snapshot?.vps, filters.country[0]),
+  const filterCountryOptions = useMemo(
+    () => mapCountryOptions(dbCountryNames),
+    [dbCountryNames],
+  )
+
+  const formCountryOptions = useMemo(() => {
+    const names = new Set(dbCountryNames)
+    for (const c of COUNTRIES) names.add(c.name)
+    return mapCountryOptions(names)
+  }, [dbCountryNames])
+
+  const filterCityOptions = useMemo(
+    () => buildCityOptions(snapshot?.vps, filters.country[0], { includeCatalog: false }),
     [snapshot?.vps, filters.country],
   )
 
@@ -425,8 +434,8 @@ function VpsPage() {
                   providerAccounts={snap.providerAccounts}
                   vps={snap.vps}
                   projectNameOptions={projectNameOptions}
-                  countryOptions={countryOptions}
-                  cityOptions={cityOptions}
+                  countryOptions={filterCountryOptions}
+                  cityOptions={filterCityOptions}
                 />
                 <EmptyState
                   title="Ничего не найдено"
@@ -450,8 +459,8 @@ function VpsPage() {
               providerAccounts={snap.providerAccounts}
               vps={snap.vps}
               projectNameOptions={projectNameOptions}
-              countryOptions={countryOptions}
-              cityOptions={cityOptions}
+              countryOptions={filterCountryOptions}
+              cityOptions={filterCityOptions}
             />
             {tableSections.map((section) => (
               <DataGridCard
@@ -532,7 +541,7 @@ function VpsPage() {
                       setValue('city', '')
                     }
                   }}
-                  options={countryOptions}
+                  options={formCountryOptions}
                   searchPlaceholder="Поиск страны…"
                   emptyText="Нет вариантов"
                 />

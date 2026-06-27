@@ -27,6 +27,7 @@ import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
+import { Badge } from '@cfdm/ui/components/badge'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 import { StatusBadge } from '@/components/status-badge'
@@ -306,25 +307,36 @@ function DashboardPage() {
                 />
               </div>
 
-              <Tabs defaultValue="issues">
-                <TabsList>
-                  <TabsTrigger value="issues">Проблемы ({issues.length})</TabsTrigger>
-                  <TabsTrigger value="recent">Последние VPS</TabsTrigger>
-                  <TabsTrigger value="risk">Аккаунты ({atRisk.length})</TabsTrigger>
+              <Tabs defaultValue="issues" className="gap-4">
+                <TabsList
+                  variant="line"
+                  className="**:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1"
+                >
+                  <TabsTrigger value="issues" className="flex-none gap-2 px-3 py-1.5 font-normal">
+                    Проблемы
+                    {issues.length > 0 ? <Badge variant="secondary">{issues.length}</Badge> : null}
+                  </TabsTrigger>
+                  <TabsTrigger value="recent" className="flex-none px-3 py-1.5 font-normal">
+                    Последние VPS
+                  </TabsTrigger>
+                  <TabsTrigger value="risk" className="flex-none gap-2 px-3 py-1.5 font-normal">
+                    Аккаунты
+                    {atRisk.length > 0 ? <Badge variant="secondary">{atRisk.length}</Badge> : null}
+                  </TabsTrigger>
                 </TabsList>
-                <TabsContent value="issues" className="mt-4">
+                <TabsContent value="issues" className="mt-0">
                   <DataGridCard
                     title="Здоровье инвентаря"
-                    description="Нет проекта, ставки, просрочка, устаревший синк, расхождения баланса"
+                    description="Ставка, просрочка оплаты, устаревший синк, расхождения баланса"
                     columns={columnDefFromDataTable(issueColumns)}
                     data={issues}
                     rowId={(i) => i.key}
                     emptyTitle="Проблем не найдено"
-                    emptyDescription="Все активные VPS имеют проект, ставку и актуальный синк"
+                    emptyDescription="Критичных проблем в инвентаре не обнаружено"
                     pagination={false}
                   />
                 </TabsContent>
-                <TabsContent value="recent" className="mt-4">
+                <TabsContent value="recent" className="mt-0">
                   <DataGridCard
                     title="Последние VPS"
                     description="Активные серверы"
@@ -340,7 +352,7 @@ function DashboardPage() {
                     onRowClick={(v) => navigate({ to: '/vps', search: { edit: v.id } })}
                   />
                 </TabsContent>
-                <TabsContent value="risk" className="mt-4">
+                <TabsContent value="risk" className="mt-0">
                   <DataGridCard
                     title="Аккаунты под риском"
                     description="Низкий баланс или устаревший синк BILLmanager"

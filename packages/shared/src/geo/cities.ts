@@ -217,11 +217,13 @@ export function cityMatchesCountry(
   )
 }
 
-/** Опции городов: из VPS и справочника, опционально по стране. */
+/** Опции городов: из VPS и опционально справочника, опционально по стране. */
 export function buildCityOptions(
   rows: readonly CityLocationRow[] | undefined,
   countryName?: string,
+  options?: { includeCatalog?: boolean },
 ): { value: string; label: string }[] {
+  const includeCatalog = options?.includeCatalog ?? true
   const names = new Set<string>()
   const countryCode = countryName?.trim()
     ? COUNTRY_BY_NAME_RU[countryName.trim().toLowerCase()]?.code
@@ -245,8 +247,10 @@ export function buildCityOptions(
     }
   }
 
-  for (const { name } of listCities(countryCode)) {
-    names.add(name)
+  if (includeCatalog) {
+    for (const { name } of listCities(countryCode)) {
+      names.add(name)
+    }
   }
 
   return [...names]

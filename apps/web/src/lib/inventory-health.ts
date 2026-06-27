@@ -87,11 +87,6 @@ export function computeInventoryHealth(input: InventoryHealthInput): InventoryIs
 
   const issues: InventoryIssue[] = []
 
-  const noProject = vps.filter((v) => v.status === 'active' && !(v.project || '').trim())
-  if (noProject.length) {
-    issues.push({ key: 'no-project', title: 'Активные VPS без проекта', count: noProject.length, to: '/vps?health=no-project' })
-  }
-
   const noRate = vps.filter((v) => {
     if (v.status !== 'active') return false
     const dr = Number(v.dailyRate || 0)
