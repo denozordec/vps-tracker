@@ -37,9 +37,9 @@ RUN apk add --no-cache nodejs
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3001 \
-    RUNTIME=express
+    RUNTIME=fastify
 # Single layer for app code + pruned prod node_modules (symlinks resolved by COPY)
 COPY --from=build /app ./
 EXPOSE 3001
-# RUNTIME=express (default, legacy) | RUNTIME=fastify (new stack)
-CMD ["sh", "-c", "if [ \"$RUNTIME\" = \"fastify\" ]; then node apps/api/dist/index.js; else node apps/api/index.js; fi"]
+# RUNTIME=express — legacy fallback (apps/api/index.js)
+CMD ["sh", "-c", "if [ \"$RUNTIME\" = \"express\" ]; then node apps/api/index.js; else node apps/api/dist/index.js; fi"]

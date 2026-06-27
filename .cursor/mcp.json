@@ -7,7 +7,7 @@
         "serve",
         "--mcp",
         "--path",
-        "C:\\Users\\shats\\Dev\\cloudflare-domain-manager"
+        "C:\\Users\\shats\\Dev\\vps-tracker"
       ]
     }
   }

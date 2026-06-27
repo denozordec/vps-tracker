@@ -7,8 +7,7 @@ services:
       - "3001:3001"
     environment:
       PORT: "3001"
-      # RUNTIME: "express" (по умолчанию, legacy) | "fastify" (новый стек)
-      RUNTIME: "express"
+      RUNTIME: "fastify"
     volumes:
       - ./data:/app/data
 

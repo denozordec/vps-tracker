@@ -18,6 +18,9 @@ dist-ssr
 coverage
 *.tsbuildinfo
 
+# Understand Anything (knowledge graph)
+.understand-anything/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

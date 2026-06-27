@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
-import { existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import * as schema from './schema/index.js'
 
@@ -17,6 +17,11 @@ export function getDbPath(): string {
 
 export function getDb(): Db {
   if (_db) return _db
+  openDatabase()
+  return _db!
+}
+
+function openDatabase(): void {
   const dbPath = getDbPath()
   const dir = dirname(dbPath)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
@@ -24,7 +29,11 @@ export function getDb(): Db {
   _sqlite.pragma('journal_mode = WAL')
   _sqlite.pragma('foreign_keys = ON')
   _db = drizzle(_sqlite, { schema })
-  return _db
+}
+
+export function getSqlite(): Database.Database {
+  getDb()
+  return _sqlite!
 }
 
 export function closeDb(): void {
@@ -35,4 +44,16 @@ export function closeDb(): void {
   }
 }
 
+/** Заменить файл SQLite и переоткрыть соединение. */
+export function reloadDatabaseFromBuffer(buffer: Buffer): void {
+  closeDb()
+  writeFileSync(getDbPath(), buffer)
+  openDatabase()
+}
+
 export { schema }
+export {
+  consolidateAllProviderApiSources,
+  consolidateProviderApiFromAccounts,
+  heuristicBillmanagerProviderApi,
+} from './maintenance/consolidate-api.js'
