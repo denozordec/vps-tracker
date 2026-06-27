@@ -11,7 +11,7 @@
   },
   "iconLibrary": "lucide",
   "registries": {
-    "@reui": "https://reui.io/r/{style}/{name}.json"
+    "@reui": "https://reui.io/r/styles/{style}/{name}.json"
   },
   "aliases": {
     "components": "@/components",

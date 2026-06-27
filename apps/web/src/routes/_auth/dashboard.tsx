@@ -27,10 +27,11 @@ import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 import { StatusBadge } from '@/components/status-badge'
+import { cn } from '@cfdm/ui/lib/utils'
 
 import { computeInventoryHealth, getStaleSyncAccountIds } from '@/lib/inventory-health'
 import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel } from '@/lib/format'
@@ -38,6 +39,9 @@ import { accountBalanceApi } from '@/lib/account'
 import { MonthlyTrendChart, MonthlyExpenseChart } from '@/components/domain/charts'
 
 import type { Vps, ProviderAccount, Provider, SyncLogRow } from '@/types/entities'
+
+const DASHBOARD_TAB_TRIGGER_CLASS =
+  'flex-none rounded-none border-0 border-b-2 border-transparent px-3 pb-2.5 pt-2 shadow-none after:hidden data-active:border-foreground data-active:bg-transparent data-active:shadow-none dark:data-active:border-foreground dark:data-active:bg-transparent'
 
 export const Route = createFileRoute('/_auth/dashboard')({
   loader: ({ context: { queryClient } }) =>
@@ -307,21 +311,26 @@ function DashboardPage() {
                 />
               </div>
 
-              <Tabs defaultValue="issues" className="gap-4">
-                <TabsList
-                  variant="line"
-                  className="**:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1"
-                >
-                  <TabsTrigger value="issues" className="flex-none gap-2 px-3 py-1.5 font-normal">
+              <Tabs defaultValue="issues" className="flex w-full flex-col gap-4">
+                <TabsList variant="line" className="mb-0 h-auto w-fit gap-1 border-b border-border p-0">
+                  <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                     Проблемы
-                    {issues.length > 0 ? <Badge variant="secondary">{issues.length}</Badge> : null}
+                    {issues.length > 0 ? (
+                      <Badge variant="primary-light" size="sm">
+                        {issues.length}
+                      </Badge>
+                    ) : null}
                   </TabsTrigger>
-                  <TabsTrigger value="recent" className="flex-none px-3 py-1.5 font-normal">
+                  <TabsTrigger value="recent" className={DASHBOARD_TAB_TRIGGER_CLASS}>
                     Последние VPS
                   </TabsTrigger>
-                  <TabsTrigger value="risk" className="flex-none gap-2 px-3 py-1.5 font-normal">
+                  <TabsTrigger value="risk" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                     Аккаунты
-                    {atRisk.length > 0 ? <Badge variant="secondary">{atRisk.length}</Badge> : null}
+                    {atRisk.length > 0 ? (
+                      <Badge variant="info-light" size="sm">
+                        {atRisk.length}
+                      </Badge>
+                    ) : null}
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="issues" className="mt-0">
