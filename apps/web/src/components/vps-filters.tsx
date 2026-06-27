@@ -236,6 +236,10 @@ export function countActiveFilters(filters: VpsFiltersState): number {
   return n
 }
 
+export function hasActiveVpsFilters(filters: VpsFiltersState): boolean {
+  return countActiveFilters(filters) > 0 || filters.groupByProject || filters.tableCompact
+}
+
 export interface VpsFilterPreset {
   name: string
   filters: VpsFiltersState

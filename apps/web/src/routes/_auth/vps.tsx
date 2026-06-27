@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Controller } from 'react-hook-form'
 import { PlusIcon, PencilIcon, Trash2Icon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,10 +13,11 @@ import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-table-card'
+import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
 import { CountryFlag } from '@/components/country-flag'
 import { QueryState } from '@/components/query-state'
+import { EmptyState } from '@/components/empty-state'
 import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { FormSheetRhf } from '@/components/form-sheet-rhf'
@@ -36,6 +37,7 @@ import { FormDatePicker } from '@/components/form-date-picker'
 import {
   applyVpsFilters,
   buildDefaultVpsFilters,
+  hasActiveVpsFilters,
   type VpsFiltersState,
 } from '@/components/vps-filters'
 import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
@@ -44,8 +46,17 @@ import type { Vps } from '@/types/entities'
 import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 import { COUNTRIES, COUNTRY_BY_NAME_RU, buildCityOptions, cityMatchesCountry, resolveCountryForCityFromRows } from '@cfdm/shared/geo'
+import { getPaidUntilDate } from '@/lib/paid-until'
+
+import { z } from 'zod'
+
+const vpsSearchSchema = z.object({
+  health: z.string().optional(),
+  edit: z.string().optional(),
+})
 
 export const Route = createFileRoute('/_auth/vps')({
+  validateSearch: (search) => vpsSearchSchema.parse(search),
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(snapshotQueryOptions()),
   component: VpsPage,
@@ -60,11 +71,48 @@ const EMPTY_FORM: VpsFormValues = {
 
 function VpsPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { health, edit } = Route.useSearch()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [defaultValues, setDefaultValues] = useState<VpsFormValues>(EMPTY_FORM)
   const [filters, setFilters] = useState<VpsFiltersState>(buildDefaultVpsFilters())
+
+  useEffect(() => {
+    if (!health) return
+    setFilters((prev) => ({ ...prev, status: prev.status.length ? prev.status : ['active'] }))
+  }, [health])
+
+  useEffect(() => {
+    if (!edit || !snapshot) return
+    const row = snapshot.vps.find((v) => v.id === edit)
+    if (row) {
+      setEditingId(row.id)
+      setDefaultValues({
+        ip: row.ip,
+        dns: row.dns ?? '',
+        providerId: row.providerId,
+        providerAccountId: row.providerAccountId,
+        country: row.country ?? '',
+        city: row.city ?? '',
+        datacenter: row.datacenter ?? '',
+        vcpu: row.vcpu,
+        ramGb: row.ramGb,
+        diskGb: row.diskGb,
+        status: row.status,
+        tariffType: row.tariffType,
+        currency: row.currency,
+        monthlyRate: Number(row.monthlyRate || 0),
+        dailyRate: Number(row.dailyRate || 0),
+        paidUntil: row.paidUntil ?? '',
+        project: row.project ?? '',
+        notes: row.notes ?? '',
+      })
+      setSheetOpen(true)
+      void navigate({ to: '/vps', search: { edit: undefined }, replace: true })
+    }
+  }, [edit, snapshot, navigate])
 
   const settings = snapshot?.settings[0]
   const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
@@ -143,10 +191,38 @@ function VpsPage() {
     return [...names].sort((a, b) => a.localeCompare(b, 'ru'))
   }, [snapshot])
 
-  const filteredVps = useMemo(
-    () => applyVpsFilters(snapshot?.vps ?? [], filters),
-    [snapshot?.vps, filters],
-  )
+  const filteredVps = useMemo(() => {
+    let rows = applyVpsFilters(snapshot?.vps ?? [], filters)
+    if (!health || !snapshot) return rows
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const ctx = {
+      vps: snapshot.vps,
+      providerAccounts: snapshot.providerAccounts,
+      payments: snapshot.payments,
+      balanceLedger: snapshot.balanceLedger,
+      now,
+    }
+    if (health === 'no-project') {
+      rows = rows.filter((v) => v.status === 'active' && !(v.project || '').trim())
+    } else if (health === 'no-rate') {
+      rows = rows.filter((v) => {
+        if (v.status !== 'active') return false
+        const dr = Number(v.dailyRate || 0)
+        const mr = Number(v.monthlyRate || 0)
+        const noMoney = (!Number.isFinite(dr) || dr <= 0) && (!Number.isFinite(mr) || mr <= 0)
+        const noCur = !(v.currency || '').trim()
+        return noMoney || noCur
+      })
+    } else if (health === 'paid-overdue') {
+      rows = rows.filter((v) => {
+        if (v.status !== 'active') return false
+        const d = getPaidUntilDate(v, ctx)
+        return d != null && d < todayStart
+      })
+    }
+    return rows
+  }, [snapshot, filters, health])
 
   const countryOptions = useMemo(() => {
     const names = new Set<string>()
@@ -335,7 +411,37 @@ function VpsPage() {
           </Button>
         }
       >
-        {(snap) => (
+        {(snap) => {
+          const filtersActive = hasActiveVpsFilters(filters)
+          const zeroResults = snap.vps.length > 0 && filteredVps.length === 0 && filtersActive
+
+          if (zeroResults) {
+            return (
+              <div className="flex flex-col gap-4">
+                <VpsFiltersToolbar
+                  filters={filters}
+                  onChange={setFilters}
+                  providers={snap.providers}
+                  providerAccounts={snap.providerAccounts}
+                  vps={snap.vps}
+                  projectNameOptions={projectNameOptions}
+                  countryOptions={countryOptions}
+                  cityOptions={cityOptions}
+                />
+                <EmptyState
+                  title="Ничего не найдено"
+                  description="По текущим фильтрам VPS не найдены"
+                  action={
+                    <Button variant="outline" onClick={() => setFilters(buildDefaultVpsFilters())}>
+                      Сбросить фильтры
+                    </Button>
+                  }
+                />
+              </div>
+            )
+          }
+
+          return (
           <div className="flex flex-col gap-4">
             <VpsFiltersToolbar
               filters={filters}
@@ -361,7 +467,8 @@ function VpsPage() {
               />
             ))}
           </div>
-        )}
+          )
+        }}
       </QueryState>
 
       <FormSheetRhf

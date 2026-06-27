@@ -3,17 +3,40 @@ import { getDb, schema } from '../index.js'
 
 type Row = typeof schema.activeTariffs.$inferSelect
 
-export type ActiveTariffDto = Omit<Row, 'orderAvailable' | 'ramGb'> & {
+export type ActiveTariffDto = Omit<Row, 'orderAvailable' | 'ramGb' | 'price'> & {
   orderAvailable: boolean
   ramGb: number
+  monthlyRate: number | null
+  currency: string | null
+}
+
+/** Парсит строку цены BILLmanager: «100.50 RUB», «€12», «12 USD». */
+export function parseTariffPrice(price: string | null | undefined): {
+  monthlyRate: number | null
+  currency: string | null
+} {
+  const raw = String(price ?? '').trim()
+  if (!raw) return { monthlyRate: null, currency: null }
+  const match = raw.match(/([\d.,]+)\s*([A-Za-z]{3})?/)
+  if (!match) return { monthlyRate: null, currency: null }
+  const monthlyRate = Number.parseFloat(match[1].replace(',', '.'))
+  const currency = match[2]?.toUpperCase() ?? null
+  return {
+    monthlyRate: Number.isFinite(monthlyRate) ? monthlyRate : null,
+    currency,
+  }
 }
 
 function toDto(row: Row | undefined): ActiveTariffDto | undefined {
   if (!row) return undefined
+  const { monthlyRate, currency } = parseTariffPrice(row.price)
+  const { price: _price, ...rest } = row
   return {
-    ...row,
+    ...rest,
     orderAvailable: Boolean(row.orderAvailable),
     ramGb: row.ramGb != null ? Number(row.ramGb) : 0,
+    monthlyRate,
+    currency,
   }
 }
 

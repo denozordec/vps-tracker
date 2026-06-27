@@ -139,6 +139,11 @@ export const api = {
     if (!res.ok) throw new ApiError(res.statusText || 'Ошибка восстановления', res.status)
     return res.json()
   },
+
+  fetchDashboardStats: () =>
+    fetchApi<import('@/queries/dashboard').DashboardStats>('/api/dashboard/stats'),
+
+  fetchProjects: () => fetchApi<{ id: string; name: string }[]>('/api/projects'),
 }
 
 export type {

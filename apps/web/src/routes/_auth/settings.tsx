@@ -16,6 +16,33 @@ import { SelectField } from '@/components/select-field'
 
 import type { Settings } from '@/types/entities'
 import { useState } from 'react'
+import { Button } from '@cfdm/ui/components/button'
+import { DownloadIcon, UploadIcon } from 'lucide-react'
+
+function boolSelect(
+  draft: Partial<Settings>,
+  setForm: (v: Partial<Settings>) => void,
+  key: keyof Settings,
+  id: string,
+  label: string,
+) {
+  const val = draft[key] === false ? 'off' : 'on'
+  return (
+    <Field orientation="horizontal">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <SelectField
+        triggerId={id}
+        triggerClassName="w-32"
+        value={val}
+        onValueChange={(v) => setForm({ ...draft, [key]: (v ?? 'on') === 'on' })}
+        options={[
+          { value: 'on', label: 'Вкл' },
+          { value: 'off', label: 'Выкл' },
+        ]}
+      />
+    </Field>
+  )
+}
 
 export const Route = createFileRoute('/_auth/settings')({
   loader: ({ context: { queryClient } }) =>
@@ -155,6 +182,132 @@ function SettingsPage() {
                     </LoadingButton>
                   </div>
                 </FieldGroup>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Синхронизация</CardTitle>
+                <CardDescription>Автосинк BILLmanager и интервалы</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FieldGroup>
+                  {boolSelect(draft, (v) => setForm(v), 'syncEnabled', 'set-sync', 'Автосинк')}
+                  <Field>
+                    <FieldLabel htmlFor="set-sync-int">Интервал синка (мин)</FieldLabel>
+                    <Input
+                      id="set-sync-int"
+                      type="number"
+                      min={15}
+                      value={draft.syncIntervalMinutes ?? 60}
+                      onChange={(e) =>
+                        setForm({ ...draft, syncIntervalMinutes: Number(e.target.value) || 60 })
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="set-tariff-int">Интервал тарифов (мин)</FieldLabel>
+                    <Input
+                      id="set-tariff-int"
+                      type="number"
+                      min={60}
+                      value={draft.syncTariffsIntervalMinutes ?? 1440}
+                      onChange={(e) =>
+                        setForm({
+                          ...draft,
+                          syncTariffsIntervalMinutes: Number(e.target.value) || 1440,
+                        })
+                      }
+                    />
+                  </Field>
+                  {boolSelect(draft, (v) => setForm(v), 'notifyLowBalanceEnabled', 'set-notify-bal', 'Низкий баланс')}
+                  {boolSelect(draft, (v) => setForm(v), 'notifySyncDigestEnabled', 'set-notify-sync', 'Дайджест синка')}
+                  {boolSelect(draft, (v) => setForm(v), 'notifyPaymentExpiryEnabled', 'set-notify-pay', 'Истечение оплаты')}
+                  {boolSelect(draft, (v) => setForm(v), 'notifyNewTariffsEnabled', 'set-notify-tar', 'Новые тарифы')}
+                  <LoadingButton
+                    className="w-fit"
+                    onClick={() => upsertMut.mutate(draft)}
+                    loading={upsertMut.isPending}
+                    disabled={!form}
+                  >
+                    Сохранить
+                  </LoadingButton>
+                </FieldGroup>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Резервное копирование</CardTitle>
+                <CardDescription>Экспорт и импорт базы данных</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const blob = await api.downloadBackupJson()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `vps-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                        toast.success('JSON выгружен')
+                      } catch (e) {
+                        toast.error(e instanceof ApiError ? e.message : 'Ошибка выгрузки')
+                      }
+                    }}
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    JSON
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        const blob = await api.downloadBackupDatabase()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `vps-tracker-${new Date().toISOString().slice(0, 10)}.db`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                        toast.success('База выгружена')
+                      } catch (e) {
+                        toast.error(e instanceof ApiError ? e.message : 'Ошибка выгрузки')
+                      }
+                    }}
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    SQLite
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const input = document.createElement('input')
+                      input.type = 'file'
+                      input.accept = 'application/json,.json'
+                      input.onchange = async () => {
+                        const file = input.files?.[0]
+                        if (!file) return
+                        try {
+                          const text = await file.text()
+                          await api.importBackupJson(JSON.parse(text))
+                          void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+                          toast.success('Импорт JSON выполнен')
+                        } catch (e) {
+                          toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта')
+                        }
+                      }
+                      input.click()
+                    }}
+                  >
+                    <UploadIcon data-icon="inline-start" />
+                    Импорт JSON
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

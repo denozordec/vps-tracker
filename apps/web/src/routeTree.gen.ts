@@ -13,10 +13,12 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthVpsRouteImport } from './routes/_auth/vps'
 import { Route as AuthTariffsRouteImport } from './routes/_auth/tariffs'
+import { Route as AuthSyncJournalRouteImport } from './routes/_auth/sync-journal'
 import { Route as AuthSettingsRouteImport } from './routes/_auth/settings'
 import { Route as AuthResourcesRouteImport } from './routes/_auth/resources'
 import { Route as AuthReportsRouteImport } from './routes/_auth/reports'
 import { Route as AuthProvidersRouteImport } from './routes/_auth/providers'
+import { Route as AuthProjectsRouteImport } from './routes/_auth/projects'
 import { Route as AuthPaymentsRouteImport } from './routes/_auth/payments'
 import { Route as AuthDashboardRouteImport } from './routes/_auth/dashboard'
 import { Route as AuthBalanceRouteImport } from './routes/_auth/balance'
@@ -41,6 +43,11 @@ const AuthTariffsRoute = AuthTariffsRouteImport.update({
   path: '/tariffs',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthSyncJournalRoute = AuthSyncJournalRouteImport.update({
+  id: '/sync-journal',
+  path: '/sync-journal',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthSettingsRoute = AuthSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -59,6 +66,11 @@ const AuthReportsRoute = AuthReportsRouteImport.update({
 const AuthProvidersRoute = AuthProvidersRouteImport.update({
   id: '/providers',
   path: '/providers',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthProjectsRoute = AuthProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthPaymentsRoute = AuthPaymentsRouteImport.update({
@@ -88,10 +100,12 @@ export interface FileRoutesByFullPath {
   '/balance': typeof AuthBalanceRoute
   '/dashboard': typeof AuthDashboardRoute
   '/payments': typeof AuthPaymentsRoute
+  '/projects': typeof AuthProjectsRoute
   '/providers': typeof AuthProvidersRoute
   '/reports': typeof AuthReportsRoute
   '/resources': typeof AuthResourcesRoute
   '/settings': typeof AuthSettingsRoute
+  '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/vps': typeof AuthVpsRoute
 }
@@ -101,10 +115,12 @@ export interface FileRoutesByTo {
   '/balance': typeof AuthBalanceRoute
   '/dashboard': typeof AuthDashboardRoute
   '/payments': typeof AuthPaymentsRoute
+  '/projects': typeof AuthProjectsRoute
   '/providers': typeof AuthProvidersRoute
   '/reports': typeof AuthReportsRoute
   '/resources': typeof AuthResourcesRoute
   '/settings': typeof AuthSettingsRoute
+  '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/vps': typeof AuthVpsRoute
 }
@@ -116,10 +132,12 @@ export interface FileRoutesById {
   '/_auth/balance': typeof AuthBalanceRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/payments': typeof AuthPaymentsRoute
+  '/_auth/projects': typeof AuthProjectsRoute
   '/_auth/providers': typeof AuthProvidersRoute
   '/_auth/reports': typeof AuthReportsRoute
   '/_auth/resources': typeof AuthResourcesRoute
   '/_auth/settings': typeof AuthSettingsRoute
+  '/_auth/sync-journal': typeof AuthSyncJournalRoute
   '/_auth/tariffs': typeof AuthTariffsRoute
   '/_auth/vps': typeof AuthVpsRoute
 }
@@ -131,10 +149,12 @@ export interface FileRouteTypes {
     | '/balance'
     | '/dashboard'
     | '/payments'
+    | '/projects'
     | '/providers'
     | '/reports'
     | '/resources'
     | '/settings'
+    | '/sync-journal'
     | '/tariffs'
     | '/vps'
   fileRoutesByTo: FileRoutesByTo
@@ -144,10 +164,12 @@ export interface FileRouteTypes {
     | '/balance'
     | '/dashboard'
     | '/payments'
+    | '/projects'
     | '/providers'
     | '/reports'
     | '/resources'
     | '/settings'
+    | '/sync-journal'
     | '/tariffs'
     | '/vps'
   id:
@@ -158,10 +180,12 @@ export interface FileRouteTypes {
     | '/_auth/balance'
     | '/_auth/dashboard'
     | '/_auth/payments'
+    | '/_auth/projects'
     | '/_auth/providers'
     | '/_auth/reports'
     | '/_auth/resources'
     | '/_auth/settings'
+    | '/_auth/sync-journal'
     | '/_auth/tariffs'
     | '/_auth/vps'
   fileRoutesById: FileRoutesById
@@ -201,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthTariffsRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/sync-journal': {
+      id: '/_auth/sync-journal'
+      path: '/sync-journal'
+      fullPath: '/sync-journal'
+      preLoaderRoute: typeof AuthSyncJournalRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/settings': {
       id: '/_auth/settings'
       path: '/settings'
@@ -227,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/providers'
       fullPath: '/providers'
       preLoaderRoute: typeof AuthProvidersRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/projects': {
+      id: '/_auth/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthProjectsRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/payments': {
@@ -265,10 +303,12 @@ interface AuthRouteChildren {
   AuthBalanceRoute: typeof AuthBalanceRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthPaymentsRoute: typeof AuthPaymentsRoute
+  AuthProjectsRoute: typeof AuthProjectsRoute
   AuthProvidersRoute: typeof AuthProvidersRoute
   AuthReportsRoute: typeof AuthReportsRoute
   AuthResourcesRoute: typeof AuthResourcesRoute
   AuthSettingsRoute: typeof AuthSettingsRoute
+  AuthSyncJournalRoute: typeof AuthSyncJournalRoute
   AuthTariffsRoute: typeof AuthTariffsRoute
   AuthVpsRoute: typeof AuthVpsRoute
 }
@@ -278,10 +318,12 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthBalanceRoute: AuthBalanceRoute,
   AuthDashboardRoute: AuthDashboardRoute,
   AuthPaymentsRoute: AuthPaymentsRoute,
+  AuthProjectsRoute: AuthProjectsRoute,
   AuthProvidersRoute: AuthProvidersRoute,
   AuthReportsRoute: AuthReportsRoute,
   AuthResourcesRoute: AuthResourcesRoute,
   AuthSettingsRoute: AuthSettingsRoute,
+  AuthSyncJournalRoute: AuthSyncJournalRoute,
   AuthTariffsRoute: AuthTariffsRoute,
   AuthVpsRoute: AuthVpsRoute,
 }

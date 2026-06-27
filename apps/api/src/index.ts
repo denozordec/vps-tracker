@@ -20,6 +20,7 @@ import { projectsRoutes } from './routes/projects.js'
 import { backupRoutes } from './routes/backup.js'
 import { ratesProxyRoutes } from './routes/rates-proxy.js'
 import { migrateRoutes } from './routes/migrate.js'
+import { dashboardRoutes } from './routes/dashboard.js'
 import { startScheduler } from './services/scheduler.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -52,6 +53,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(backupRoutes)
   await app.register(ratesProxyRoutes)
   await app.register(migrateRoutes)
+  await app.register(dashboardRoutes)
 
   const staticDir = opts.staticDir ?? join(__dirname, '..', '..', 'web', 'dist')
   if (existsSync(staticDir)) {

@@ -6,6 +6,7 @@ import { balanceLedgerRepository } from './balance-ledger.js'
 import { settingsRepository } from './settings.js'
 import { activeTariffsRepository, tariffSyncOptionsRepository } from './tariffs.js'
 import { projectsRepository } from './projects.js'
+import { syncLogRepository } from './sync-log.js'
 
 export interface Snapshot {
   vps: ReturnType<typeof vpsRepository.list>
@@ -17,6 +18,7 @@ export interface Snapshot {
   settings: ReturnType<typeof settingsRepository.list>
   activeTariffs: ReturnType<typeof activeTariffsRepository.list>
   tariffSyncOptions: ReturnType<typeof tariffSyncOptionsRepository.list>
+  syncLog: ReturnType<typeof syncLogRepository.listRecent>
 }
 
 export function getSnapshot(): Snapshot {
@@ -30,6 +32,7 @@ export function getSnapshot(): Snapshot {
     settings: settingsRepository.list(),
     activeTariffs: activeTariffsRepository.list(),
     tariffSyncOptions: tariffSyncOptionsRepository.list(),
+    syncLog: syncLogRepository.listRecent(50),
   }
 }
 
@@ -43,4 +46,5 @@ export {
   activeTariffsRepository,
   tariffSyncOptionsRepository,
   projectsRepository,
+  syncLogRepository,
 }

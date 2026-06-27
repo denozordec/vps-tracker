@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
@@ -6,12 +6,12 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-table-card'
+import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
-import { EmptyState } from '@/components/empty-state'
-import { ServerCogIcon, ServerIcon, UserRoundIcon, CpuIcon, CoinsIcon, HardDriveIcon } from 'lucide-react'
+import { Button } from '@cfdm/ui/components/button'
+import { ServerIcon, UserRoundIcon, CpuIcon, CoinsIcon, HardDriveIcon } from 'lucide-react'
 
 import type { ActiveTariff } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
@@ -90,7 +90,9 @@ function TariffsPage() {
         empty={snapshot?.activeTariffs.length === 0}
         emptyTitle="Тарифы не загружены"
         emptyDescription="Выполните синхронизацию аккаунта BILLmanager, чтобы загрузить тарифы"
-        emptyAction={<EmptyState icon={<ServerCogIcon className="size-8" />} title="Нет тарифов" />}
+        emptyAction={
+          <Button render={<Link to="/accounts" />}>Перейти к аккаунтам</Button>
+        }
       >
         {(snap) => <DataGridCard columns={columnDefFromDataTable(columns)} data={snap.activeTariffs} rowId={(t) => t.id} />}
       </QueryState>

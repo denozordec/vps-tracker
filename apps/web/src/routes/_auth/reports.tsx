@@ -69,7 +69,13 @@ function ReportsPage() {
                 ]}
               />
               <ChartsGrid>
-                <MonthlyExpenseChart vps={snap.vps} providers={snap.providers} settings={snap.settings} ratesData={ratesData} />
+                <MonthlyExpenseChart
+                  vps={snap.vps}
+                  providers={snap.providers}
+                  providerAccounts={snap.providerAccounts}
+                  settings={snap.settings}
+                  ratesData={ratesData}
+                />
                 <PaymentsPieChart payments={snap.payments} settings={snap.settings} ratesData={ratesData} />
                 <MonthlyTrendChart payments={snap.payments} settings={snap.settings} ratesData={ratesData} className="lg:col-span-2" />
               </ChartsGrid>

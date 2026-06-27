@@ -31,8 +31,13 @@ export interface ProviderAccount {
   apiCredentialsSet?: boolean
   billingMode?: BillingMode
   balance_api?: number | null
+  balanceApi?: number | null
   balance_currency?: string
+  balanceCurrency?: string
   currency?: string
+  balanceAlertBelow?: number | null
+  enoughmoneyto?: string
+  balanceUpdatedAt?: string
   notes?: string
 }
 
@@ -100,6 +105,12 @@ export interface Settings {
   ratesUrl?: string
   autoConvert?: boolean
   syncEnabled?: boolean
+  syncIntervalMinutes?: number
+  syncTariffsIntervalMinutes?: number
+  notifyLowBalanceEnabled?: boolean
+  notifySyncDigestEnabled?: boolean
+  notifyPaymentExpiryEnabled?: boolean
+  notifyNewTariffsEnabled?: boolean
   telegramChatId?: string
   telegramBotToken?: string
 }
@@ -158,5 +169,5 @@ export interface DataSnapshot {
   activeTariffs: ActiveTariff[]
   tariffSyncOptions?: unknown[]
   serverProjects?: unknown[]
-  syncLog?: SyncLogRow[]
+  syncLog: SyncLogRow[]
 }

@@ -21,7 +21,7 @@ import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { EmptyState } from './empty-state'
-import type { DataTableColumn } from './data-table-card'
+import type { DataTableColumn } from './data-grid-types'
 
 const PAGINATION_LABELS = {
   rowsPerPageLabel: 'Строк на странице',
@@ -228,8 +228,8 @@ export function DataGridCard<TData extends object>({
 
   return (
     <Card className={cn('ring-0 shadow-none', className)}>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/50 pb-4">
-        <div className="space-y-1">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/50 pb-4">
+        <div className="flex flex-col gap-1">
           {title ? <CardTitle>{title}</CardTitle> : null}
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>

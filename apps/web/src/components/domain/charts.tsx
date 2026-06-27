@@ -20,6 +20,11 @@ import type { ReactNode } from 'react'
 import type { Vps, Provider, Payment, Settings, RatesData } from '@/types/entities'
 import { convertCurrency, formatCurrency, monthKey, toIsoCurrency } from '@/lib/format'
 import { providerByIdMap } from '@/lib/billmanager'
+import { EmptyState } from '@/components/empty-state'
+
+function ChartEmpty({ message }: { message: string }) {
+  return <EmptyState title={message} className="h-72 border-none" />
+}
 
 const EXPENSE_CONFIG: ChartConfig = {
   expense: { label: 'Расход', color: 'var(--chart-1)' },
@@ -28,18 +33,21 @@ const EXPENSE_CONFIG: ChartConfig = {
 export function MonthlyExpenseChart({
   vps,
   providers,
+  providerAccounts,
   settings,
   ratesData,
   className,
 }: {
   vps: Vps[]
   providers: Provider[]
+  providerAccounts?: { id: string; name: string; providerId: string }[]
   settings: Settings[]
   ratesData: RatesData | null
   className?: string
 }) {
   const baseCurrency = (settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
   const providerById = providerByIdMap(providers)
+  const accountById = new Map((providerAccounts ?? []).map((a) => [a.id, a]))
 
   const monthlyByAccount = new Map<string, number>()
   for (const v of vps) {
@@ -56,7 +64,7 @@ export function MonthlyExpenseChart({
   const data = Array.from(monthlyByAccount.entries())
     .map(([accountId, value]) => ({
       accountId,
-      name: providerById.get(accountId)?.name ?? accountId,
+      name: accountById.get(accountId)?.name ?? accountId,
       expense: Math.round(value),
     }))
     .sort((a, b) => b.expense - a.expense)
@@ -69,6 +77,9 @@ export function MonthlyExpenseChart({
         <CardDescription>Топ-10 по monthly rate, в {baseCurrency}</CardDescription>
       </CardHeader>
       <CardContent>
+        {data.length === 0 ? (
+          <ChartEmpty message="Нет данных для графика" />
+        ) : (
         <ChartContainer config={EXPENSE_CONFIG} className="h-72 w-full">
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -78,6 +89,7 @@ export function MonthlyExpenseChart({
             <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />
           </BarChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   )
@@ -115,6 +127,9 @@ export function PaymentsPieChart({
         <CardDescription>Структура в {baseCurrency}</CardDescription>
       </CardHeader>
       <CardContent>
+        {data.length === 0 ? (
+          <ChartEmpty message="Нет данных о платежах" />
+        ) : (
         <ChartContainer config={PAYMENTS_CONFIG} className="mx-auto h-72 w-full">
           <PieChart>
             <RechartsTooltip content={<ChartTooltipContent nameKey="type" formatter={(v) => formatCurrency(Number(v), baseCurrency)} />} />
@@ -125,6 +140,7 @@ export function PaymentsPieChart({
             </Pie>
           </PieChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   )
@@ -163,6 +179,9 @@ export function MonthlyTrendChart({
         <CardDescription>Последние 12 месяцев, {baseCurrency}</CardDescription>
       </CardHeader>
       <CardContent>
+        {data.length === 0 ? (
+          <ChartEmpty message="Нет данных за выбранный период" />
+        ) : (
         <ChartContainer config={trendConfig} className="h-72 w-full">
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -172,6 +191,7 @@ export function MonthlyTrendChart({
             <Bar dataKey="amount" fill="var(--color-amount)" radius={4} />
           </BarChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   )

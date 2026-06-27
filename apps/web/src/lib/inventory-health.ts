@@ -31,16 +31,18 @@ function ledgerBalanceInCurrency(
   return credits - debits
 }
 
+import { accountBalanceApi } from '@/lib/account'
+
 export function accountHasApiLedgerMismatch(
   account: ProviderAccount,
   balanceLedger: BalanceLedgerRow[],
 ): boolean {
-  if (account.balance_api == null || !Number.isFinite(Number(account.balance_api))) return false
+  const apiBalance = accountBalanceApi(account)
+  if (apiBalance == null) return false
   const rows = ledgerRowsInAccountCurrency(account, balanceLedger)
   if (rows.length === 0) return false
   const ledger = ledgerBalanceInCurrency(account, balanceLedger)
   if (!Number.isFinite(ledger)) return false
-  const apiBalance = Number(account.balance_api)
   const diff = Math.abs(apiBalance - ledger)
   const tol = Math.max(10, Math.abs(apiBalance) * 0.05)
   return diff > tol

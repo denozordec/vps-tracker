@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, UserRoundIcon, KeyRoundIcon, PlugIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
+import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, UserRoundIcon, KeyRoundIcon, PlugIcon, ReceiptIcon, WalletIcon, MoreHorizontalIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-table-card'
+import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { QueryState } from '@/components/query-state'
 import { TableSkeleton } from '@/components/skeletons'
@@ -21,7 +21,14 @@ import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { Textarea } from '@cfdm/ui/components/textarea'
 import { SelectField } from '@/components/select-field'
-import { LoadingButton } from '@/components/loading-button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@cfdm/ui/components/dropdown-menu'
+import { accountBalanceApi, accountBalanceCurrency } from '@/lib/account'
 
 import type { ProviderAccount, BillingMode } from '@/types/entities'
 import { providerByIdMap, accountBillmanagerUiReady } from '@/lib/billmanager'
@@ -40,10 +47,19 @@ interface FormState {
   login: string
   apiCredentials: string
   billingMode: BillingMode
+  balanceAlertBelow: string
   notes: string
 }
 
-const EMPTY: FormState = { providerId: '', name: '', login: '', apiCredentials: '', billingMode: 'monthly', notes: '' }
+const EMPTY: FormState = {
+  providerId: '',
+  name: '',
+  login: '',
+  apiCredentials: '',
+  billingMode: 'monthly',
+  balanceAlertBelow: '',
+  notes: '',
+}
 
 function AccountsPage() {
   const queryClient = useQueryClient()
@@ -53,8 +69,14 @@ function AccountsPage() {
 
   const saveMut = useMutation({
     mutationFn: (r: FormState) => {
-      const { apiCredentials, ...rest } = r
-      const payload = apiCredentials ? { ...rest, apiCredentials } : rest
+      const { apiCredentials, balanceAlertBelow, ...rest } = r
+      const alertRaw = balanceAlertBelow.trim()
+      const alertNum = alertRaw ? Number(alertRaw) : null
+      const base = {
+        ...rest,
+        balanceAlertBelow: Number.isFinite(alertNum) ? alertNum : null,
+      }
+      const payload = apiCredentials ? { ...base, apiCredentials } : base
       return r.id
         ? api.update<ProviderAccount>('providerAccounts', r.id, payload as unknown as Partial<ProviderAccount>)
         : api.create('providerAccounts', payload as unknown as ProviderAccount)
@@ -85,9 +107,16 @@ function AccountsPage() {
 
   const openCreate = () => { setForm({ ...EMPTY, providerId: snapshot?.providers[0]?.id ?? '' }); setOpen(true) }
   const openEdit = (a: ProviderAccount) => {
+    const ext = a as ProviderAccount & { balanceAlertBelow?: number | null }
     setForm({
-      id: a.id, providerId: a.providerId, name: a.name, login: a.login ?? '',
-      apiCredentials: '', billingMode: a.billingMode ?? 'monthly', notes: a.notes ?? '',
+      id: a.id,
+      providerId: a.providerId,
+      name: a.name,
+      login: a.login ?? '',
+      apiCredentials: '',
+      billingMode: a.billingMode ?? 'monthly',
+      balanceAlertBelow: ext.balanceAlertBelow != null ? String(ext.balanceAlertBelow) : '',
+      notes: a.notes ?? '',
     })
     setOpen(true)
   }
@@ -125,12 +154,16 @@ function AccountsPage() {
       icon: WalletIcon,
       headerClassName: 'text-right',
       className: 'text-right',
-      sortValue: (a) => Number(a.balance_api ?? 0),
+      sortValue: (a) => accountBalanceApi(a) ?? 0,
       cell: (a) => {
         const provider = providerById.get(a.providerId)
         if (!accountBillmanagerUiReady(a, provider)) return <span className="text-muted-foreground">—</span>
-        const cur = a.balance_currency || a.currency || provider?.baseCurrency || 'USD'
-        return <span className="tabular-nums font-medium">{formatCurrency(Number(a.balance_api ?? 0), cur)}</span>
+        const cur = accountBalanceCurrency(a)
+        const ext = a as ProviderAccount & { enoughmoneyto?: string }
+        return dataGridCellStack(
+          formatCurrency(accountBalanceApi(a) ?? 0, cur),
+          ext.enoughmoneyto ? `до ${ext.enoughmoneyto}` : undefined,
+        )
       },
     },
     {
@@ -142,28 +175,43 @@ function AccountsPage() {
         const provider = providerById.get(a.providerId)
         const canSync = accountBillmanagerUiReady(a, provider)
         return (
-          <div className="flex justify-end gap-1">
-            <LoadingButton
-              variant="outline"
-              size="sm"
-              loading={syncMut.isPending && syncMut.variables === a.id}
-              disabled={!canSync}
-              onClick={() => syncMut.mutate(a.id)}
-            >
-              <RefreshCwIcon data-icon="inline-start" />
-              Синк
-            </LoadingButton>
-            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(a)} aria-label="Редактировать">
-              <PencilIcon />
-            </Button>
-            <ConfirmDialog
-              trigger={<Button variant="ghost" size="icon-sm" aria-label="Удалить"><Trash2Icon /></Button>}
-              title="Удалить аккаунт?"
-              description={`«${a.name}» будет удалён.`}
-              destructive
-              confirmLabel="Удалить"
-              onConfirm={() => delMut.mutate(a.id)}
-            />
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="icon-sm" aria-label="Действия">
+                    <MoreHorizontalIcon />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={!canSync || (syncMut.isPending && syncMut.variables === a.id)}
+                  onClick={() => syncMut.mutate(a.id)}
+                >
+                  <RefreshCwIcon />
+                  Синхронизировать
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openEdit(a)}>
+                  <PencilIcon />
+                  Редактировать
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <ConfirmDialog
+                  trigger={
+                    <DropdownMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
+                      <Trash2Icon />
+                      Удалить
+                    </DropdownMenuItem>
+                  }
+                  title="Удалить аккаунт?"
+                  description={`«${a.name}» будет удалён.`}
+                  destructive
+                  confirmLabel="Удалить"
+                  onConfirm={() => delMut.mutate(a.id)}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )
       },
@@ -231,6 +279,16 @@ function AccountsPage() {
               { value: 'monthly', label: billingModeLabel('monthly') },
               { value: 'daily', label: billingModeLabel('daily') },
             ]}
+          />
+        </FormField>
+        <FormField label="Порог низкого баланса" htmlFor="acc-alert" description="Уведомление на дашборде, если баланс API ниже">
+          <Input
+            id="acc-alert"
+            type="number"
+            min={0}
+            value={form.balanceAlertBelow}
+            onChange={(e) => setForm({ ...form, balanceAlertBelow: e.target.value })}
+            placeholder="Не задан"
           />
         </FormField>
         <FormField label="Заметки" htmlFor="acc-notes">

@@ -18,7 +18,7 @@ export function EmptyState({ title, description, icon, action, className }: Empt
       )}
     >
       {icon ? <div className="text-muted-foreground">{icon}</div> : null}
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">{title}</p>
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
