@@ -73,7 +73,7 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const onlyTariffs = Boolean(req.body?.onlyTariffs)
-      const opts = onlyTariffs ? { skipVpsPayments: true } : { skipTariffs: true }
+      const opts = onlyTariffs ? { skipVpsPayments: true } : {}
 
       try {
         const result = await runBillmanagerAccountSync(syncRow, opts)

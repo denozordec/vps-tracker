@@ -31,7 +31,7 @@ import {
 import { accountBalanceApi, accountBalanceCurrency } from '@/lib/account'
 
 import type { ProviderAccount, BillingMode } from '@/types/entities'
-import { providerByIdMap, accountBillmanagerUiReady } from '@/lib/billmanager'
+import { providerByIdMap, accountBillmanagerUiReady, billmanagerSyncableAccounts } from '@/lib/billmanager'
 import { billingModeLabel, formatCurrency } from '@/lib/format'
 
 export const Route = createFileRoute('/_auth/accounts')({
@@ -98,9 +98,29 @@ function AccountsPage() {
   })
   const syncMut = useMutation({
     mutationFn: (id: string) => api.syncAccount(id),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+      const synced = (data as { synced?: { vpsCount?: number; paymentsCount?: number; tariffsCount?: number } })
+        ?.synced
+      const parts: string[] = []
+      if (synced?.vpsCount != null) parts.push(`VPS ${synced.vpsCount}`)
+      if (synced?.paymentsCount) parts.push(`платежи ${synced.paymentsCount}`)
+      if (synced?.tariffsCount) parts.push(`тарифы ${synced.tariffsCount}`)
+      toast.success(parts.length ? `Синк: ${parts.join(', ')}` : 'Синк завершён')
+    },
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка синка'),
+  })
+  const syncAllMut = useMutation({
+    mutationFn: async () => {
+      if (!snapshot) return
+      const accounts = billmanagerSyncableAccounts(snapshot.providerAccounts, snapshot.providers)
+      for (const a of accounts) {
+        await api.syncAccount(a.id)
+      }
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
-      toast.success('Синк запущен')
+      toast.success('Синхронизация всех аккаунтов завершена')
     },
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка синка'),
   })
@@ -122,6 +142,9 @@ function AccountsPage() {
   }
 
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
+  const syncableCount = snapshot
+    ? billmanagerSyncableAccounts(snapshot.providerAccounts, snapshot.providers).length
+    : 0
 
   const columns: DataTableColumn<ProviderAccount>[] = [
     {
@@ -184,7 +207,7 @@ function AccountsPage() {
                   </Button>
                 }
               />
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-auto min-w-44">
                 <DropdownMenuItem
                   disabled={!canSync || (syncMut.isPending && syncMut.variables === a.id)}
                   onClick={() => syncMut.mutate(a.id)}
@@ -223,7 +246,21 @@ function AccountsPage() {
       <PageHeader
         title="Аккаунты хостеров"
         description="Аккаунты провайдеров с API-доступом"
-        actions={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить</Button>}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {syncableCount > 0 ? (
+              <Button
+                variant="outline"
+                disabled={syncAllMut.isPending}
+                onClick={() => syncAllMut.mutate()}
+              >
+                <RefreshCwIcon data-icon="inline-start" />
+                Синхронизировать все
+              </Button>
+            ) : null}
+            <Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить</Button>
+          </div>
+        }
       />
       <QueryState
         data={snapshot}
