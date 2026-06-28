@@ -57,6 +57,8 @@ export const vpsSchema = z.object({
   paidUntil: z.string().optional().default(''),
   project: z.string().optional().default(''),
   notes: z.string().optional().default(''),
+  userOverrides: z.array(z.string()).optional().default([]),
+  customData: z.record(z.union([z.string(), z.number(), z.boolean()])).optional().default({}),
 })
 
 export const paymentSchema = z.object({
@@ -66,6 +68,7 @@ export const paymentSchema = z.object({
   amount: z.coerce.number().min(0, 'Сумма должна быть ≥ 0'),
   currency: z.string().min(1).default('RUB'),
   providerAccountId: z.string().min(1, 'Выберите аккаунт'),
+  vpsId: z.string().optional().default(''),
   note: z.string().optional().default(''),
 })
 
@@ -88,14 +91,21 @@ export const settingsSchema = z.object({
   syncTariffsIntervalMinutes: z.coerce.number().min(60).optional().default(1440),
   telegramChatId: z.string().optional().default(''),
   telegramBotToken: z.string().optional().default(''),
+  telegramMessageThreadId: z.string().optional().default(''),
   notifyPaymentExpiryEnabled: z.boolean().optional().default(true),
   notifyNewTariffsEnabled: z.boolean().optional().default(true),
   notifyLowBalanceEnabled: z.boolean().optional().default(true),
   notifySyncDigestEnabled: z.boolean().optional().default(true),
+  notifyVpsDownEnabled: z.boolean().optional().default(true),
+  webhookUrl: z.string().url('Невалидный URL').or(z.literal('')).optional().default(''),
+  webhookEnabled: z.boolean().optional().default(false),
+  customFieldsJson: z.string().optional().default('[]'),
 })
 
 export const projectSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1, 'Укажите название проекта').max(120),
+  color: z.string().optional().default(''),
 })
 
 export type ProjectFormValues = z.infer<typeof projectSchema>

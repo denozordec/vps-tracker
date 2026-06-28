@@ -95,21 +95,42 @@ export function computeDashboardStats(): DashboardStats {
     return balance < threshold
   }).length
 
+  const noRateCount = activeVps.filter((v) => {
+    const dr = Number(v.dailyRate || 0)
+    const mr = Number(v.monthlyRate || 0)
+    const noMoney = (!Number.isFinite(dr) || dr <= 0) && (!Number.isFinite(mr) || mr <= 0)
+    const noCur = !(v.currency || '').trim()
+    return noMoney || noCur
+  }).length
+
+  const paidOverdueCount = activeVps.filter((v) => {
+    if (!v.paidUntil) return false
+    const d = new Date(v.paidUntil)
+    if (Number.isNaN(d.getTime())) return false
+    return d < todayStart
+  }).length
+
+  const balanceMismatchCount = snap.providerAccounts.filter((a) => {
+    const apiBalance = a.balanceApi != null ? Number(a.balanceApi) : null
+    if (apiBalance == null || !Number.isFinite(apiBalance)) return false
+    const rows = snap.balanceLedger.filter((r) => r.providerAccountId === a.id)
+    if (rows.length === 0) return false
+    const credits = rows.filter((r) => r.direction === 'credit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
+    const debits = rows.filter((r) => r.direction === 'debit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
+    const ledger = credits - debits
+    if (!Number.isFinite(ledger)) return false
+    const diff = Math.abs(apiBalance - ledger)
+    const tol = Math.max(10, Math.abs(apiBalance) * 0.05)
+    return diff > tol
+  }).length
+
   let issuesCount = 0
-  if (
-    activeVps.some((v) => {
-      const dr = Number(v.dailyRate || 0)
-      const mr = Number(v.monthlyRate || 0)
-      const noMoney = (!Number.isFinite(dr) || dr <= 0) && (!Number.isFinite(mr) || mr <= 0)
-      const noCur = !(v.currency || '').trim()
-      return noMoney || noCur
-    })
-  ) {
-    issuesCount++
-  }
+  if (noRateCount > 0) issuesCount++
+  if (paidOverdueCount > 0) issuesCount++
   if (expiringWithin7Days > 0) issuesCount++
   if (staleSyncAccountCount > 0) issuesCount++
   if (lowBalanceAccountCount > 0) issuesCount++
+  if (balanceMismatchCount > 0) issuesCount++
 
   let lastGlobalSyncAt: string | null = null
   for (const row of snap.syncLog) {

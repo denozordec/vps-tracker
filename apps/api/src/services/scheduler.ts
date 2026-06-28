@@ -5,9 +5,12 @@ import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { billmanagerAccountRowForSync } from './billmanager/context.js'
 import { runBillmanagerAccountSync } from './billmanager/sync-job.js'
 import { sendTelegramMessage } from './telegram.js'
+import { notifyWebhook } from './webhook.js'
+import { runVpsUptimeChecks } from './uptime-check.js'
 
 let syncIntervalId: ReturnType<typeof setInterval> | null = null
 let syncTariffsIntervalId: ReturnType<typeof setInterval> | null = null
+let uptimeIntervalId: ReturnType<typeof setInterval> | null = null
 
 const UPCOMING_DAYS = 7
 const SETTINGS_ID = 'settings-main'
@@ -152,6 +155,9 @@ async function sendPaymentExpiryNotifications(): Promise<void> {
     text,
     settings.telegramMessageThreadId,
   )
+  await notifyWebhook(settings, 'payment_expiry', text.replace(/<[^>]+>/g, ''), {
+    count: upcoming.length,
+  })
 }
 
 export async function runScheduledSync(): Promise<void> {
@@ -197,10 +203,14 @@ export async function runScheduledSync(): Promise<void> {
     }
 
     if (canTg && settings.notifySyncDigestEnabled && digestLines.length > 0) {
-      await sendTelegramMessage(token!, chatId!, `📋 <b>Синхронизация VPS</b>\n\n${digestLines.join('\n')}`, settings.telegramMessageThreadId)
+      const msg = `📋 <b>Синхронизация VPS</b>\n\n${digestLines.join('\n')}`
+      await sendTelegramMessage(token!, chatId!, msg, settings.telegramMessageThreadId)
+      await notifyWebhook(settings, 'sync_digest', msg.replace(/<[^>]+>/g, ''), { lines: digestLines })
     }
     if (canTg && settings.notifyLowBalanceEnabled && lowBalanceLines.length > 0) {
-      await sendTelegramMessage(token!, chatId!, `💰 <b>Низкий баланс</b>\n\n${lowBalanceLines.join('\n')}`, settings.telegramMessageThreadId)
+      const msg = `💰 <b>Низкий баланс</b>\n\n${lowBalanceLines.join('\n')}`
+      await sendTelegramMessage(token!, chatId!, msg, settings.telegramMessageThreadId)
+      await notifyWebhook(settings, 'low_balance', msg.replace(/<[^>]+>/g, ''), { lines: lowBalanceLines })
     }
 
     if (settings.notifyPaymentExpiryEnabled) {
@@ -248,11 +258,38 @@ export async function runScheduledSyncTariffs(): Promise<void> {
   }
 }
 
+export async function runScheduledUptimeChecks(): Promise<void> {
+  try {
+    const settings = settingsRepository.getRow(SETTINGS_ID)
+    const { checked, down } = await runVpsUptimeChecks()
+    if (down > 0 && settings) {
+      const msg = `VPS недоступны: ${down} из ${checked}`
+      if (
+        settings.notifyVpsDownEnabled &&
+        settings.telegramBotToken?.trim() &&
+        settings.telegramChatId?.trim()
+      ) {
+        await sendTelegramMessage(
+          settings.telegramBotToken,
+          settings.telegramChatId,
+          `🔴 <b>${msg}</b>`,
+          settings.telegramMessageThreadId,
+        )
+      }
+      await notifyWebhook(settings, 'vps_down', msg, { checked, down })
+    }
+  } catch (err) {
+    console.warn('Uptime check error:', err instanceof Error ? err.message : err)
+  }
+}
+
 export function startScheduler(): void {
   if (syncIntervalId) clearInterval(syncIntervalId)
   syncIntervalId = null
   if (syncTariffsIntervalId) clearInterval(syncTariffsIntervalId)
   syncTariffsIntervalId = null
+  if (uptimeIntervalId) clearInterval(uptimeIntervalId)
+  uptimeIntervalId = null
 
   try {
     const settings = settingsRepository.getRow(SETTINGS_ID)
@@ -262,8 +299,10 @@ export function startScheduler(): void {
     const tariffsInterval = Math.max(60, Number(settings.syncTariffsIntervalMinutes) || 1440)
     syncIntervalId = setInterval(() => void runScheduledSync(), interval * 60 * 1000)
     syncTariffsIntervalId = setInterval(() => void runScheduledSyncTariffs(), tariffsInterval * 60 * 1000)
+    uptimeIntervalId = setInterval(() => void runScheduledUptimeChecks(), 5 * 60 * 1000)
+    void runScheduledUptimeChecks()
     console.log(
-      `Scheduled sync enabled: VPS/payments every ${interval} min, tariffs every ${tariffsInterval} min`,
+      `Scheduled sync enabled: VPS/payments every ${interval} min, tariffs every ${tariffsInterval} min, uptime every 5 min`,
     )
   } catch {
     // ignore
@@ -275,6 +314,8 @@ export function stopScheduler(): void {
   syncIntervalId = null
   if (syncTariffsIntervalId) clearInterval(syncTariffsIntervalId)
   syncTariffsIntervalId = null
+  if (uptimeIntervalId) clearInterval(uptimeIntervalId)
+  uptimeIntervalId = null
 }
 
 export function restartScheduler(): void {

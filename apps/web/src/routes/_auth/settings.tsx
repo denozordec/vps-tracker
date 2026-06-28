@@ -14,6 +14,7 @@ import { SectionCardsSkeleton } from '@/components/skeletons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
+import { Textarea } from '@cfdm/ui/components/textarea'
 import { LoadingButton } from '@/components/loading-button'
 import { SelectField } from '@/components/select-field'
 import { FormField } from '@/components/form-field'
@@ -44,6 +45,15 @@ function settingsToFormValues(s: Settings): SettingsFormValues {
     notifyNewTariffsEnabled: s.notifyNewTariffsEnabled !== false,
     notifyLowBalanceEnabled: s.notifyLowBalanceEnabled !== false,
     notifySyncDigestEnabled: s.notifySyncDigestEnabled !== false,
+    notifyVpsDownEnabled: (s as Settings & { notifyVpsDownEnabled?: boolean }).notifyVpsDownEnabled !== false,
+    webhookUrl: (s as Settings & { webhookUrl?: string }).webhookUrl ?? '',
+    webhookEnabled: (s as Settings & { webhookEnabled?: boolean }).webhookEnabled === true,
+    customFieldsJson: JSON.stringify(
+      (s as Settings & { customFields?: unknown[] }).customFields ?? [],
+      null,
+      2,
+    ),
+    telegramMessageThreadId: (s as Settings & { telegramMessageThreadId?: string }).telegramMessageThreadId ?? '',
   }
 }
 
@@ -86,11 +96,20 @@ function SettingsPage() {
 
   const upsertMut = useMutation({
     mutationFn: (patch: SettingsFormValues) => {
-      if (current?.id) return api.update<Settings>('settings', current.id, patch)
+      const { customFieldsJson, ...rest } = patch
+      let customFields: unknown[] = []
+      try {
+        const parsed = JSON.parse(customFieldsJson || '[]') as unknown
+        if (Array.isArray(parsed)) customFields = parsed
+      } catch {
+        throw new ApiError('Невалидный JSON в кастомных полях')
+      }
+      const payload = { ...rest, customFields }
+      if (current?.id) return api.update<Settings>('settings', current.id, payload)
       return api.create<Settings>('settings', {
         id: 'settings-main',
         ratesUrl: 'https://www.cbr-xml-daily.ru/latest.js',
-        ...patch,
+        ...payload,
       } as Settings)
     },
     onSuccess: () => {
@@ -172,6 +191,30 @@ function SettingsPage() {
       >
         <UploadIcon data-icon="inline-start" />
         Импорт JSON
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => {
+          const input = document.createElement('input')
+          input.type = 'file'
+          input.accept = '.db,application/octet-stream'
+          input.onchange = async () => {
+            const file = input.files?.[0]
+            if (!file) return
+            try {
+              const buffer = await file.arrayBuffer()
+              await api.importBackupDatabase(buffer)
+              void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+              toast.success('Импорт SQLite выполнен')
+            } catch (e) {
+              toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта')
+            }
+          }
+          input.click()
+        }}
+      >
+        <UploadIcon data-icon="inline-start" />
+        Импорт SQLite
       </Button>
     </div>
   )
@@ -259,6 +302,9 @@ function SettingsPage() {
                         {...form.register('telegramBotToken')}
                       />
                     </FormField>
+                    <FormField label="Thread ID (топик)" htmlFor="set-tg-thread">
+                      <Input id="set-tg-thread" placeholder="Необязательно" {...form.register('telegramMessageThreadId')} />
+                    </FormField>
                     <LoadingButton
                       type="button"
                       variant="outline"
@@ -319,7 +365,51 @@ function SettingsPage() {
                         <BoolSelect id="set-notify-tar" label="Новые тарифы" value={field.value ?? true} onChange={field.onChange} />
                       )}
                     />
+                    <Controller
+                      control={form.control}
+                      name="notifyVpsDownEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-notify-down" label="VPS недоступен" value={field.value ?? true} onChange={field.onChange} />
+                      )}
+                    />
                   </FieldGroup>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Webhook</CardTitle>
+                  <CardDescription>POST JSON при тех же событиях, что и Telegram</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <Controller
+                      control={form.control}
+                      name="webhookEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-webhook" label="Webhook" value={field.value ?? false} onChange={field.onChange} />
+                      )}
+                    />
+                    <FormField label="Webhook URL" htmlFor="set-webhook-url" error={form.formState.errors.webhookUrl?.message}>
+                      <Input id="set-webhook-url" placeholder="https://hooks.example.com/..." {...form.register('webhookUrl')} />
+                    </FormField>
+                  </FieldGroup>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Кастомные поля VPS</CardTitle>
+                  <CardDescription>JSON-массив: {"{ \"key\", \"label\", \"type\": \"text|number|bool\" }"}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FormField label="Схема полей" htmlFor="set-custom-fields" error={form.formState.errors.customFieldsJson?.message}>
+                    <Textarea
+                      id="set-custom-fields"
+                      className="min-h-32 font-mono text-xs"
+                      {...form.register('customFieldsJson')}
+                    />
+                  </FormField>
                 </CardContent>
               </Card>
             </div>

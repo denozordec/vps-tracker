@@ -3,6 +3,7 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import * as schema from './schema/index.js'
+import { ensureRuntimeSchema } from './runtime-migrate.js'
 
 export type Db = BetterSQLite3Database<typeof schema>
 
@@ -29,6 +30,7 @@ function openDatabase(): void {
   _sqlite.pragma('journal_mode = WAL')
   _sqlite.pragma('foreign_keys = ON')
   _db = drizzle(_sqlite, { schema })
+  ensureRuntimeSchema(_sqlite)
 }
 
 export function getSqlite(): Database.Database {

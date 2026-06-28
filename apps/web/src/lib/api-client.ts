@@ -150,6 +150,25 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+
+  updateProject: (id: string, patch: { name?: string; color?: string | null; notes?: string | null }) =>
+    fetchApi<{ id: string; name: string }>(`/api/projects/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    }),
+
+  deleteProject: (id: string) =>
+    fetchApi<void>(`/api/projects/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  fetchAuditLog: (limit = 100) =>
+    fetchApi<Array<{
+      id: string
+      entity: string
+      entityId: string
+      action: string
+      diff: Record<string, unknown> | null
+      createdAt: string
+    }>>(`/api/audit?limit=${limit}`),
 }
 
 export type {

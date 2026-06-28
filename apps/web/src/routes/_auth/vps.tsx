@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo, useEffect } from 'react'
-import { PlusIcon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon } from 'lucide-react'
+import { PlusIcon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon, CalendarIcon, ActivityIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -27,17 +27,21 @@ import {
   type VpsFiltersState,
 } from '@/components/vps-filters'
 import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
+import { HealthModeBanner } from '@/components/health-mode-banner'
+import { VpsBulkToolbar } from '@/components/domain/vps-bulk-toolbar'
 
 import type { Vps } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 import { COUNTRIES, COUNTRY_BY_NAME_RU, buildCityOptions } from '@cfdm/shared/geo'
 import { getPaidUntilDate } from '@/lib/paid-until'
+import { parseCustomFieldDefs } from '@/lib/custom-fields'
 
 import { z } from 'zod'
 
 const vpsSearchSchema = z.object({
   health: z.string().optional(),
   edit: z.string().optional(),
+  project: z.string().optional(),
 })
 
 export const Route = createFileRoute('/_auth/vps')({
@@ -52,17 +56,26 @@ const EMPTY_FORM = VPS_FORM_EMPTY
 function VpsPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const { health, edit } = Route.useSearch()
+  const { health, edit, project: projectSearch } = Route.useSearch()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [defaultValues, setDefaultValues] = useState<VpsFormValues>(EMPTY_FORM)
   const [filters, setFilters] = useState<VpsFiltersState>(buildDefaultVpsFilters())
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   useEffect(() => {
     if (!health) return
     setFilters((prev) => ({ ...prev, status: prev.status.length ? prev.status : ['active'] }))
   }, [health])
+
+  useEffect(() => {
+    if (!projectSearch) return
+    setFilters((prev) => ({
+      ...prev,
+      project: prev.project.length ? prev.project : [projectSearch],
+    }))
+  }, [projectSearch])
 
   useEffect(() => {
     if (!edit || !snapshot) return
@@ -109,6 +122,17 @@ function VpsPage() {
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка удаления'),
   })
 
+  const bulkMutation = useMutation({
+    mutationFn: (payload: { ids: string[]; action: string; value?: unknown }) =>
+      api.bulkUpdateVps(payload.ids, payload.action, payload.value),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+      setSelectedIds([])
+      toast.success('Массовое действие выполнено')
+    },
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка'),
+  })
+
   const openCreate = () => {
     setEditingId(null)
     setDefaultValues({
@@ -124,10 +148,14 @@ function VpsPage() {
     setSheetOpen(true)
   }
   const submit = (values: VpsFormValues) => {
+    const payload = {
+      ...values,
+      customData: JSON.stringify(values.customData ?? {}),
+    } as unknown as Partial<Vps>
     if (editingId) {
-      void updateMutation.mutate({ id: editingId, patch: values as unknown as Partial<Vps> })
+      void updateMutation.mutate({ id: editingId, patch: payload })
     } else {
-      void createMutation.mutate(values)
+      void createMutation.mutate(payload as unknown as VpsFormValues)
     }
   }
 
@@ -242,7 +270,12 @@ function VpsPage() {
       header: 'IP / DNS',
       icon: GlobeIcon,
       sortValue: (v) => v.ip || v.dns || '',
-      cell: (v) => dataGridCellStack(v.ip || '—', v.dns || undefined),
+      cell: (v) => dataGridCellStack(
+        <Button variant="link" className="h-auto p-0 font-normal" render={<Link to="/vps/$vpsId" params={{ vpsId: v.id }} />}>
+          {v.ip || '—'}
+        </Button>,
+        v.dns || undefined,
+      ),
     },
     {
       key: 'account',
@@ -315,6 +348,54 @@ function VpsPage() {
         return dataGridCellStack(
           formatInProviderCurrency(amount, currency, provider, snapshot?.settings ?? [], ratesData),
           tariffTypeLabel(v.tariffType),
+        )
+      },
+    },
+    {
+      key: 'health',
+      header: 'Мониторинг',
+      icon: ActivityIcon,
+      sortable: false,
+      cell: (v) => {
+        const ext = v as Vps & { lastHealthStatus?: string; monitoringEnabled?: boolean }
+        if (!ext.monitoringEnabled) return <span className="text-muted-foreground">—</span>
+        if (ext.lastHealthStatus === 'up') return <Badge variant="default">up</Badge>
+        if (ext.lastHealthStatus === 'down') return <Badge variant="destructive">down</Badge>
+        return <Badge variant="outline">—</Badge>
+      },
+    },
+    {
+      key: 'paidUntil',
+      header: 'Оплачено до',
+      icon: CalendarIcon,
+      sortValue: (v) => {
+        if (!snapshot) return ''
+        const d = getPaidUntilDate(v, {
+          vps: snapshot.vps,
+          providerAccounts: snapshot.providerAccounts,
+          payments: snapshot.payments,
+          balanceLedger: snapshot.balanceLedger,
+          now: new Date(),
+        })
+        return d?.getTime() ?? 0
+      },
+      cell: (v) => {
+        if (!snapshot) return '—'
+        const d = getPaidUntilDate(v, {
+          vps: snapshot.vps,
+          providerAccounts: snapshot.providerAccounts,
+          payments: snapshot.payments,
+          balanceLedger: snapshot.balanceLedger,
+          now: new Date(),
+        })
+        if (!d) return <span className="text-muted-foreground">—</span>
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        const overdue = d < todayStart
+        return (
+          <span className={overdue ? 'text-destructive tabular-nums' : 'tabular-nums text-muted-foreground'}>
+            {d.toLocaleDateString('ru-RU')}
+          </span>
         )
       },
     },
@@ -396,6 +477,15 @@ function VpsPage() {
 
           return (
           <div className="flex flex-col gap-4">
+            {health ? <HealthModeBanner health={health} exitTo="/vps" /> : null}
+            <VpsBulkToolbar
+              selectedCount={selectedIds.length}
+              projectOptions={projectNameOptions}
+              busy={bulkMutation.isPending}
+              onSetStatus={(status) => bulkMutation.mutate({ ids: selectedIds, action: 'status', value: status })}
+              onSetProject={(project) => bulkMutation.mutate({ ids: selectedIds, action: 'project', value: project })}
+              onDelete={() => bulkMutation.mutate({ ids: selectedIds, action: 'delete' })}
+            />
             <VpsFiltersToolbar
               filters={filters}
               onChange={setFilters}
@@ -415,6 +505,8 @@ function VpsPage() {
                 rowId={(v) => v.id}
                 emptyTitle="VPS не найдены"
                 pinLastColumn
+                enableRowSelection
+                onRowSelectionChange={setSelectedIds}
                 virtualization={section.items.length > 200}
                 height={560}
               />
@@ -434,6 +526,9 @@ function VpsPage() {
           providerAccounts={snapshot.providerAccounts}
           vpsRows={snapshot.vps}
           formCountryOptions={formCountryOptions}
+          customFieldDefs={parseCustomFieldDefs(
+            (snapshot.settings[0] as { customFields?: unknown })?.customFields,
+          )}
           onSubmit={submit}
           submitting={createMutation.isPending || updateMutation.isPending}
         />

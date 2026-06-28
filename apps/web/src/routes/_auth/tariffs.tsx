@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
+import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-grid-types'
@@ -15,6 +17,7 @@ import { ServerIcon, UserRoundIcon, CpuIcon, CoinsIcon, HardDriveIcon, RefreshCw
 import type { ActiveTariff } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel, billmanagerSyncableAccounts } from '@/lib/billmanager'
 import { formatCurrency } from '@/lib/format'
+import { computeTariffDiffs } from '@/lib/tariff-diff'
 
 export const Route = createFileRoute('/_auth/tariffs')({
   loader: ({ context: { queryClient } }) =>
@@ -29,6 +32,11 @@ function TariffsPage() {
   const syncableCount = snapshot
     ? billmanagerSyncableAccounts(snapshot.providerAccounts, snapshot.providers).length
     : 0
+
+  const tariffDiffs = useMemo(
+    () => (snapshot ? computeTariffDiffs(snapshot.vps, snapshot.activeTariffs) : []),
+    [snapshot],
+  )
 
   const syncTariffsMut = useMutation({
     mutationFn: async () => {
@@ -143,11 +151,29 @@ function TariffsPage() {
       }
     >
       {(snap) => (
-        <DataGridCard
-          columns={columnDefFromDataTable(columns)}
-          data={snap.activeTariffs}
-          rowId={(t) => t.id}
-        />
+        <div className="flex flex-col gap-4">
+          {tariffDiffs.length > 0 ? (
+            <Alert>
+              <AlertTitle>Расхождение тариф vs VPS ({tariffDiffs.length})</AlertTitle>
+              <AlertDescription className="flex flex-col gap-1">
+                {tariffDiffs.slice(0, 5).map((d) => (
+                  <span key={d.vpsId}>
+                    <Link to="/vps/$vpsId" params={{ vpsId: d.vpsId }} className="underline">
+                      {d.vpsLabel}
+                    </Link>
+                    {' '}({d.tariffName}): {d.issues.join('; ')}
+                  </span>
+                ))}
+                {tariffDiffs.length > 5 ? <span>…и ещё {tariffDiffs.length - 5}</span> : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <DataGridCard
+            columns={columnDefFromDataTable(columns)}
+            data={snap.activeTariffs}
+            rowId={(t) => t.id}
+          />
+        </div>
       )}
     </CrudListPage>
   )

@@ -7,9 +7,11 @@ import {
   flexRender,
   type ColumnDef,
   type SortingState,
+  type RowSelectionState,
 } from '@tanstack/react-table'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
+import { Checkbox } from '@cfdm/ui/components/checkbox'
 import { cn } from '@cfdm/ui/lib/utils'
 import {
   DataGrid,
@@ -64,6 +66,10 @@ export interface DataGridCardProps<TData extends object> {
   virtualization?: boolean
   /** Высота viewport для виртуализации (px). По умолчанию 480. */
   height?: number
+  /** Включить выбор строк (чекбоксы). */
+  enableRowSelection?: boolean
+  /** Callback при изменении выбора. */
+  onRowSelectionChange?: (selectedIds: string[]) => void
   className?: string
 }
 
@@ -155,19 +161,58 @@ export function DataGridCard<TData extends object>({
   initialSorting,
   virtualization = false,
   height = 480,
+  enableRowSelection = false,
+  onRowSelectionChange,
   className,
 }: DataGridCardProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
-  const lastColId = pinLastColumn ? columns[columns.length - 1]?.id ?? '' : ''
+  const selectColumn: ColumnDef<TData, unknown> = {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Выбрать все"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Выбрать строку"
+        onClick={(e) => e.stopPropagation()}
+      />
+    ),
+    enableSorting: false,
+    meta: { cellClassName: 'w-10' },
+  }
+
+  const tableColumns = enableRowSelection ? [selectColumn, ...columns] : columns
+
+  const lastColId = pinLastColumn ? tableColumns[tableColumns.length - 1]?.id ?? '' : ''
 
   const showPagination = pagination ?? true
 
   const table = useReactTable<TData>({
     data,
-    columns,
-    state: { sorting },
+    columns: tableColumns,
+    state: { sorting, ...(enableRowSelection ? { rowSelection } : {}) },
     onSortingChange: setSorting,
+    onRowSelectionChange: enableRowSelection
+      ? (updater) => {
+          setRowSelection((prev) => {
+            const next = typeof updater === 'function' ? updater(prev) : updater
+            if (onRowSelectionChange && rowId) {
+              const ids = Object.keys(next).filter((k) => next[k])
+              onRowSelectionChange(ids)
+            }
+            return next
+          })
+        }
+      : undefined,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: showPagination ? getPaginationRowModel() : undefined,
@@ -179,6 +224,7 @@ export function DataGridCard<TData extends object>({
       ? (row, index) => rowId(row, index)
       : undefined,
     enableColumnPinning: pinLastColumn,
+    enableRowSelection,
   })
 
   const hasHeader = Boolean(title || description || actions)

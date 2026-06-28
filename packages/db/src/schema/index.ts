@@ -78,6 +78,9 @@ export const vps = sqliteTable('vps', {
   paidUntil: text('paidUntil'),
   notes: text('notes'),
   userOverrides: text('userOverrides'),
+  customData: text('customData'),
+  lastHealthStatus: text('last_health_status'),
+  lastHealthCheckedAt: text('last_health_checked_at'),
 })
 
 export const payments = sqliteTable('payments', {
@@ -120,6 +123,29 @@ export const settings = sqliteTable('settings', {
   telegramMessageThreadId: text('telegramMessageThreadId'),
   notifyLowBalanceEnabled: integer('notifyLowBalanceEnabled'),
   notifySyncDigestEnabled: integer('notifySyncDigestEnabled'),
+  notifyVpsDownEnabled: integer('notifyVpsDownEnabled'),
+  webhookUrl: text('webhookUrl'),
+  webhookEnabled: integer('webhookEnabled'),
+})
+
+export const vpsHealthChecks = sqliteTable('vps_health_checks', {
+  id: text('id').primaryKey(),
+  vpsId: text('vpsId')
+    .notNull()
+    .references(() => vps.id),
+  checkedAt: text('checkedAt').notNull(),
+  status: text('status').notNull(),
+  latencyMs: integer('latencyMs'),
+  error: text('error'),
+})
+
+export const auditLog = sqliteTable('audit_log', {
+  id: text('id').primaryKey(),
+  entity: text('entity').notNull(),
+  entityId: text('entityId').notNull(),
+  action: text('action').notNull(),
+  diff: text('diff'),
+  createdAt: text('createdAt').notNull(),
 })
 
 export const syncLog = sqliteTable('sync_log', {

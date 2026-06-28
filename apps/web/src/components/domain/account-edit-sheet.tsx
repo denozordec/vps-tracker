@@ -1,12 +1,18 @@
+import { useMutation } from '@tanstack/react-query'
+import { PlugIcon, RefreshCwIcon } from 'lucide-react'
+import { toast } from 'sonner'
+
 import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { Textarea } from '@cfdm/ui/components/textarea'
 import { SelectField } from '@/components/select-field'
+import { LoadingButton } from '@/components/loading-button'
 import type { ZodType } from 'zod'
 import { providerAccountSchema, type ProviderAccountFormValues } from '@/lib/schemas'
 import type { BillingMode, Provider } from '@/types/entities'
 import { billingModeLabel } from '@/lib/format'
+import { api, ApiError } from '@/lib/api-client'
 
 const EMPTY: ProviderAccountFormValues = {
   providerId: '',
@@ -25,6 +31,7 @@ interface ProviderAccountEditSheetProps {
   providers: Provider[]
   onSubmit: (values: ProviderAccountFormValues) => void
   submitting?: boolean
+  onBalanceRefreshed?: () => void
 }
 
 export function providerAccountFormDefaults(
@@ -48,8 +55,25 @@ export function ProviderAccountEditSheet({
   providers,
   onSubmit,
   submitting,
+  onBalanceRefreshed,
 }: ProviderAccountEditSheetProps) {
   const isEdit = Boolean(defaultValues.id)
+
+  const testMut = useMutation({
+    mutationFn: async (values: { apiBaseUrl: string; apiCredentials: string }) =>
+      api.testConnection(values.apiBaseUrl, values.apiCredentials),
+    onSuccess: () => toast.success('Подключение успешно'),
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка подключения'),
+  })
+
+  const balanceMut = useMutation({
+    mutationFn: (accountId: string) => api.fetchAccountBalance(accountId),
+    onSuccess: (data) => {
+      toast.success(`Баланс: ${data.balance} ${data.currency}`)
+      onBalanceRefreshed?.()
+    },
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка обновления баланса'),
+  })
 
   return (
     <FormSheetRhf
@@ -64,13 +88,19 @@ export function ProviderAccountEditSheet({
     >
       {(form) => {
         const { register, formState: { errors }, watch, setValue } = form
+        const providerId = watch('providerId')
+        const provider = providers.find((p) => p.id === providerId)
+        const apiBaseUrl = (provider?.apiBaseUrl ?? '').trim()
+        const creds = watch('apiCredentials')?.trim() ?? ''
+        const canTest = Boolean(apiBaseUrl && creds)
+
         return (
           <>
             <FormField label="Хостер" htmlFor="acc-provider" error={errors.providerId?.message}>
               <SelectField
                 triggerId="acc-provider"
                 placeholder="Выберите хостера"
-                value={watch('providerId')}
+                value={providerId}
                 onValueChange={(v) => setValue('providerId', v ?? '', { shouldValidate: true })}
                 options={providers.map((p) => ({ value: p.id, label: p.name }))}
               />
@@ -88,6 +118,31 @@ export function ProviderAccountEditSheet({
             >
               <Input id="acc-creds" type="password" {...register('apiCredentials')} />
             </FormField>
+            <div className="flex flex-wrap gap-2">
+              <LoadingButton
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canTest}
+                loading={testMut.isPending}
+                onClick={() => testMut.mutate({ apiBaseUrl, apiCredentials: creds })}
+              >
+                <PlugIcon data-icon="inline-start" />
+                Проверить подключение
+              </LoadingButton>
+              {isEdit && defaultValues.id ? (
+                <LoadingButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={balanceMut.isPending}
+                  onClick={() => balanceMut.mutate(defaultValues.id!)}
+                >
+                  <RefreshCwIcon data-icon="inline-start" />
+                  Обновить баланс
+                </LoadingButton>
+              ) : null}
+            </div>
             <FormField label="Режим биллинга" htmlFor="acc-mode">
               <SelectField
                 triggerId="acc-mode"

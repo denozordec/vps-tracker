@@ -35,6 +35,7 @@ export const vpsSchema = z.object({
   paidUntil: z.string().optional().default(''),
   notes: z.string().optional().default(''),
   userOverrides: z.union([z.array(z.string()), z.literal('clear')]).optional(),
+  customData: z.union([z.string(), z.record(z.unknown())]).optional(),
 })
 
 export type VpsFormValues = z.infer<typeof vpsSchema>

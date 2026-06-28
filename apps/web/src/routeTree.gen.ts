@@ -17,12 +17,15 @@ import { Route as AuthSyncJournalRouteImport } from './routes/_auth/sync-journal
 import { Route as AuthSettingsRouteImport } from './routes/_auth/settings'
 import { Route as AuthResourcesRouteImport } from './routes/_auth/resources'
 import { Route as AuthReportsRouteImport } from './routes/_auth/reports'
+import { Route as AuthRenewalsRouteImport } from './routes/_auth/renewals'
 import { Route as AuthProvidersRouteImport } from './routes/_auth/providers'
 import { Route as AuthProjectsRouteImport } from './routes/_auth/projects'
 import { Route as AuthPaymentsRouteImport } from './routes/_auth/payments'
 import { Route as AuthDashboardRouteImport } from './routes/_auth/dashboard'
 import { Route as AuthBalanceRouteImport } from './routes/_auth/balance'
+import { Route as AuthAuditRouteImport } from './routes/_auth/audit'
 import { Route as AuthAccountsRouteImport } from './routes/_auth/accounts'
+import { Route as AuthVpsVpsIdRouteImport } from './routes/_auth/vps.$vpsId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -63,6 +66,11 @@ const AuthReportsRoute = AuthReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthRenewalsRoute = AuthRenewalsRouteImport.update({
+  id: '/renewals',
+  path: '/renewals',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthProvidersRoute = AuthProvidersRouteImport.update({
   id: '/providers',
   path: '/providers',
@@ -88,106 +96,134 @@ const AuthBalanceRoute = AuthBalanceRouteImport.update({
   path: '/balance',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthAuditRoute = AuthAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthAccountsRoute = AuthAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthVpsVpsIdRoute = AuthVpsVpsIdRouteImport.update({
+  id: '/$vpsId',
+  path: '/$vpsId',
+  getParentRoute: () => AuthVpsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AuthAccountsRoute
+  '/audit': typeof AuthAuditRoute
   '/balance': typeof AuthBalanceRoute
   '/dashboard': typeof AuthDashboardRoute
   '/payments': typeof AuthPaymentsRoute
   '/projects': typeof AuthProjectsRoute
   '/providers': typeof AuthProvidersRoute
+  '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
   '/resources': typeof AuthResourcesRoute
   '/settings': typeof AuthSettingsRoute
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
-  '/vps': typeof AuthVpsRoute
+  '/vps': typeof AuthVpsRouteWithChildren
+  '/vps/$vpsId': typeof AuthVpsVpsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AuthAccountsRoute
+  '/audit': typeof AuthAuditRoute
   '/balance': typeof AuthBalanceRoute
   '/dashboard': typeof AuthDashboardRoute
   '/payments': typeof AuthPaymentsRoute
   '/projects': typeof AuthProjectsRoute
   '/providers': typeof AuthProvidersRoute
+  '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
   '/resources': typeof AuthResourcesRoute
   '/settings': typeof AuthSettingsRoute
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
-  '/vps': typeof AuthVpsRoute
+  '/vps': typeof AuthVpsRouteWithChildren
+  '/vps/$vpsId': typeof AuthVpsVpsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_auth/accounts': typeof AuthAccountsRoute
+  '/_auth/audit': typeof AuthAuditRoute
   '/_auth/balance': typeof AuthBalanceRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/payments': typeof AuthPaymentsRoute
   '/_auth/projects': typeof AuthProjectsRoute
   '/_auth/providers': typeof AuthProvidersRoute
+  '/_auth/renewals': typeof AuthRenewalsRoute
   '/_auth/reports': typeof AuthReportsRoute
   '/_auth/resources': typeof AuthResourcesRoute
   '/_auth/settings': typeof AuthSettingsRoute
   '/_auth/sync-journal': typeof AuthSyncJournalRoute
   '/_auth/tariffs': typeof AuthTariffsRoute
-  '/_auth/vps': typeof AuthVpsRoute
+  '/_auth/vps': typeof AuthVpsRouteWithChildren
+  '/_auth/vps/$vpsId': typeof AuthVpsVpsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/accounts'
+    | '/audit'
     | '/balance'
     | '/dashboard'
     | '/payments'
     | '/projects'
     | '/providers'
+    | '/renewals'
     | '/reports'
     | '/resources'
     | '/settings'
     | '/sync-journal'
     | '/tariffs'
     | '/vps'
+    | '/vps/$vpsId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/accounts'
+    | '/audit'
     | '/balance'
     | '/dashboard'
     | '/payments'
     | '/projects'
     | '/providers'
+    | '/renewals'
     | '/reports'
     | '/resources'
     | '/settings'
     | '/sync-journal'
     | '/tariffs'
     | '/vps'
+    | '/vps/$vpsId'
   id:
     | '__root__'
     | '/'
     | '/_auth'
     | '/_auth/accounts'
+    | '/_auth/audit'
     | '/_auth/balance'
     | '/_auth/dashboard'
     | '/_auth/payments'
     | '/_auth/projects'
     | '/_auth/providers'
+    | '/_auth/renewals'
     | '/_auth/reports'
     | '/_auth/resources'
     | '/_auth/settings'
     | '/_auth/sync-journal'
     | '/_auth/tariffs'
     | '/_auth/vps'
+    | '/_auth/vps/$vpsId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -253,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthReportsRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/renewals': {
+      id: '/_auth/renewals'
+      path: '/renewals'
+      fullPath: '/renewals'
+      preLoaderRoute: typeof AuthRenewalsRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/providers': {
       id: '/_auth/providers'
       path: '/providers'
@@ -288,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthBalanceRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/audit': {
+      id: '/_auth/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthAuditRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/accounts': {
       id: '/_auth/accounts'
       path: '/accounts'
@@ -295,37 +345,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAccountsRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/vps/$vpsId': {
+      id: '/_auth/vps/$vpsId'
+      path: '/$vpsId'
+      fullPath: '/vps/$vpsId'
+      preLoaderRoute: typeof AuthVpsVpsIdRouteImport
+      parentRoute: typeof AuthVpsRoute
+    }
   }
 }
 
+interface AuthVpsRouteChildren {
+  AuthVpsVpsIdRoute: typeof AuthVpsVpsIdRoute
+}
+
+const AuthVpsRouteChildren: AuthVpsRouteChildren = {
+  AuthVpsVpsIdRoute: AuthVpsVpsIdRoute,
+}
+
+const AuthVpsRouteWithChildren =
+  AuthVpsRoute._addFileChildren(AuthVpsRouteChildren)
+
 interface AuthRouteChildren {
   AuthAccountsRoute: typeof AuthAccountsRoute
+  AuthAuditRoute: typeof AuthAuditRoute
   AuthBalanceRoute: typeof AuthBalanceRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthPaymentsRoute: typeof AuthPaymentsRoute
   AuthProjectsRoute: typeof AuthProjectsRoute
   AuthProvidersRoute: typeof AuthProvidersRoute
+  AuthRenewalsRoute: typeof AuthRenewalsRoute
   AuthReportsRoute: typeof AuthReportsRoute
   AuthResourcesRoute: typeof AuthResourcesRoute
   AuthSettingsRoute: typeof AuthSettingsRoute
   AuthSyncJournalRoute: typeof AuthSyncJournalRoute
   AuthTariffsRoute: typeof AuthTariffsRoute
-  AuthVpsRoute: typeof AuthVpsRoute
+  AuthVpsRoute: typeof AuthVpsRouteWithChildren
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthAccountsRoute: AuthAccountsRoute,
+  AuthAuditRoute: AuthAuditRoute,
   AuthBalanceRoute: AuthBalanceRoute,
   AuthDashboardRoute: AuthDashboardRoute,
   AuthPaymentsRoute: AuthPaymentsRoute,
   AuthProjectsRoute: AuthProjectsRoute,
   AuthProvidersRoute: AuthProvidersRoute,
+  AuthRenewalsRoute: AuthRenewalsRoute,
   AuthReportsRoute: AuthReportsRoute,
   AuthResourcesRoute: AuthResourcesRoute,
   AuthSettingsRoute: AuthSettingsRoute,
   AuthSyncJournalRoute: AuthSyncJournalRoute,
   AuthTariffsRoute: AuthTariffsRoute,
-  AuthVpsRoute: AuthVpsRoute,
+  AuthVpsRoute: AuthVpsRouteWithChildren,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

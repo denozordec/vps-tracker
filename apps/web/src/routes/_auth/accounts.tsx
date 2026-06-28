@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   PlusIcon,
   RefreshCwIcon,
@@ -11,6 +11,7 @@ import {
   WalletIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -21,6 +22,7 @@ import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
+import { HealthModeBanner } from '@/components/health-mode-banner'
 import {
   ProviderAccountEditSheet,
   providerAccountFormDefaults,
@@ -30,14 +32,24 @@ import { accountBalanceApi, accountBalanceCurrency } from '@/lib/account'
 import type { ProviderAccount } from '@/types/entities'
 import { providerByIdMap, accountBillmanagerUiReady, billmanagerSyncableAccounts } from '@/lib/billmanager'
 import { billingModeLabel, formatCurrency } from '@/lib/format'
+import {
+  getBalanceMismatchAccountIds,
+  getStaleSyncAccountIds,
+} from '@/lib/inventory-health'
+
+const accountsSearchSchema = z.object({
+  health: z.string().optional(),
+})
 
 export const Route = createFileRoute('/_auth/accounts')({
+  validateSearch: (search) => accountsSearchSchema.parse(search),
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(snapshotQueryOptions()),
   component: AccountsPage,
 })
 
 function AccountsPage() {
+  const { health } = Route.useSearch()
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [open, setOpen] = useState(false)
@@ -128,6 +140,22 @@ function AccountsPage() {
   const syncableCount = snapshot
     ? billmanagerSyncableAccounts(snapshot.providerAccounts, snapshot.providers).length
     : 0
+
+  const filteredAccounts = useMemo(() => {
+    const accounts = snapshot?.providerAccounts ?? []
+    if (!health || !snapshot) return accounts
+    if (health === 'stale-sync') {
+      const ids = new Set(
+        getStaleSyncAccountIds(snapshot.providerAccounts, snapshot.providers, snapshot.syncLog ?? []),
+      )
+      return accounts.filter((a) => ids.has(a.id))
+    }
+    if (health === 'balance-mismatch') {
+      const ids = new Set(getBalanceMismatchAccountIds(snapshot.providerAccounts, snapshot.balanceLedger))
+      return accounts.filter((a) => ids.has(a.id))
+    }
+    return accounts
+  }, [snapshot, health])
 
   const columns: DataTableColumn<ProviderAccount>[] = [
     {
@@ -250,17 +278,22 @@ function AccountsPage() {
             providers={snapshot.providers}
             onSubmit={(values) => saveMut.mutate(values)}
             submitting={saveMut.isPending}
+            onBalanceRefreshed={() => void queryClient.invalidateQueries({ queryKey: ['snapshot'] })}
           />
         ) : null
       }
     >
-      {(snap) => (
-        <DataGridCard
-          columns={columnDefFromDataTable(columns)}
-          data={snap.providerAccounts}
-          rowId={(a) => a.id}
-          pinLastColumn
-        />
+      {( ) => (
+        <div className="flex flex-col gap-4">
+          {health ? <HealthModeBanner health={health} exitTo="/accounts" /> : null}
+          <DataGridCard
+            columns={columnDefFromDataTable(columns)}
+            data={filteredAccounts}
+            rowId={(a) => a.id}
+            pinLastColumn
+            emptyTitle={health ? 'Нет аккаунтов с этой проблемой' : 'Нет записей'}
+          />
+        </div>
       )}
     </CrudListPage>
   )

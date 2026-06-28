@@ -3,7 +3,7 @@ import { getDb, schema } from '../index.js'
 
 type Row = typeof schema.settings.$inferSelect
 
-export type SettingsDto = Omit<Row, 'telegramBotToken' | 'autoConvert' | 'syncEnabled' | 'notifyPaymentExpiryEnabled' | 'notifyNewTariffsEnabled' | 'notifyLowBalanceEnabled' | 'notifySyncDigestEnabled' | 'customFields'> & {
+export type SettingsDto = Omit<Row, 'telegramBotToken' | 'autoConvert' | 'syncEnabled' | 'notifyPaymentExpiryEnabled' | 'notifyNewTariffsEnabled' | 'notifyLowBalanceEnabled' | 'notifySyncDigestEnabled' | 'notifyVpsDownEnabled' | 'webhookEnabled' | 'customFields'> & {
   telegramBotTokenSet: boolean
   autoConvert: boolean
   syncEnabled: boolean
@@ -11,6 +11,8 @@ export type SettingsDto = Omit<Row, 'telegramBotToken' | 'autoConvert' | 'syncEn
   notifyNewTariffsEnabled: boolean
   notifyLowBalanceEnabled: boolean
   notifySyncDigestEnabled: boolean
+  notifyVpsDownEnabled: boolean
+  webhookEnabled: boolean
   customFields: unknown[]
 }
 
@@ -34,6 +36,8 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
     notifyNewTariffsEnabled: Boolean(row.notifyNewTariffsEnabled),
     notifyLowBalanceEnabled: Boolean(row.notifyLowBalanceEnabled),
     notifySyncDigestEnabled: Boolean(row.notifySyncDigestEnabled),
+    notifyVpsDownEnabled: Boolean(row.notifyVpsDownEnabled),
+    webhookEnabled: Boolean(row.webhookEnabled),
     customFields: Array.isArray(customFields) ? customFields : [],
   }
 }
@@ -60,6 +64,9 @@ interface SettingsInput {
   notifyNewTariffsEnabled?: boolean
   notifyLowBalanceEnabled?: boolean
   notifySyncDigestEnabled?: boolean
+  notifyVpsDownEnabled?: boolean
+  webhookUrl?: string
+  webhookEnabled?: boolean
   customFields?: unknown
 }
 
@@ -121,6 +128,17 @@ function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
         : existing?.notifySyncDigestEnabled
           ? 1
           : 0,
+    notifyVpsDownEnabled:
+      r.notifyVpsDownEnabled !== undefined
+        ? r.notifyVpsDownEnabled
+          ? 1
+          : 0
+        : existing?.notifyVpsDownEnabled
+          ? 1
+          : 0,
+    webhookUrl: r.webhookUrl !== undefined ? r.webhookUrl || '' : existing?.webhookUrl ?? '',
+    webhookEnabled:
+      r.webhookEnabled !== undefined ? (r.webhookEnabled ? 1 : 0) : existing?.webhookEnabled ? 1 : 0,
     customFields: serializeCustomFields(r.customFields ?? existing?.customFields),
   }
 }

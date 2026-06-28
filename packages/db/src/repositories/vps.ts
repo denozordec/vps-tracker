@@ -81,6 +81,7 @@ interface VpsInput {
   paidUntil?: string
   notes?: string
   userOverrides?: string[] | 'clear'
+  customData?: string | Record<string, unknown>
 }
 
 function projectColumnsForSave(projectInput: unknown): { project: string; projectId: string } {
@@ -97,6 +98,12 @@ function numOrNull(v: unknown): number | null {
 
 function boolToInt(v: unknown): number {
   return v ? 1 : 0
+}
+
+function serializeCustomData(v: unknown): string | null {
+  if (v == null) return null
+  if (typeof v === 'string') return v || null
+  return JSON.stringify(v)
 }
 
 export const vpsRepository = {
@@ -153,6 +160,7 @@ export const vpsRepository = {
         userOverrides: input.userOverrides && Array.isArray(input.userOverrides)
           ? JSON.stringify(input.userOverrides)
           : '[]',
+        customData: serializeCustomData(input.customData),
       })
       .run()
     return this.get(finalId)!
@@ -248,6 +256,9 @@ export const vpsRepository = {
         paidUntil: input.paidUntil ?? '',
         notes: input.notes ?? '',
         userOverrides: userOverridesJson,
+        ...(input.customData !== undefined
+          ? { customData: serializeCustomData(input.customData) }
+          : {}),
       })
       .where(eq(schema.vps.id, id))
       .run()

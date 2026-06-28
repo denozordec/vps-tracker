@@ -42,9 +42,10 @@ import { Badge } from '@cfdm/ui/components/badge'
 
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { ModeToggle } from '@/components/mode-toggle'
+import { GlobalSearch, GlobalSearchTrigger, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
 import { formatRelativeSyncTime } from '@/lib/sync-format'
 
@@ -87,12 +88,14 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/reports', label: 'Отчёты', icon: ChartColumnBig },
       { to: '/resources', label: 'Ресурсы', icon: ChartBar },
+      { to: '/renewals', label: 'Продления', icon: RefreshCwIcon },
     ],
   },
   {
     label: 'Система',
     items: [
       { to: '/sync-journal', label: 'Журнал синка', icon: HistoryIcon },
+      { to: '/audit', label: 'Журнал изменений', icon: HistoryIcon },
       { to: '/settings', label: 'Настройки', icon: Settings },
     ],
   },
@@ -114,11 +117,15 @@ const PARENT_ROUTE: Record<string, string> = {
   '/balance': '/dashboard',
   '/reports': '/dashboard',
   '/resources': '/dashboard',
+  '/renewals': '/dashboard',
   '/sync-journal': '/settings',
+  '/audit': '/settings',
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const [searchOpen, setSearchOpen] = useState(false)
+  useGlobalSearchHotkey(() => setSearchOpen(true))
   const activeItem = ALL_NAV_ITEMS.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`)) ?? ALL_NAV_ITEMS[0]
   const parentTo = PARENT_ROUTE[activeItem.to]
   const parentLabel = parentTo ? ROUTE_LABELS[parentTo] : null
@@ -227,6 +234,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
+            <GlobalSearchTrigger onClick={() => setSearchOpen(true)} />
             {stats?.issuesCount ? (
               <Badge variant="destructive" className="hidden sm:inline-flex">
                 {stats.issuesCount} проблем
@@ -237,6 +245,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">{children}</main>
       </SidebarInset>
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </SidebarProvider>
   )
 }

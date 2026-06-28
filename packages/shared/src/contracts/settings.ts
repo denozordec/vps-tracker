@@ -16,6 +16,9 @@ export const settingsSchema = z.object({
   notifyNewTariffsEnabled: z.boolean().optional(),
   notifyLowBalanceEnabled: z.boolean().optional(),
   notifySyncDigestEnabled: z.boolean().optional(),
+  notifyVpsDownEnabled: z.boolean().optional(),
+  webhookUrl: z.string().url('Невалидный URL').or(z.literal('')).optional(),
+  webhookEnabled: z.boolean().optional(),
   customFields: z.any().optional(),
 })
 

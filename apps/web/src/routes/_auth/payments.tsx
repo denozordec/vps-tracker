@@ -33,10 +33,15 @@ function PaymentsPage() {
   )
 
   const saveMut = useMutation({
-    mutationFn: (r: PaymentFormValues) =>
-      r.id
-        ? api.update<Payment>('payments', r.id, r as unknown as Partial<Payment>)
-        : api.create('payments', r as unknown as Payment),
+    mutationFn: (r: PaymentFormValues) => {
+      const payload = {
+        ...r,
+        vpsId: r.vpsId?.trim() || undefined,
+      }
+      return r.id
+        ? api.update<Payment>('payments', r.id, payload as unknown as Partial<Payment>)
+        : api.create('payments', payload as unknown as Payment)
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
       toast.success('Платёж сохранён')
@@ -66,6 +71,7 @@ function PaymentsPage() {
         amount: p.amount,
         currency: p.currency,
         providerAccountId: p.providerAccountId,
+        vpsId: (p as Payment & { vpsId?: string }).vpsId ?? '',
         note: p.note ?? '',
       }),
     )
@@ -174,6 +180,7 @@ function PaymentsPage() {
             defaultValues={formDefaults}
             providerAccounts={snapshot.providerAccounts}
             providers={snapshot.providers}
+            vpsRows={snapshot.vps}
             onSubmit={(values) => saveMut.mutate(values)}
             submitting={saveMut.isPending}
           />

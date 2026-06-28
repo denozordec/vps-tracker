@@ -5,6 +5,8 @@ import { Input } from '@cfdm/ui/components/input'
 import { SelectField } from '@/components/select-field'
 import { AutoCompleteInput } from '@/components/auto-complete-input'
 import { Textarea } from '@cfdm/ui/components/textarea'
+import { Checkbox } from '@cfdm/ui/components/checkbox'
+import { Label } from '@cfdm/ui/components/label'
 import {
   NumberField,
   NumberFieldGroup,
@@ -16,6 +18,8 @@ import { FormDatePicker } from '@/components/form-date-picker'
 import { vpsSchema, type VpsFormValues } from '@/lib/schemas'
 import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { buildCityOptions, cityMatchesCountry, resolveCountryForCityFromRows } from '@cfdm/shared/geo'
+import { VPS_SYNC_OVERRIDE_FIELDS, parseUserOverrides } from '@/lib/vps-sync-fields'
+import { parseCustomData, type CustomFieldDef } from '@/lib/custom-fields'
 import type { Provider, ProviderAccount, Vps } from '@/types/entities'
 import type { ZodType } from 'zod'
 
@@ -38,6 +42,8 @@ export const VPS_FORM_EMPTY: VpsFormValues = {
   paidUntil: '',
   project: '',
   notes: '',
+  userOverrides: [] as string[],
+  customData: {} as Record<string, string | number | boolean>,
 }
 
 export function vpsFormFromRow(v: Vps): VpsFormValues {
@@ -61,6 +67,8 @@ export function vpsFormFromRow(v: Vps): VpsFormValues {
     paidUntil: v.paidUntil ?? '',
     project: v.project ?? '',
     notes: v.notes ?? '',
+    userOverrides: parseUserOverrides((v as Vps & { userOverrides?: unknown }).userOverrides),
+    customData: parseCustomData((v as Vps & { customData?: unknown }).customData),
   }
 }
 
@@ -73,6 +81,7 @@ interface VpsEditSheetProps {
   providerAccounts: ProviderAccount[]
   vpsRows: Vps[]
   formCountryOptions: Array<{ value: string; label: string }>
+  customFieldDefs?: CustomFieldDef[]
   onSubmit: (values: VpsFormValues) => void
   submitting?: boolean
 }
@@ -86,6 +95,7 @@ export function VpsEditSheet({
   providerAccounts,
   vpsRows,
   formCountryOptions,
+  customFieldDefs = [],
   onSubmit,
   submitting,
 }: VpsEditSheetProps) {
@@ -326,6 +336,74 @@ export function VpsEditSheet({
             <FormField label="Заметки" htmlFor="vps-notes">
               <Textarea id="vps-notes" {...register('notes')} />
             </FormField>
+            {customFieldDefs.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm font-medium">Дополнительные поля</p>
+                {customFieldDefs.map((field) => {
+                  const customData = watch('customData') ?? {}
+                  if (field.type === 'bool') {
+                    return (
+                      <div key={field.key} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`custom-${field.key}`}
+                          checked={Boolean(customData[field.key])}
+                          onCheckedChange={(v) =>
+                            setValue('customData', { ...customData, [field.key]: Boolean(v) })
+                          }
+                        />
+                        <Label htmlFor={`custom-${field.key}`} className="font-normal">
+                          {field.label}
+                        </Label>
+                      </div>
+                    )
+                  }
+                  return (
+                    <FormField key={field.key} label={field.label} htmlFor={`custom-${field.key}`}>
+                      <Input
+                        id={`custom-${field.key}`}
+                        type={field.type === 'number' ? 'number' : 'text'}
+                        value={String(customData[field.key] ?? '')}
+                        onChange={(e) => {
+                          const val =
+                            field.type === 'number' ? Number(e.target.value) : e.target.value
+                          setValue('customData', { ...customData, [field.key]: val })
+                        }}
+                      />
+                    </FormField>
+                  )
+                })}
+              </div>
+            ) : null}
+            {editingId ? (
+              <FormField
+                label="Не перезаписывать при синке"
+                description="Отмеченные поля сохранят ручные значения при синхронизации с BILLmanager"
+              >
+                <div className="flex flex-col gap-2">
+                  {VPS_SYNC_OVERRIDE_FIELDS.map(({ key, label }) => {
+                    const overrides = watch('userOverrides') ?? []
+                    const checked = overrides.includes(key)
+                    return (
+                      <div key={key} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`vps-override-${key}`}
+                          checked={checked}
+                          onCheckedChange={(value) => {
+                            const next = value
+                              ? [...overrides, key]
+                              : overrides.filter((f) => f !== key)
+                            setValue('userOverrides', next)
+                          }}
+                        />
+                        <Label htmlFor={`vps-override-${key}`} className="font-normal">
+                          {label}
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+              </FormField>
+            ) : null}
           </>
         )
       }}
