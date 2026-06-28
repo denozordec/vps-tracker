@@ -14,6 +14,8 @@ import { Slider } from '@cfdm/ui/components/slider'
 import { PlusIcon } from 'lucide-react'
 
 import { ListFiltersBar, type FilterChip } from '@/components/list-filters-bar'
+import type { DataGridColumnVisibilityOption } from '@/components/data-grid-card'
+import type { VisibilityState } from '@tanstack/react-table'
 
 import {
   Filters,
@@ -47,6 +49,9 @@ interface VpsFiltersToolbarProps {
   projectNameOptions: string[]
   shownCount: number
   totalCount: number
+  columnVisibilityOptions?: DataGridColumnVisibilityOption[]
+  columnVisibility?: VisibilityState
+  onColumnVisibilityChange?: (columnId: string, visible: boolean) => void
 }
 
 const RU_I18N: FilterI18nConfig = {
@@ -171,6 +176,9 @@ export function VpsFiltersToolbar({
   projectNameOptions,
   shownCount,
   totalCount,
+  columnVisibilityOptions,
+  columnVisibility,
+  onColumnVisibilityChange,
 }: VpsFiltersToolbarProps) {
   const [presets, setPresets] = useState<VpsFilterPreset[]>(() => loadFilterPresets())
 
@@ -518,6 +526,24 @@ export function VpsFiltersToolbar({
                     <span className="text-sm">Компактная таблица</span>
                   </label>
                 </div>
+
+                {columnVisibilityOptions && columnVisibilityOptions.length > 0 && onColumnVisibilityChange ? (
+                  <>
+                    <Separator />
+                    <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
+                      <Label className="text-xs text-muted-foreground">Колонки</Label>
+                      {columnVisibilityOptions.map((col) => (
+                        <label key={col.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={columnVisibility?.[col.id] !== false}
+                            onCheckedChange={(v) => onColumnVisibilityChange(col.id, Boolean(v))}
+                          />
+                          <span className="text-sm">{col.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
 
                 <Separator />
 

@@ -11,7 +11,8 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
+import { DataGridCard, columnDefFromDataTable, loadStoredColumnVisibility, dataTableColumnVisibilityOptions } from '@/components/data-grid-card'
+import type { VisibilityState } from '@tanstack/react-table'
 import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
 import { CountryFlag } from '@/components/country-flag'
@@ -274,6 +275,30 @@ function VpsPage() {
     [customFieldDefs],
   )
 
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
+    ...(loadStoredColumnVisibility('vps-column-visibility') ?? {}),
+  }))
+
+  useEffect(() => {
+    setColumnVisibility((prev) => ({ ...customColumnVisibility, ...prev }))
+  }, [customColumnVisibility])
+
+  useEffect(() => {
+    localStorage.setItem('vps-column-visibility', JSON.stringify(columnVisibility))
+  }, [columnVisibility])
+
+  const handleColumnVisibilityChange = (columnId: string, visible: boolean) => {
+    setColumnVisibility((prev) => {
+      const next = { ...prev }
+      if (visible) {
+        delete next[columnId]
+      } else {
+        next[columnId] = false
+      }
+      return next
+    })
+  }
+
   const columns: DataTableColumn<Vps>[] = useMemo(() => {
     const base: DataTableColumn<Vps>[] = [
     {
@@ -437,6 +462,11 @@ function VpsPage() {
     deleteMutation,
   ])
 
+  const columnVisibilityOptions = useMemo(
+    () => dataTableColumnVisibilityOptions(columns),
+    [columns],
+  )
+
   return (
     <PageShell>
       <PageHeader
@@ -485,6 +515,9 @@ function VpsPage() {
                   cityOptions={filterCityOptions}
                   shownCount={filteredVps.length}
                   totalCount={snap.vps.length}
+                  columnVisibilityOptions={columnVisibilityOptions}
+                  columnVisibility={columnVisibility}
+                  onColumnVisibilityChange={handleColumnVisibilityChange}
                 />
                 <EmptyState
                   title="Ничего не найдено"
@@ -521,6 +554,9 @@ function VpsPage() {
               cityOptions={filterCityOptions}
               shownCount={filteredVps.length}
               totalCount={snap.vps.length}
+              columnVisibilityOptions={columnVisibilityOptions}
+              columnVisibility={columnVisibility}
+              onColumnVisibilityChange={handleColumnVisibilityChange}
             />
             {tableSections.map((section) => (
               <DataGridCard
@@ -537,8 +573,9 @@ function VpsPage() {
                 virtualization={section.items.length > 200}
                 height={560}
                 enableColumnVisibility
-                columnVisibilityStorageKey="vps-column-visibility"
-                initialColumnVisibility={customColumnVisibility}
+                columnVisibility={columnVisibility}
+                onColumnVisibilityChange={setColumnVisibility}
+                columnVisibilityTrigger={false}
               />
             ))}
           </div>

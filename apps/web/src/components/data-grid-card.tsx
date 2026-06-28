@@ -9,10 +9,10 @@ import {
   type SortingState,
   type RowSelectionState,
   type VisibilityState,
+  type OnChangeFn,
 } from '@tanstack/react-table'
 import { Columns3Icon } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Checkbox } from '@cfdm/ui/components/checkbox'
 import { Button } from '@cfdm/ui/components/button'
 import { cn } from '@cfdm/ui/lib/utils'
@@ -52,6 +52,24 @@ function loadStoredColumnVisibility(key: string): VisibilityState | undefined {
   }
 }
 
+export { loadStoredColumnVisibility }
+
+export interface DataGridColumnVisibilityOption {
+  id: string
+  label: string
+}
+
+export function dataTableColumnVisibilityOptions<T>(
+  cols: DataTableColumn<T>[],
+): DataGridColumnVisibilityOption[] {
+  return cols
+    .filter((c) => c.enableHiding !== false)
+    .map((c) => ({
+      id: c.key,
+      label: c.headerTitle ?? (typeof c.header === 'string' ? c.header : c.key),
+    }))
+}
+
 export interface DataGridCardProps<TData extends object> {
   title?: ReactNode
   description?: ReactNode
@@ -86,11 +104,38 @@ export interface DataGridCardProps<TData extends object> {
   onRowSelectionChange?: (selectedIds: string[]) => void
   /** Показать picker видимости колонок. */
   enableColumnVisibility?: boolean
+  /** Управляемая видимость колонок (для внешнего UI, напр. тулбар «Вид»). */
+  columnVisibility?: VisibilityState
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+  /** Показать встроенную кнопку «Колонки». По умолчанию true при enableColumnVisibility. */
+  columnVisibilityTrigger?: boolean
   /** Ключ localStorage для сохранения видимости колонок. */
   columnVisibilityStorageKey?: string
   /** Начальная видимость колонок (перекрывает localStorage для отсутствующих ключей). */
   initialColumnVisibility?: VisibilityState
   className?: string
+}
+
+function DataGridSectionHeader({
+  title,
+  description,
+  actions,
+}: {
+  title?: ReactNode
+  description?: ReactNode
+  actions?: ReactNode
+}) {
+  if (!title && !description && !actions) return null
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        {title ? <h3 className="text-sm font-medium">{title}</h3> : null}
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+    </div>
+  )
 }
 
 function DataGridPaginationBar() {
@@ -190,23 +235,32 @@ export function DataGridCard<TData extends object>({
   enableRowSelection = false,
   onRowSelectionChange,
   enableColumnVisibility = false,
+  columnVisibility: columnVisibilityProp,
+  onColumnVisibilityChange,
+  columnVisibilityTrigger,
   columnVisibilityStorageKey,
   initialColumnVisibility,
   className,
 }: DataGridCardProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(() => {
     const stored = columnVisibilityStorageKey
       ? loadStoredColumnVisibility(columnVisibilityStorageKey)
       : undefined
     return { ...initialColumnVisibility, ...stored }
   })
 
+  const isColumnVisibilityControlled = columnVisibilityProp !== undefined
+  const columnVisibility = isColumnVisibilityControlled ? columnVisibilityProp : internalColumnVisibility
+  const setColumnVisibility: OnChangeFn<VisibilityState> = isColumnVisibilityControlled
+    ? (onColumnVisibilityChange ?? (() => undefined))
+    : setInternalColumnVisibility
+
   useEffect(() => {
-    if (!columnVisibilityStorageKey) return
+    if (isColumnVisibilityControlled || !columnVisibilityStorageKey) return
     localStorage.setItem(columnVisibilityStorageKey, JSON.stringify(columnVisibility))
-  }, [columnVisibility, columnVisibilityStorageKey])
+  }, [columnVisibility, columnVisibilityStorageKey, isColumnVisibilityControlled])
 
   const selectColumn: ColumnDef<TData, unknown> = {
     id: 'select',
@@ -274,11 +328,14 @@ export function DataGridCard<TData extends object>({
     enableHiding: enableColumnVisibility,
   })
 
-  const columnVisibilityAction = enableColumnVisibility ? (
+  const showColumnVisibilityTrigger =
+    enableColumnVisibility && (columnVisibilityTrigger ?? true)
+
+  const columnVisibilityAction = showColumnVisibilityTrigger ? (
     <DataGridColumnVisibility
       table={table}
       trigger={
-        <Button variant="outline" size="sm">
+        <Button variant="ghost" size="sm">
           <Columns3Icon data-icon="inline-start" />
           Колонки
         </Button>
@@ -286,37 +343,25 @@ export function DataGridCard<TData extends object>({
     />
   ) : null
 
-  const headerActions = (
+  const headerActions = actions ? (
     <div className="flex items-center gap-2">
       {columnVisibilityAction}
       {actions}
     </div>
+  ) : (
+    columnVisibilityAction
   )
 
-  const hasHeader = Boolean(title || description || actions || enableColumnVisibility)
+  const hasHeader = Boolean(title || description || actions || showColumnVisibilityTrigger)
 
   if (data.length === 0) {
-    if (!hasHeader) {
-      return (
-        <div className={className}>
-          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
-        </div>
-      )
-    }
-
     return (
-      <Card className={cn('ring-0 shadow-none', className)}>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <div className="flex flex-col gap-1">
-            {title ? <CardTitle>{title}</CardTitle> : null}
-            {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-          </div>
-          {headerActions ? <div className="flex items-center gap-2">{headerActions}</div> : null}
-        </CardHeader>
-        <CardContent>
-          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
-        </CardContent>
-      </Card>
+      <div className={cn('flex flex-col gap-3', className)}>
+        {hasHeader ? (
+          <DataGridSectionHeader title={title} description={description} actions={headerActions} />
+        ) : null}
+        <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+      </div>
     )
   }
 
@@ -335,30 +380,13 @@ export function DataGridCard<TData extends object>({
     />
   )
 
-  if (!hasHeader) {
-    return (
-      <div className={className}>
-        {enableColumnVisibility ? (
-          <div className="mb-2 flex justify-end">{columnVisibilityAction}</div>
-        ) : null}
-        {gridBody}
-      </div>
-    )
-  }
-
   return (
-    <Card className={cn('ring-0 shadow-none', className)}>
-        <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/50 pb-4">
-        <div className="flex flex-col gap-1">
-          {title ? <CardTitle>{title}</CardTitle> : null}
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-        </div>
-        {(actions || enableColumnVisibility) ? (
-          <div className="flex items-center gap-2">{headerActions}</div>
-        ) : null}
-      </CardHeader>
-      <CardContent className="p-0 pt-2">{gridBody}</CardContent>
-    </Card>
+    <div className={cn('flex flex-col gap-3', className)}>
+      {hasHeader ? (
+        <DataGridSectionHeader title={title} description={description} actions={headerActions} />
+      ) : null}
+      {gridBody}
+    </div>
   )
 }
 
