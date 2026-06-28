@@ -1,29 +1,32 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, Trash2Icon, ArrowDownUpIcon, CalendarIcon, UserRoundIcon, ArrowLeftRightIcon, CoinsIcon, StickyNoteIcon } from 'lucide-react'
+import {
+  PlusIcon,
+  Trash2Icon,
+  ArrowDownUpIcon,
+  CalendarIcon,
+  UserRoundIcon,
+  ArrowLeftRightIcon,
+  CoinsIcon,
+  StickyNoteIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
-import { PageShell } from '@/components/page-shell'
-import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
-import { QueryState } from '@/components/query-state'
-import { SectionCardsSkeleton } from '@/components/skeletons'
+import { CrudListPage } from '@/components/crud-list-page'
 import { SectionCards } from '@/components/section-cards'
+import { TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { FormSheet } from '@/components/form-sheet'
-import { FormField } from '@/components/form-field'
-import { Input } from '@cfdm/ui/components/input'
-import { SelectField } from '@/components/select-field'
-import { Textarea } from '@cfdm/ui/components/textarea'
-
-import type { BalanceLedgerRow, LedgerDirection } from '@/types/entities'
+import { BalanceEntrySheet, balanceEntryFormDefaults } from '@/components/domain/balance-entry-sheet'
+import type { BalanceLedgerFormValues } from '@/lib/schemas'
+import type { BalanceLedgerRow } from '@/types/entities'
 import { formatCurrency } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 
@@ -33,26 +36,14 @@ export const Route = createFileRoute('/_auth/balance')({
   component: BalancePage,
 })
 
-interface FormState {
-  providerAccountId: string
-  direction: LedgerDirection
-  amount: number
-  currency: string
-  date: string
-  note: string
-}
-
-const TODAY = new Date().toISOString().slice(0, 10)
-const EMPTY: FormState = { providerAccountId: '', direction: 'credit', amount: 0, currency: 'RUB', date: TODAY, note: '' }
-
 function BalancePage() {
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState<FormState>(EMPTY)
+  const [formDefaults, setFormDefaults] = useState<BalanceLedgerFormValues>(balanceEntryFormDefaults())
 
   const addMut = useMutation({
-    mutationFn: (r: FormState) => api.create('balanceLedger', r as unknown as BalanceLedgerRow),
+    mutationFn: (r: BalanceLedgerFormValues) => api.create('balanceLedger', r as unknown as BalanceLedgerRow),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
       toast.success('Запись добавлена')
@@ -69,7 +60,10 @@ function BalancePage() {
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка'),
   })
 
-  const openCreate = () => { setForm({ ...EMPTY, providerAccountId: snapshot?.providerAccounts[0]?.id ?? '' }); setOpen(true) }
+  const openCreate = () => {
+    setFormDefaults(balanceEntryFormDefaults(snapshot?.providerAccounts[0]?.id ?? ''))
+    setOpen(true)
+  }
 
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
 
@@ -115,7 +109,8 @@ function BalancePage() {
       sortValue: (r) => Number(r.amount),
       cell: (r) => (
         <span className={`tabular-nums font-medium ${r.direction === 'credit' ? '' : 'text-destructive'}`}>
-          {r.direction === 'credit' ? '+' : '−'}{formatCurrency(Number(r.amount), r.currency ?? 'RUB')}
+          {r.direction === 'credit' ? '+' : '−'}
+          {formatCurrency(Number(r.amount), r.currency ?? 'RUB')}
         </span>
       ),
     },
@@ -132,7 +127,11 @@ function BalancePage() {
       className: 'w-16 text-right',
       cell: (r) => (
         <ConfirmDialog
-          trigger={<Button variant="ghost" size="icon-sm" aria-label="Удалить"><Trash2Icon /></Button>}
+          trigger={
+            <Button variant="ghost" size="icon-sm" aria-label="Удалить">
+              <Trash2Icon />
+            </Button>
+          }
           title="Удалить запись?"
           confirmLabel="Удалить"
           destructive
@@ -143,99 +142,84 @@ function BalancePage() {
   ]
 
   const rows = [...(snapshot?.balanceLedger ?? [])].sort((a, b) => b.date.localeCompare(a.date))
-
   const totalCredit = rows.filter((r) => r.direction === 'credit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
   const totalDebit = rows.filter((r) => r.direction === 'debit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Баланс и списания"
-        description="Журнал движений по аккаунтам"
-        actions={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить запись</Button>}
-      />
-      <QueryState
-        data={snapshot}
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        skeleton={<SectionCardsSkeleton count={3} />}
-      >
-        {(snap) => (
-          <>
+    <CrudListPage
+      title="Баланс и списания"
+      description="Журнал движений по аккаунтам"
+      actions={
+        <Button onClick={openCreate}>
+          <PlusIcon data-icon="inline-start" />
+          Добавить запись
+        </Button>
+      }
+      data={snapshot}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      skeleton={<TableSkeleton />}
+      empty={rows.length === 0}
+      emptyTitle="Записей нет"
+      emptyDescription="Добавьте движение по балансу аккаунта"
+      emptyAction={
+        <Button onClick={openCreate}>
+          <PlusIcon data-icon="inline-start" />
+          Добавить запись
+        </Button>
+      }
+      sheet={
+        snapshot ? (
+          <BalanceEntrySheet
+            open={open}
+            onOpenChange={setOpen}
+            defaultValues={formDefaults}
+            providerAccounts={snapshot.providerAccounts}
+            providers={snapshot.providers}
+            onSubmit={(values) => addMut.mutate(values)}
+            submitting={addMut.isPending}
+          />
+        ) : null
+      }
+    >
+      {(snap) => {
+        const baseCurrency = snap.settings[0]?.baseCurrency ?? 'RUB'
+        return (
+          <div className="flex flex-col gap-4">
             <SectionCards
               items={[
-                { label: 'Всего приходов', value: formatCurrency(totalCredit, snap.settings[0]?.baseCurrency ?? 'RUB') },
-                { label: 'Всего списаний', value: formatCurrency(totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB') },
-                { label: 'Чистый баланс (ledger)', value: formatCurrency(totalCredit - totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB') },
+                { label: 'Всего приходов', value: formatCurrency(totalCredit, baseCurrency) },
+                { label: 'Всего списаний', value: formatCurrency(totalDebit, baseCurrency) },
+                {
+                  label: 'Чистый баланс (ledger)',
+                  value: formatCurrency(totalCredit - totalDebit, baseCurrency),
+                },
               ]}
             />
             <DataGridCard
               columns={columnDefFromDataTable(columns)}
               data={rows}
               rowId={(r) => r.id}
-              emptyTitle="Записей нет"
-              emptyAction={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить</Button>}
               pinLastColumn
               footerContent={
                 <div className="flex justify-end gap-6 px-3 py-2 text-sm tabular-nums">
-                  <span>Приходы: <b className="text-foreground">{formatCurrency(totalCredit, snap.settings[0]?.baseCurrency ?? 'RUB')}</b></span>
-                  <span>Списания: <b className="text-foreground">{formatCurrency(totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB')}</b></span>
-                  <span>Итого: <b className="text-foreground">{formatCurrency(totalCredit - totalDebit, snap.settings[0]?.baseCurrency ?? 'RUB')}</b></span>
+                  <span>
+                    Приходы: <b className="text-foreground">{formatCurrency(totalCredit, baseCurrency)}</b>
+                  </span>
+                  <span>
+                    Списания: <b className="text-foreground">{formatCurrency(totalDebit, baseCurrency)}</b>
+                  </span>
+                  <span>
+                    Итого: <b className="text-foreground">{formatCurrency(totalCredit - totalDebit, baseCurrency)}</b>
+                  </span>
                 </div>
               }
             />
-          </>
-        )}
-      </QueryState>
-
-      <FormSheet
-        open={open}
-        onOpenChange={setOpen}
-        trigger={null}
-        title="Новая запись"
-        onSubmit={() => addMut.mutate(form)}
-        submitting={addMut.isPending}
-      >
-        <FormField label="Аккаунт" htmlFor="bl-acc">
-          <SelectField
-            triggerId="bl-acc"
-            placeholder="Выберите аккаунт"
-            value={form.providerAccountId}
-            onValueChange={(v) => setForm({ ...form, providerAccountId: v ?? '' })}
-            options={(snapshot?.providerAccounts ?? []).map((a) => ({
-              value: a.id,
-              label: accountSelectLabel(a, providerById),
-            }))}
-          />
-        </FormField>
-        <FormField label="Движение" htmlFor="bl-dir">
-          <SelectField
-            triggerId="bl-dir"
-            value={form.direction}
-            onValueChange={(v) => setForm({ ...form, direction: (v ?? 'credit') as LedgerDirection })}
-            options={[
-              { value: 'credit', label: 'Приход' },
-              { value: 'debit', label: 'Списание' },
-            ]}
-          />
-        </FormField>
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label="Дата" htmlFor="bl-date">
-            <Input id="bl-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          </FormField>
-          <FormField label="Сумма" htmlFor="bl-amount">
-            <Input id="bl-amount" type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} />
-          </FormField>
-          <FormField label="Валюта" htmlFor="bl-cur">
-            <Input id="bl-cur" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />
-          </FormField>
-        </div>
-        <FormField label="Заметка" htmlFor="bl-note">
-          <Textarea id="bl-note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-        </FormField>
-      </FormSheet>
-    </PageShell>
+          </div>
+        )
+      }}
+    </CrudListPage>
   )
 }

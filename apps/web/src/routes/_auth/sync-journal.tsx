@@ -3,14 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { HistoryIcon, UserRoundIcon, CheckCircle2Icon, XCircleIcon, LoaderIcon } from 'lucide-react'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
-import { PageShell } from '@/components/page-shell'
-import { PageHeader } from '@/components/page-header'
+import { CrudListPage } from '@/components/crud-list-page'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-grid-types'
-import { QueryState } from '@/components/query-state'
-import { TableSkeleton } from '@/components/skeletons'
 import { StatusBadge } from '@/components/status-badge'
 import { dataGridCellStack } from '@/components/data-grid-cells'
+import { Button } from '@cfdm/ui/components/button'
 import { formatSyncSummaryLine } from '@/lib/inventory-health'
 import { formatRelativeSyncTime } from '@/lib/sync-format'
 
@@ -37,10 +35,11 @@ function SyncJournalPage() {
       header: 'Запуск',
       icon: HistoryIcon,
       sortValue: (r) => r.startedAt ?? '',
-      cell: (r) => dataGridCellStack(
-        r.startedAt ? new Date(r.startedAt).toLocaleString('ru-RU') : '—',
-        r.finishedAt ? `завершён ${formatRelativeSyncTime(r.finishedAt)}` : undefined,
-      ),
+      cell: (r) =>
+        dataGridCellStack(
+          r.startedAt ? new Date(r.startedAt).toLocaleString('ru-RU') : '—',
+          r.finishedAt ? `завершён ${formatRelativeSyncTime(r.finishedAt)}` : undefined,
+        ),
     },
     {
       key: 'account',
@@ -57,7 +56,10 @@ function SyncJournalPage() {
       cell: (r) => (
         <div className="flex items-center gap-2">
           {statusIcon(r.status)}
-          <StatusBadge status={r.status} label={r.status === 'ok' ? 'OK' : r.status === 'error' ? 'Ошибка' : 'Выполняется'} />
+          <StatusBadge
+            status={r.status}
+            label={r.status === 'ok' ? 'OK' : r.status === 'error' ? 'Ошибка' : 'Выполняется'}
+          />
         </div>
       ),
     },
@@ -73,36 +75,36 @@ function SyncJournalPage() {
   ]
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Журнал синка"
-        description="История синхронизаций BILLmanager по аккаунтам"
-        actions={
-          <Link to="/accounts" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
-            Управление аккаунтами
-          </Link>
-        }
-      />
-      <QueryState
-        data={snapshot}
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        skeleton={<TableSkeleton />}
-        empty={!snapshot?.syncLog?.length}
-        emptyTitle="Записей синка нет"
-        emptyDescription="Запустите синхронизацию на странице аккаунтов"
-      >
-        {(snap) => (
-          <DataGridCard
-            columns={columnDefFromDataTable(columns)}
-            data={snap.syncLog ?? []}
-            rowId={(r) => r.id}
-            dense
-          />
-        )}
-      </QueryState>
-    </PageShell>
+    <CrudListPage
+      title="Журнал синка"
+      description="История синхронизаций BILLmanager по аккаунтам"
+      actions={
+        <Button variant="link" render={<Link to="/accounts" />}>
+          Управление аккаунтами
+        </Button>
+      }
+      data={snapshot}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      empty={!snapshot?.syncLog?.length}
+      emptyTitle="Записей синка нет"
+      emptyDescription="Запустите синхронизацию на странице аккаунтов"
+      emptyAction={
+        <Button variant="link" render={<Link to="/accounts" />}>
+          Перейти к аккаунтам
+        </Button>
+      }
+    >
+      {(snap) => (
+        <DataGridCard
+          columns={columnDefFromDataTable(columns)}
+          data={snap.syncLog ?? []}
+          rowId={(r) => r.id}
+          dense
+        />
+      )}
+    </CrudListPage>
   )
 }

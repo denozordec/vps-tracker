@@ -4,14 +4,11 @@ import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
-import { PageShell } from '@/components/page-shell'
-import { PageHeader } from '@/components/page-header'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
-import { QueryState } from '@/components/query-state'
-import { TableSkeleton } from '@/components/skeletons'
+import { CrudListPage } from '@/components/crud-list-page'
 import { Button } from '@cfdm/ui/components/button'
 import { ServerIcon, UserRoundIcon, CpuIcon, CoinsIcon, HardDriveIcon, RefreshCwIcon } from 'lucide-react'
 
@@ -97,7 +94,11 @@ function TariffsPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       sortValue: (t) => Number(t.monthlyRate ?? 0),
-      cell: (t) => <span className="tabular-nums font-medium">{formatCurrency(Number(t.monthlyRate ?? 0), t.currency ?? 'RUB')}</span>,
+      cell: (t) => (
+        <span className="tabular-nums font-medium">
+          {formatCurrency(Number(t.monthlyRate ?? 0), t.currency ?? 'RUB')}
+        </span>
+      ),
     },
     {
       key: 'disk',
@@ -108,45 +109,46 @@ function TariffsPage() {
   ]
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Активные тарифы"
-        description="Тарифы, загруженные из BILLmanager vds.order"
-        actions={
-          syncableCount > 0 ? (
-            <Button variant="outline" disabled={syncTariffsMut.isPending} onClick={() => syncTariffsMut.mutate()}>
+    <CrudListPage
+      title="Активные тарифы"
+      description="Тарифы, загруженные из BILLmanager vds.order"
+      actions={
+        syncableCount > 0 ? (
+          <Button variant="outline" disabled={syncTariffsMut.isPending} onClick={() => syncTariffsMut.mutate()}>
+            <RefreshCwIcon data-icon="inline-start" />
+            Загрузить тарифы
+          </Button>
+        ) : undefined
+      }
+      data={snapshot}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      empty={snapshot?.activeTariffs.length === 0}
+      emptyTitle="Тарифы не загружены"
+      emptyDescription="Синхронизация аккаунта BILLmanager загружает тарифы вместе с VPS и платежами"
+      emptyAction={
+        <div className="flex flex-wrap justify-center gap-2">
+          {syncableCount > 0 ? (
+            <Button disabled={syncTariffsMut.isPending} onClick={() => syncTariffsMut.mutate()}>
               <RefreshCwIcon data-icon="inline-start" />
               Загрузить тарифы
             </Button>
-          ) : undefined
-        }
-      />
-      <QueryState
-        data={snapshot}
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        skeleton={<TableSkeleton />}
-        empty={snapshot?.activeTariffs.length === 0}
-        emptyTitle="Тарифы не загружены"
-        emptyDescription="Синхронизация аккаунта BILLmanager загружает тарифы вместе с VPS и платежами"
-        emptyAction={
-          <div className="flex flex-wrap justify-center gap-2">
-            {syncableCount > 0 ? (
-              <Button disabled={syncTariffsMut.isPending} onClick={() => syncTariffsMut.mutate()}>
-                <RefreshCwIcon data-icon="inline-start" />
-                Загрузить тарифы
-              </Button>
-            ) : null}
-            <Button variant="outline" render={<Link to="/accounts" />}>
-              Перейти к аккаунтам
-            </Button>
-          </div>
-        }
-      >
-        {(snap) => <DataGridCard columns={columnDefFromDataTable(columns)} data={snap.activeTariffs} rowId={(t) => t.id} />}
-      </QueryState>
-    </PageShell>
+          ) : null}
+          <Button variant="outline" render={<Link to="/accounts" />}>
+            Перейти к аккаунтам
+          </Button>
+        </div>
+      }
+    >
+      {(snap) => (
+        <DataGridCard
+          columns={columnDefFromDataTable(columns)}
+          data={snap.activeTariffs}
+          rowId={(t) => t.id}
+        />
+      )}
+    </CrudListPage>
   )
 }

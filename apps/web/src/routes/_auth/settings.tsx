@@ -1,6 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { DownloadIcon, UploadIcon } from 'lucide-react'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -9,40 +12,14 @@ import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
 import { SectionCardsSkeleton } from '@/components/skeletons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
-import { Field, FieldGroup, FieldLabel } from '@cfdm/ui/components/field'
+import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
 import { LoadingButton } from '@/components/loading-button'
 import { SelectField } from '@/components/select-field'
-
-import type { Settings } from '@/types/entities'
-import { useState } from 'react'
+import { FormField } from '@/components/form-field'
 import { Button } from '@cfdm/ui/components/button'
-import { DownloadIcon, UploadIcon } from 'lucide-react'
-
-function boolSelect(
-  draft: Partial<Settings>,
-  setForm: (v: Partial<Settings>) => void,
-  key: keyof Settings,
-  id: string,
-  label: string,
-) {
-  const val = draft[key] === false ? 'off' : 'on'
-  return (
-    <Field orientation="horizontal">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <SelectField
-        triggerId={id}
-        triggerClassName="w-32"
-        value={val}
-        onValueChange={(v) => setForm({ ...draft, [key]: (v ?? 'on') === 'on' })}
-        options={[
-          { value: 'on', label: 'Вкл' },
-          { value: 'off', label: 'Выкл' },
-        ]}
-      />
-    </Field>
-  )
-}
+import { settingsSchema, type SettingsFormValues } from '@/lib/schemas'
+import type { Settings } from '@/types/entities'
 
 export const Route = createFileRoute('/_auth/settings')({
   loader: ({ context: { queryClient } }) =>
@@ -52,28 +29,74 @@ export const Route = createFileRoute('/_auth/settings')({
 
 const CURRENCIES = ['RUB', 'USD', 'EUR', 'UAH', 'KZT']
 
+function settingsToFormValues(s: Settings): SettingsFormValues {
+  return {
+    id: s.id,
+    baseCurrency: s.baseCurrency ?? 'RUB',
+    ratesUrl: s.ratesUrl ?? '',
+    autoConvert: s.autoConvert !== false,
+    syncEnabled: s.syncEnabled !== false,
+    syncIntervalMinutes: s.syncIntervalMinutes ?? 60,
+    syncTariffsIntervalMinutes: s.syncTariffsIntervalMinutes ?? 1440,
+    telegramChatId: s.telegramChatId ?? '',
+    telegramBotToken: s.telegramBotToken ?? '',
+    notifyPaymentExpiryEnabled: s.notifyPaymentExpiryEnabled !== false,
+    notifyNewTariffsEnabled: s.notifyNewTariffsEnabled !== false,
+    notifyLowBalanceEnabled: s.notifyLowBalanceEnabled !== false,
+    notifySyncDigestEnabled: s.notifySyncDigestEnabled !== false,
+  }
+}
+
+function BoolSelect({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <FormField label={label} htmlFor={id}>
+      <SelectField
+        triggerId={id}
+        triggerClassName="w-32"
+        value={value ? 'on' : 'off'}
+        onValueChange={(v) => onChange((v ?? 'on') === 'on')}
+        options={[
+          { value: 'on', label: 'Вкл' },
+          { value: 'off', label: 'Выкл' },
+        ]}
+      />
+    </FormField>
+  )
+}
+
 function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const current = snapshot?.settings?.[0]
-  const [form, setForm] = useState<Partial<Settings> | null>(null)
-  const draft = form ?? current ?? {}
+
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    values: current ? settingsToFormValues(current) : undefined,
+  })
 
   const upsertMut = useMutation({
-    mutationFn: (patch: Partial<Settings>) => {
+    mutationFn: (patch: SettingsFormValues) => {
       if (current?.id) return api.update<Settings>('settings', current.id, patch)
       return api.create<Settings>('settings', {
         id: 'settings-main',
-        baseCurrency: 'RUB',
         ratesUrl: 'https://www.cbr-xml-daily.ru/latest.js',
-        autoConvert: true,
         ...patch,
       } as Settings)
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
       toast.success('Настройки сохранены')
-      setForm(null)
+      form.reset(form.getValues())
     },
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка'),
   })
@@ -84,9 +107,82 @@ function SettingsPage() {
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка отправки'),
   })
 
+  const backupActions = (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        onClick={async () => {
+          try {
+            const blob = await api.downloadBackupJson()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `vps-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success('JSON выгружен')
+          } catch (e) {
+            toast.error(e instanceof ApiError ? e.message : 'Ошибка выгрузки')
+          }
+        }}
+      >
+        <DownloadIcon data-icon="inline-start" />
+        JSON
+      </Button>
+      <Button
+        variant="outline"
+        onClick={async () => {
+          try {
+            const blob = await api.downloadBackupDatabase()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `vps-tracker-${new Date().toISOString().slice(0, 10)}.db`
+            a.click()
+            URL.revokeObjectURL(url)
+            toast.success('База выгружена')
+          } catch (e) {
+            toast.error(e instanceof ApiError ? e.message : 'Ошибка выгрузки')
+          }
+        }}
+      >
+        <DownloadIcon data-icon="inline-start" />
+        SQLite
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => {
+          const input = document.createElement('input')
+          input.type = 'file'
+          input.accept = 'application/json,.json'
+          input.onchange = async () => {
+            const file = input.files?.[0]
+            if (!file) return
+            try {
+              const text = await file.text()
+              await api.importBackupJson(JSON.parse(text))
+              void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+              toast.success('Импорт JSON выполнен')
+            } catch (e) {
+              toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта')
+            }
+          }
+          input.click()
+        }}
+      >
+        <UploadIcon data-icon="inline-start" />
+        Импорт JSON
+      </Button>
+    </div>
+  )
+
   return (
     <PageShell>
-      <PageHeader title="Настройки" description="Базовая валюта, курсы, синк, Telegram" />
+      <PageHeader
+        title="Настройки"
+        description="Базовая валюта, курсы, синк, Telegram"
+        actions={backupActions}
+      />
       <QueryState
         data={snapshot}
         isLoading={isLoading}
@@ -96,221 +192,147 @@ function SettingsPage() {
         skeleton={<SectionCardsSkeleton count={1} />}
       >
         {() => (
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Валюта и курсы</CardTitle>
-                <CardDescription>Отображение сумм и источник курсов</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="set-cur">Базовая валюта</FieldLabel>
-                    <SelectField
-                      triggerId="set-cur"
-                      value={draft.baseCurrency ?? 'RUB'}
-                      onValueChange={(v) => setForm({ ...draft, baseCurrency: v ?? 'RUB' })}
-                      options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => void form.handleSubmit((values) => upsertMut.mutate(values))(e)}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Валюта и курсы</CardTitle>
+                  <CardDescription>Отображение сумм и источник курсов</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <FormField label="Базовая валюта" htmlFor="set-cur" error={form.formState.errors.baseCurrency?.message}>
+                      <Controller
+                        control={form.control}
+                        name="baseCurrency"
+                        render={({ field }) => (
+                          <SelectField
+                            triggerId="set-cur"
+                            value={field.value}
+                            onValueChange={(v) => field.onChange(v ?? 'RUB')}
+                            options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                          />
+                        )}
+                      />
+                    </FormField>
+                    <FormField label="URL курсов (JSON)" htmlFor="set-rates" error={form.formState.errors.ratesUrl?.message}>
+                      <Input
+                        id="set-rates"
+                        placeholder="https://www.cbr-xml-daily.ru/latest.js"
+                        {...form.register('ratesUrl')}
+                      />
+                    </FormField>
+                    <Controller
+                      control={form.control}
+                      name="autoConvert"
+                      render={({ field }) => (
+                        <BoolSelect
+                          id="set-auto"
+                          label="Автоконвертация"
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      )}
                     />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="set-rates">URL курсов (JSON)</FieldLabel>
-                    <Input
-                      id="set-rates"
-                      value={draft.ratesUrl ?? ''}
-                      onChange={(e) => setForm({ ...draft, ratesUrl: e.target.value })}
-                      placeholder="https://www.cbr-xml-daily.ru/latest.js"
-                    />
-                  </Field>
-                  <Field orientation="horizontal">
-                    <FieldLabel htmlFor="set-auto">Автоконвертация</FieldLabel>
-                    <SelectField
-                      triggerId="set-auto"
-                      triggerClassName="w-32"
-                      value={draft.autoConvert === false ? 'off' : 'on'}
-                      onValueChange={(v) => setForm({ ...draft, autoConvert: (v ?? 'on') === 'on' })}
-                      options={[
-                        { value: 'on', label: 'Включена' },
-                        { value: 'off', label: 'Выключена' },
-                      ]}
-                    />
-                  </Field>
-                  <LoadingButton
-                    className="w-fit"
-                    onClick={() => upsertMut.mutate(draft)}
-                    loading={upsertMut.isPending}
-                    disabled={!form}
-                  >
-                    Сохранить
-                  </LoadingButton>
-                </FieldGroup>
-              </CardContent>
-            </Card>
+                  </FieldGroup>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Telegram</CardTitle>
-                <CardDescription>Уведомления о здоровье инвентаря</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="set-tg-chat">Chat ID</FieldLabel>
-                    <Input
-                      id="set-tg-chat"
-                      value={draft.telegramChatId ?? ''}
-                      onChange={(e) => setForm({ ...draft, telegramChatId: e.target.value })}
-                      placeholder="-1001234567890"
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="set-tg-token">Bot token</FieldLabel>
-                    <Input
-                      id="set-tg-token"
-                      type="password"
-                      value={draft.telegramBotToken ?? ''}
-                      onChange={(e) => setForm({ ...draft, telegramBotToken: e.target.value })}
-                      placeholder="123456:ABC-DEF..."
-                    />
-                  </Field>
-                  <div className="flex gap-2">
-                    <LoadingButton onClick={() => upsertMut.mutate(draft)} loading={upsertMut.isPending} disabled={!form}>
-                      Сохранить
-                    </LoadingButton>
-                    <LoadingButton variant="outline" onClick={() => telegramTestMut.mutate()} loading={telegramTestMut.isPending}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Telegram</CardTitle>
+                  <CardDescription>Уведомления о здоровье инвентаря</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <FormField label="Chat ID" htmlFor="set-tg-chat">
+                      <Input id="set-tg-chat" placeholder="-1001234567890" {...form.register('telegramChatId')} />
+                    </FormField>
+                    <FormField label="Bot token" htmlFor="set-tg-token">
+                      <Input
+                        id="set-tg-token"
+                        type="password"
+                        placeholder="123456:ABC-DEF..."
+                        {...form.register('telegramBotToken')}
+                      />
+                    </FormField>
+                    <LoadingButton
+                      type="button"
+                      variant="outline"
+                      onClick={() => telegramTestMut.mutate()}
+                      loading={telegramTestMut.isPending}
+                    >
                       Тест
                     </LoadingButton>
-                  </div>
-                </FieldGroup>
-              </CardContent>
-            </Card>
+                  </FieldGroup>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Синхронизация</CardTitle>
-                <CardDescription>Автосинк BILLmanager и интервалы</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup>
-                  {boolSelect(draft, (v) => setForm(v), 'syncEnabled', 'set-sync', 'Автосинк')}
-                  <Field>
-                    <FieldLabel htmlFor="set-sync-int">Интервал синка (мин)</FieldLabel>
-                    <Input
-                      id="set-sync-int"
-                      type="number"
-                      min={15}
-                      value={draft.syncIntervalMinutes ?? 60}
-                      onChange={(e) =>
-                        setForm({ ...draft, syncIntervalMinutes: Number(e.target.value) || 60 })
-                      }
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Синхронизация</CardTitle>
+                  <CardDescription>Автосинк BILLmanager и интервалы</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <Controller
+                      control={form.control}
+                      name="syncEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-sync" label="Автосинк" value={field.value ?? true} onChange={field.onChange} />
+                      )}
                     />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="set-tariff-int">Интервал тарифов (мин)</FieldLabel>
-                    <Input
-                      id="set-tariff-int"
-                      type="number"
-                      min={60}
-                      value={draft.syncTariffsIntervalMinutes ?? 1440}
-                      onChange={(e) =>
-                        setForm({
-                          ...draft,
-                          syncTariffsIntervalMinutes: Number(e.target.value) || 1440,
-                        })
-                      }
+                    <FormField label="Интервал синка (мин)" htmlFor="set-sync-int">
+                      <Input id="set-sync-int" type="number" min={15} {...form.register('syncIntervalMinutes')} />
+                    </FormField>
+                    <FormField label="Интервал тарифов (мин)" htmlFor="set-tariff-int">
+                      <Input id="set-tariff-int" type="number" min={60} {...form.register('syncTariffsIntervalMinutes')} />
+                    </FormField>
+                    <Controller
+                      control={form.control}
+                      name="notifyLowBalanceEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-notify-bal" label="Низкий баланс" value={field.value ?? true} onChange={field.onChange} />
+                      )}
                     />
-                  </Field>
-                  {boolSelect(draft, (v) => setForm(v), 'notifyLowBalanceEnabled', 'set-notify-bal', 'Низкий баланс')}
-                  {boolSelect(draft, (v) => setForm(v), 'notifySyncDigestEnabled', 'set-notify-sync', 'Дайджест синка')}
-                  {boolSelect(draft, (v) => setForm(v), 'notifyPaymentExpiryEnabled', 'set-notify-pay', 'Истечение оплаты')}
-                  {boolSelect(draft, (v) => setForm(v), 'notifyNewTariffsEnabled', 'set-notify-tar', 'Новые тарифы')}
-                  <LoadingButton
-                    className="w-fit"
-                    onClick={() => upsertMut.mutate(draft)}
-                    loading={upsertMut.isPending}
-                    disabled={!form}
-                  >
-                    Сохранить
-                  </LoadingButton>
-                </FieldGroup>
-              </CardContent>
-            </Card>
+                    <Controller
+                      control={form.control}
+                      name="notifySyncDigestEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-notify-sync" label="Дайджест синка" value={field.value ?? true} onChange={field.onChange} />
+                      )}
+                    />
+                    <Controller
+                      control={form.control}
+                      name="notifyPaymentExpiryEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-notify-pay" label="Истечение оплаты" value={field.value ?? true} onChange={field.onChange} />
+                      )}
+                    />
+                    <Controller
+                      control={form.control}
+                      name="notifyNewTariffsEnabled"
+                      render={({ field }) => (
+                        <BoolSelect id="set-notify-tar" label="Новые тарифы" value={field.value ?? true} onChange={field.onChange} />
+                      )}
+                    />
+                  </FieldGroup>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Резервное копирование</CardTitle>
-                <CardDescription>Экспорт и импорт базы данных</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        const blob = await api.downloadBackupJson()
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = `vps-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
-                        a.click()
-                        URL.revokeObjectURL(url)
-                        toast.success('JSON выгружен')
-                      } catch (e) {
-                        toast.error(e instanceof ApiError ? e.message : 'Ошибка выгрузки')
-                      }
-                    }}
-                  >
-                    <DownloadIcon data-icon="inline-start" />
-                    JSON
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        const blob = await api.downloadBackupDatabase()
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = `vps-tracker-${new Date().toISOString().slice(0, 10)}.db`
-                        a.click()
-                        URL.revokeObjectURL(url)
-                        toast.success('База выгружена')
-                      } catch (e) {
-                        toast.error(e instanceof ApiError ? e.message : 'Ошибка выгрузки')
-                      }
-                    }}
-                  >
-                    <DownloadIcon data-icon="inline-start" />
-                    SQLite
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const input = document.createElement('input')
-                      input.type = 'file'
-                      input.accept = 'application/json,.json'
-                      input.onchange = async () => {
-                        const file = input.files?.[0]
-                        if (!file) return
-                        try {
-                          const text = await file.text()
-                          await api.importBackupJson(JSON.parse(text))
-                          void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
-                          toast.success('Импорт JSON выполнен')
-                        } catch (e) {
-                          toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта')
-                        }
-                      }
-                      input.click()
-                    }}
-                  >
-                    <UploadIcon data-icon="inline-start" />
-                    Импорт JSON
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            <LoadingButton
+              type="submit"
+              className="w-fit"
+              loading={upsertMut.isPending}
+              disabled={!form.formState.isDirty}
+            >
+              Сохранить настройки
+            </LoadingButton>
+          </form>
         )}
       </QueryState>
     </PageShell>

@@ -27,7 +27,7 @@ import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@/components/reui/badge'
+import { Badge } from '@cfdm/ui/components/badge'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 import { StatusBadge } from '@/components/status-badge'
@@ -36,6 +36,7 @@ import { cn } from '@cfdm/ui/lib/utils'
 import { computeInventoryHealth, getStaleSyncAccountIds } from '@/lib/inventory-health'
 import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel } from '@/lib/format'
 import { accountBalanceApi } from '@/lib/account'
+import { exportActiveVpsCsv } from '@/lib/export-csv'
 import { MonthlyTrendChart, MonthlyExpenseChart } from '@/components/domain/charts'
 
 import type { Vps, ProviderAccount, Provider, SyncLogRow } from '@/types/entities'
@@ -316,9 +317,7 @@ function DashboardPage() {
                   <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                     Проблемы
                     {issues.length > 0 ? (
-                      <Badge variant="primary-light" size="sm">
-                        {issues.length}
-                      </Badge>
+                      <Badge variant="secondary">{issues.length}</Badge>
                     ) : null}
                   </TabsTrigger>
                   <TabsTrigger value="recent" className={DASHBOARD_TAB_TRIGGER_CLASS}>
@@ -327,9 +326,7 @@ function DashboardPage() {
                   <TabsTrigger value="risk" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                     Аккаунты
                     {atRisk.length > 0 ? (
-                      <Badge variant="info-light" size="sm">
-                        {atRisk.length}
-                      </Badge>
+                      <Badge variant="outline">{atRisk.length}</Badge>
                     ) : null}
                   </TabsTrigger>
                 </TabsList>
@@ -382,21 +379,7 @@ function DashboardPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const csv = ['ip,status,project,currency,monthlyRate']
-                    for (const v of activeVps) {
-                      csv.push(
-                        [v.ip, v.status, v.project ?? '', v.currency, v.monthlyRate ?? ''].join(','),
-                      )
-                    }
-                    const blob = new Blob([csv.join('\n')], { type: 'text/csv' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = 'vps-export.csv'
-                    a.click()
-                    URL.revokeObjectURL(url)
-                  }}
+                  onClick={() => exportActiveVpsCsv(activeVps)}
                 >
                   <DownloadIcon data-icon="inline-start" />
                   Экспорт CSV

@@ -29,12 +29,11 @@ apps/web/src/components/  ← shared + domain + layout
   empty-state.tsx
   query-state.tsx
   confirm-dialog.tsx
-  data-table-card.tsx
+  data-grid-card.tsx
   section-cards.tsx
   status-badge.tsx
   form-sheet.tsx          ← Sheet + RHF FormProvider
   form-field.tsx          ← Field + Controller + aria-invalid
-  table-card.tsx          ← Card + Table wrapper
   loading-button.tsx      ← Button + Spinner + label swap
   section-cards-skeleton.tsx
   table-skeleton.tsx
@@ -49,14 +48,14 @@ apps/web/src/components/  ← shared + domain + layout
 | Page wrapper | `PageShell` | — |
 | Page title | `PageHeader` | — |
 | Stat metrics | `SectionCards` | `Card` |
-| Data list | `DataTableCard` | `Table`, `InputGroup` |
+| Data list | `DataGridCard` | `Table`, `InputGroup` |
 | Empty | `EmptyState` | `Empty` |
 | Loading / Error | `QueryState` | `Skeleton`, `Alert` |
 | Status | `StatusBadge` | `Badge` |
 | Create/Edit | `FormSheet` + `*-edit-sheet.tsx` | `Sheet`, `Field` |
 | Form field | `FormField` | `Field`, `Input`, `Select` |
 | Submit button | `LoadingButton` | `Button`, `Spinner` |
-| Table wrapper | `TableCard` | `Table`, `Card` |
+| Table wrapper | `DataGridCard` | `Table`, `Card` |
 | Delete confirm | `ConfirmDialog` | `AlertDialog` |
 | List row | — | `Item variant="outline" size="sm"` |
 | Nav | `AppSidebar` | `Sidebar` |

@@ -1,36 +1,33 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, PencilIcon, Trash2Icon, RefreshCwIcon, UserRoundIcon, KeyRoundIcon, PlugIcon, ReceiptIcon, WalletIcon, MoreHorizontalIcon } from 'lucide-react'
+import {
+  PlusIcon,
+  RefreshCwIcon,
+  UserRoundIcon,
+  KeyRoundIcon,
+  PlugIcon,
+  ReceiptIcon,
+  WalletIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
-import { PageShell } from '@/components/page-shell'
-import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
-import { QueryState } from '@/components/query-state'
-import { TableSkeleton } from '@/components/skeletons'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { FormSheet } from '@/components/form-sheet'
-import { FormField } from '@/components/form-field'
-import { Input } from '@cfdm/ui/components/input'
-import { Textarea } from '@cfdm/ui/components/textarea'
-import { SelectField } from '@/components/select-field'
+import { CrudListPage } from '@/components/crud-list-page'
+import { RowActions } from '@/components/row-actions'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@cfdm/ui/components/dropdown-menu'
+  ProviderAccountEditSheet,
+  providerAccountFormDefaults,
+} from '@/components/domain/account-edit-sheet'
+import type { ProviderAccountFormValues } from '@/lib/schemas'
 import { accountBalanceApi, accountBalanceCurrency } from '@/lib/account'
-
-import type { ProviderAccount, BillingMode } from '@/types/entities'
+import type { ProviderAccount } from '@/types/entities'
 import { providerByIdMap, accountBillmanagerUiReady, billmanagerSyncableAccounts } from '@/lib/billmanager'
 import { billingModeLabel, formatCurrency } from '@/lib/format'
 
@@ -40,37 +37,18 @@ export const Route = createFileRoute('/_auth/accounts')({
   component: AccountsPage,
 })
 
-interface FormState {
-  id?: string
-  providerId: string
-  name: string
-  login: string
-  apiCredentials: string
-  billingMode: BillingMode
-  balanceAlertBelow: string
-  notes: string
-}
-
-const EMPTY: FormState = {
-  providerId: '',
-  name: '',
-  login: '',
-  apiCredentials: '',
-  billingMode: 'monthly',
-  balanceAlertBelow: '',
-  notes: '',
-}
-
 function AccountsPage() {
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState<FormState>(EMPTY)
+  const [formDefaults, setFormDefaults] = useState<ProviderAccountFormValues>(
+    providerAccountFormDefaults(null, snapshot?.providers[0]?.id ?? ''),
+  )
 
   const saveMut = useMutation({
-    mutationFn: (r: FormState) => {
+    mutationFn: (r: ProviderAccountFormValues) => {
       const { apiCredentials, balanceAlertBelow, ...rest } = r
-      const alertRaw = balanceAlertBelow.trim()
+      const alertRaw = balanceAlertBelow === '' || balanceAlertBelow == null ? '' : String(balanceAlertBelow)
       const alertNum = alertRaw ? Number(alertRaw) : null
       const base = {
         ...rest,
@@ -125,19 +103,24 @@ function AccountsPage() {
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка синка'),
   })
 
-  const openCreate = () => { setForm({ ...EMPTY, providerId: snapshot?.providers[0]?.id ?? '' }); setOpen(true) }
+  const openCreate = () => {
+    setFormDefaults(providerAccountFormDefaults(null, snapshot?.providers[0]?.id ?? ''))
+    setOpen(true)
+  }
   const openEdit = (a: ProviderAccount) => {
     const ext = a as ProviderAccount & { balanceAlertBelow?: number | null }
-    setForm({
-      id: a.id,
-      providerId: a.providerId,
-      name: a.name,
-      login: a.login ?? '',
-      apiCredentials: '',
-      billingMode: a.billingMode ?? 'monthly',
-      balanceAlertBelow: ext.balanceAlertBelow != null ? String(ext.balanceAlertBelow) : '',
-      notes: a.notes ?? '',
-    })
+    setFormDefaults(
+      providerAccountFormDefaults({
+        id: a.id,
+        providerId: a.providerId,
+        name: a.name,
+        login: a.login ?? '',
+        apiCredentials: '',
+        billingMode: a.billingMode ?? 'monthly',
+        balanceAlertBelow: ext.balanceAlertBelow != null ? ext.balanceAlertBelow : '',
+        notes: a.notes ?? '',
+      }),
+    )
     setOpen(true)
   }
 
@@ -163,7 +146,11 @@ function AccountsPage() {
       key: 'creds',
       header: 'API-доступ',
       icon: PlugIcon,
-      cell: (a) => <Badge variant={a.apiCredentialsSet ? 'default' : 'outline'}>{a.apiCredentialsSet ? 'установлены' : 'нет'}</Badge>,
+      cell: (a) => (
+        <Badge variant={a.apiCredentialsSet ? 'default' : 'outline'}>
+          {a.apiCredentialsSet ? 'установлены' : 'нет'}
+        </Badge>
+      ),
     },
     {
       key: 'mode',
@@ -198,140 +185,83 @@ function AccountsPage() {
         const provider = providerById.get(a.providerId)
         const canSync = accountBillmanagerUiReady(a, provider)
         return (
-          <div className="flex justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon-sm" aria-label="Действия">
-                    <MoreHorizontalIcon />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-auto min-w-44">
-                <DropdownMenuItem
-                  disabled={!canSync || (syncMut.isPending && syncMut.variables === a.id)}
+          <RowActions
+            onEdit={() => openEdit(a)}
+            onDelete={() => delMut.mutate(a.id)}
+            deleteTitle="Удалить аккаунт?"
+            deleteDescription={`«${a.name}» будет удалён.`}
+            extra={
+              canSync ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Синхронизировать"
+                  disabled={syncMut.isPending && syncMut.variables === a.id}
                   onClick={() => syncMut.mutate(a.id)}
                 >
                   <RefreshCwIcon />
-                  Синхронизировать
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openEdit(a)}>
-                  <PencilIcon />
-                  Редактировать
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <ConfirmDialog
-                  trigger={
-                    <DropdownMenuItem variant="destructive" onSelect={(e) => e.preventDefault()}>
-                      <Trash2Icon />
-                      Удалить
-                    </DropdownMenuItem>
-                  }
-                  title="Удалить аккаунт?"
-                  description={`«${a.name}» будет удалён.`}
-                  destructive
-                  confirmLabel="Удалить"
-                  onConfirm={() => delMut.mutate(a.id)}
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                </Button>
+              ) : null
+            }
+          />
         )
       },
     },
   ]
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Аккаунты хостеров"
-        description="Аккаунты провайдеров с API-доступом"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {syncableCount > 0 ? (
-              <Button
-                variant="outline"
-                disabled={syncAllMut.isPending}
-                onClick={() => syncAllMut.mutate()}
-              >
-                <RefreshCwIcon data-icon="inline-start" />
-                Синхронизировать все
-              </Button>
-            ) : null}
-            <Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить</Button>
-          </div>
-        }
-      />
-      <QueryState
-        data={snapshot}
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        skeleton={<TableSkeleton />}
-        empty={snapshot?.providerAccounts.length === 0}
-        emptyTitle="Аккаунты не найдены"
-        emptyAction={<Button onClick={openCreate}><PlusIcon data-icon="inline-start" />Добавить аккаунт</Button>}
-      >
-        {(snap) => <DataGridCard columns={columnDefFromDataTable(columns)} data={snap.providerAccounts} rowId={(a) => a.id} pinLastColumn />}
-      </QueryState>
-
-      <FormSheet
-        open={open}
-        onOpenChange={setOpen}
-        trigger={null}
-        title={form.id ? 'Редактировать аккаунт' : 'Новый аккаунт'}
-        description="API-креды хранятся на сервере и используются для синка с BILLmanager"
-        onSubmit={() => saveMut.mutate(form)}
-        submitting={saveMut.isPending}
-      >
-        <FormField label="Хостер" htmlFor="acc-provider">
-          <SelectField
-            triggerId="acc-provider"
-            placeholder="Выберите хостера"
-            value={form.providerId}
-            onValueChange={(v) => setForm({ ...form, providerId: v ?? '' })}
-            options={(snapshot?.providers ?? []).map((p) => ({ value: p.id, label: p.name }))}
+    <CrudListPage
+      title="Аккаунты хостеров"
+      description="Аккаунты провайдеров с API-доступом"
+      actions={
+        <div className="flex flex-wrap gap-2">
+          {syncableCount > 0 ? (
+            <Button variant="outline" disabled={syncAllMut.isPending} onClick={() => syncAllMut.mutate()}>
+              <RefreshCwIcon data-icon="inline-start" />
+              Синхронизировать все
+            </Button>
+          ) : null}
+          <Button onClick={openCreate}>
+            <PlusIcon data-icon="inline-start" />
+            Добавить
+          </Button>
+        </div>
+      }
+      data={snapshot}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      empty={snapshot?.providerAccounts.length === 0}
+      emptyTitle="Аккаунты не найдены"
+      emptyDescription="Добавьте аккаунт хостера для синхронизации VPS и платежей"
+      emptyAction={
+        <Button onClick={openCreate}>
+          <PlusIcon data-icon="inline-start" />
+          Добавить аккаунт
+        </Button>
+      }
+      sheet={
+        snapshot ? (
+          <ProviderAccountEditSheet
+            open={open}
+            onOpenChange={setOpen}
+            defaultValues={formDefaults}
+            providers={snapshot.providers}
+            onSubmit={(values) => saveMut.mutate(values)}
+            submitting={saveMut.isPending}
           />
-        </FormField>
-        <FormField label="Название" htmlFor="acc-name">
-          <Input id="acc-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        </FormField>
-        <FormField label="Логин" htmlFor="acc-login">
-          <Input id="acc-login" value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} />
-        </FormField>
-        <FormField
-          label={form.id ? 'Новый API-пароль (необязательно)' : 'API-пароль (логин:пароль)'}
-          htmlFor="acc-creds"
-          description="Оставьте пустым при редактировании, чтобы сохранить существующий"
-        >
-          <Input id="acc-creds" type="password" value={form.apiCredentials} onChange={(e) => setForm({ ...form, apiCredentials: e.target.value })} />
-        </FormField>
-        <FormField label="Режим биллинга" htmlFor="acc-mode">
-          <SelectField
-            triggerId="acc-mode"
-            value={form.billingMode}
-            onValueChange={(v) => setForm({ ...form, billingMode: (v ?? 'monthly') as BillingMode })}
-            options={[
-              { value: 'monthly', label: billingModeLabel('monthly') },
-              { value: 'daily', label: billingModeLabel('daily') },
-            ]}
-          />
-        </FormField>
-        <FormField label="Порог низкого баланса" htmlFor="acc-alert" description="Уведомление на дашборде, если баланс API ниже">
-          <Input
-            id="acc-alert"
-            type="number"
-            min={0}
-            value={form.balanceAlertBelow}
-            onChange={(e) => setForm({ ...form, balanceAlertBelow: e.target.value })}
-            placeholder="Не задан"
-          />
-        </FormField>
-        <FormField label="Заметки" htmlFor="acc-notes">
-          <Textarea id="acc-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-        </FormField>
-      </FormSheet>
-    </PageShell>
+        ) : null
+      }
+    >
+      {(snap) => (
+        <DataGridCard
+          columns={columnDefFromDataTable(columns)}
+          data={snap.providerAccounts}
+          rowId={(a) => a.id}
+          pinLastColumn
+        />
+      )}
+    </CrudListPage>
   )
 }

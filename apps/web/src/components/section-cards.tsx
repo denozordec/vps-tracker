@@ -17,9 +17,18 @@ const VARIANT_CLASS: Record<NonNullable<SectionCardItem['variant']>, string> = {
   destructive: 'border-destructive/50',
 }
 
+function sectionGridClass(count: number): string {
+  if (count <= 1) return 'grid-cols-1'
+  if (count === 2) return 'sm:grid-cols-2'
+  if (count === 3) return 'sm:grid-cols-2 lg:grid-cols-3'
+  if (count === 4) return 'sm:grid-cols-2 lg:grid-cols-4'
+  if (count === 5) return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+  return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+}
+
 export function SectionCards({ items, className }: { items: SectionCardItem[]; className?: string }) {
   return (
-    <div className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6', className)}>
+    <div className={cn('grid gap-4', sectionGridClass(items.length), className)}>
       {items.map((item, idx) => {
         const clickable = Boolean(item.onClick)
         const content = (

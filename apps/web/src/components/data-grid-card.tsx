@@ -195,7 +195,7 @@ export function DataGridCard<TData extends object>({
     return (
       <Card className={cn('ring-0 shadow-none', className)}>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             {title ? <CardTitle>{title}</CardTitle> : null}
             {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
           </div>

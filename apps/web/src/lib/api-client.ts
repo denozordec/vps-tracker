@@ -144,6 +144,12 @@ export const api = {
     fetchApi<import('@/queries/dashboard').DashboardStats>('/api/dashboard/stats'),
 
   fetchProjects: () => fetchApi<{ id: string; name: string }[]>('/api/projects'),
+
+  createProject: (name: string) =>
+    fetchApi<{ id: string; name: string }>('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
 }
 
 export type {

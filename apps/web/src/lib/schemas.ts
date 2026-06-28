@@ -33,6 +33,7 @@ export const providerAccountSchema = z.object({
   login: z.string().optional().default(''),
   apiCredentials: z.string().optional().default(''),
   billingMode: billingModeSchema.default('monthly'),
+  balanceAlertBelow: z.union([z.coerce.number().min(0), z.literal('')]).optional(),
   notes: z.string().optional().default(''),
 })
 
@@ -83,9 +84,21 @@ export const settingsSchema = z.object({
   ratesUrl: z.string().url('Невалидный URL').or(z.literal('')).optional(),
   autoConvert: z.boolean().default(true),
   syncEnabled: z.boolean().optional().default(true),
+  syncIntervalMinutes: z.coerce.number().min(15).optional().default(60),
+  syncTariffsIntervalMinutes: z.coerce.number().min(60).optional().default(1440),
   telegramChatId: z.string().optional().default(''),
   telegramBotToken: z.string().optional().default(''),
+  notifyPaymentExpiryEnabled: z.boolean().optional().default(true),
+  notifyNewTariffsEnabled: z.boolean().optional().default(true),
+  notifyLowBalanceEnabled: z.boolean().optional().default(true),
+  notifySyncDigestEnabled: z.boolean().optional().default(true),
 })
+
+export const projectSchema = z.object({
+  name: z.string().min(1, 'Укажите название проекта').max(120),
+})
+
+export type ProjectFormValues = z.infer<typeof projectSchema>
 
 export type ProviderFormValues = z.infer<typeof providerSchema>
 export type ProviderAccountFormValues = z.infer<typeof providerAccountSchema>
