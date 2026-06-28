@@ -1,21 +1,31 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PlusIcon, CalendarIcon, UserRoundIcon, TagIcon, CoinsIcon, StickyNoteIcon } from 'lucide-react'
+import {
+  PlusIcon,
+  CalendarIcon,
+  UserRoundIcon,
+  TagIcon,
+  CoinsIcon,
+  StickyNoteIcon,
+  CreditCardIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-import { snapshotQueryOptions } from '@/queries/snapshot'
+import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
 import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
+import { SectionCards } from '@/components/section-cards'
+import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { RowActions } from '@/components/row-actions'
 import { PaymentEditSheet, paymentFormDefaults } from '@/components/domain/payment-edit-sheet'
 import type { PaymentFormValues } from '@/lib/schemas'
 import type { Payment } from '@/types/entities'
-import { paymentTypeLabel, formatCurrency } from '@/lib/format'
+import { paymentTypeLabel, formatCurrency, convertCurrency, normalizeRatesPayload, toIsoCurrency } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 
 export const Route = createFileRoute('/_auth/payments')({
@@ -27,6 +37,9 @@ export const Route = createFileRoute('/_auth/payments')({
 function PaymentsPage() {
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
+  const settings = snapshot?.settings?.[0]
+  const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
+  const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
   const [open, setOpen] = useState(false)
   const [formDefaults, setFormDefaults] = useState<PaymentFormValues>(
     paymentFormDefaults(null, snapshot?.providerAccounts[0]?.id ?? ''),
@@ -163,6 +176,12 @@ function PaymentsPage() {
       isError={isError}
       error={error}
       onRetry={() => refetch()}
+      skeleton={
+        <div className="flex flex-col gap-4">
+          <SectionCardsSkeleton count={3} />
+          <TableSkeleton />
+        </div>
+      }
       empty={snapshot?.payments.length === 0}
       emptyTitle="Платежей нет"
       emptyDescription="Добавьте первый платёж или дождитесь синхронизации"
@@ -187,25 +206,66 @@ function PaymentsPage() {
         ) : null
       }
     >
-      {() => (
-        <DataGridCard
-          columns={columnDefFromDataTable(columns)}
-          data={sorted}
-          rowId={(p) => p.id}
-          pinLastColumn
-          virtualization={sorted.length > 200}
-          height={560}
-          footerContent={
-            <div className="flex flex-wrap justify-end gap-6 px-3 py-2 text-sm tabular-nums">
-              {Object.entries(totalByCurrency).map(([cur, sum]) => (
-                <span key={cur}>
-                  Итого {cur}: <b className="text-foreground">{formatCurrency(sum, cur)}</b>
-                </span>
-              ))}
-            </div>
-          }
-        />
-      )}
+      {(snap) => {
+        const baseCurrency = (snap.settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
+        const totalSum = snap.payments.reduce(
+          (acc, p) =>
+            acc + convertCurrency(Number(p.amount), toIsoCurrency(p.currency), baseCurrency, ratesData),
+          0,
+        )
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - 30)
+        const cutoffStr = cutoff.toISOString().slice(0, 10)
+        const recent = snap.payments.filter((p) => p.date >= cutoffStr)
+        const recentSum = recent.reduce(
+          (acc, p) =>
+            acc + convertCurrency(Number(p.amount), toIsoCurrency(p.currency), baseCurrency, ratesData),
+          0,
+        )
+
+        return (
+          <div className="flex flex-col gap-4">
+            <SectionCards
+              items={[
+                {
+                  label: 'Всего платежей',
+                  value: snap.payments.length,
+                  icon: <CreditCardIcon className="size-4" />,
+                },
+                {
+                  label: 'Общая сумма',
+                  value: formatCurrency(totalSum, baseCurrency),
+                  icon: <CoinsIcon className="size-4" />,
+                  hint: baseCurrency,
+                },
+                {
+                  label: 'За 30 дней',
+                  value: recent.length,
+                  icon: <CalendarIcon className="size-4" />,
+                  hint: formatCurrency(recentSum, baseCurrency),
+                },
+              ]}
+            />
+            <DataGridCard
+              columns={columnDefFromDataTable(columns)}
+              data={sorted}
+              rowId={(p) => p.id}
+              pinLastColumn
+              virtualization={sorted.length > 200}
+              height={560}
+              footerContent={
+                <div className="flex flex-wrap justify-end gap-6 px-3 py-2 text-sm tabular-nums">
+                  {Object.entries(totalByCurrency).map(([cur, sum]) => (
+                    <span key={cur}>
+                      Итого {cur}: <b className="text-foreground">{formatCurrency(sum, cur)}</b>
+                    </span>
+                  ))}
+                </div>
+              }
+            />
+          </div>
+        )
+      }}
     </CrudListPage>
   )
 }

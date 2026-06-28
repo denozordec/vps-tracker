@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { snapshotQueryOptions } from '@/queries/snapshot'
+import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
@@ -25,12 +25,12 @@ import type { DataTableColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { SectionCards } from '@/components/section-cards'
-import { TableSkeleton } from '@/components/skeletons'
+import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { BalanceEntrySheet, balanceEntryFormDefaults } from '@/components/domain/balance-entry-sheet'
 import type { BalanceLedgerFormValues } from '@/lib/schemas'
 import type { BalanceLedgerRow } from '@/types/entities'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, convertCurrency, normalizeRatesPayload, toIsoCurrency } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 
 export const Route = createFileRoute('/_auth/balance')({
@@ -42,6 +42,9 @@ export const Route = createFileRoute('/_auth/balance')({
 function BalancePage() {
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
+  const settings = snapshot?.settings?.[0]
+  const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
+  const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
   const [open, setOpen] = useState(false)
   const [formDefaults, setFormDefaults] = useState<BalanceLedgerFormValues>(balanceEntryFormDefaults())
 
@@ -145,8 +148,21 @@ function BalancePage() {
   ]
 
   const rows = [...(snapshot?.balanceLedger ?? [])].sort((a, b) => b.date.localeCompare(a.date))
-  const totalCredit = rows.filter((r) => r.direction === 'credit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
-  const totalDebit = rows.filter((r) => r.direction === 'debit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
+  const baseCurrency = (snapshot?.settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
+  const totalCredit = rows
+    .filter((r) => r.direction === 'credit')
+    .reduce(
+      (acc, r) =>
+        acc + convertCurrency(Number(r.amount), toIsoCurrency(r.currency), baseCurrency, ratesData),
+      0,
+    )
+  const totalDebit = rows
+    .filter((r) => r.direction === 'debit')
+    .reduce(
+      (acc, r) =>
+        acc + convertCurrency(Number(r.amount), toIsoCurrency(r.currency), baseCurrency, ratesData),
+      0,
+    )
 
   return (
     <CrudListPage
@@ -163,7 +179,12 @@ function BalancePage() {
       isError={isError}
       error={error}
       onRetry={() => refetch()}
-      skeleton={<TableSkeleton />}
+      skeleton={
+        <div className="flex flex-col gap-4">
+          <SectionCardsSkeleton count={3} />
+          <TableSkeleton />
+        </div>
+      }
       empty={rows.length === 0}
       emptyTitle="Записей нет"
       emptyDescription="Добавьте движение по балансу аккаунта"
@@ -187,9 +208,7 @@ function BalancePage() {
         ) : null
       }
     >
-      {(snap) => {
-        const baseCurrency = snap.settings[0]?.baseCurrency ?? 'RUB'
-        return (
+      {() => (
           <div className="flex flex-col gap-4">
             <SectionCards
               items={[
@@ -233,8 +252,7 @@ function BalancePage() {
               }
             />
           </div>
-        )
-      }}
+        )}
     </CrudListPage>
   )
 }

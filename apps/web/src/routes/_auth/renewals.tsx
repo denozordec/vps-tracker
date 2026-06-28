@@ -1,18 +1,21 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, AlertTriangleIcon, ServerIcon, CoinsIcon } from 'lucide-react'
 
-import { snapshotQueryOptions } from '@/queries/snapshot'
+import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
+import { SectionCards } from '@/components/section-cards'
+import { SectionCardsSkeleton } from '@/components/skeletons'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Badge } from '@cfdm/ui/components/badge'
 import { Button } from '@cfdm/ui/components/button'
 import { SelectField } from '@/components/select-field'
 import { getPaidUntilDate } from '@/lib/paid-until'
 import { providerByIdMap } from '@/lib/billmanager'
+import { convertCurrency, formatCurrency, normalizeRatesPayload, toIsoCurrency } from '@/lib/format'
 
 export const Route = createFileRoute('/_auth/renewals')({
   loader: ({ context: { queryClient } }) =>
@@ -34,6 +37,10 @@ interface RenewalItem {
 function RenewalsPage() {
   const [horizon, setHorizon] = useState<Horizon>('30')
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
+  const settings = snapshot?.settings?.[0]
+  const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
+  const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
+  const baseCurrency = (settings?.baseCurrency ?? 'RUB').toUpperCase()
 
   const items = useMemo(() => {
     if (!snapshot) return []
@@ -69,6 +76,20 @@ function RenewalsPage() {
     }
     return list.sort((a, b) => a.date.getTime() - b.date.getTime())
   }, [snapshot, horizon])
+
+  const overdueCount = items.filter((i) => i.overdue).length
+
+  const renewalCost = useMemo(() => {
+    if (!snapshot) return 0
+    const vpsById = new Map(snapshot.vps.map((v) => [v.id, v]))
+    return items.reduce((acc, item) => {
+      const v = vpsById.get(item.id)
+      if (!v) return acc
+      const burn =
+        v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0)
+      return acc + convertCurrency(burn, toIsoCurrency(v.currency), baseCurrency, ratesData)
+    }, 0)
+  }, [snapshot, items, baseCurrency, ratesData])
 
   const grouped = useMemo(() => {
     const map = new Map<string, RenewalItem[]>()
@@ -106,12 +127,35 @@ function RenewalsPage() {
         isError={isError}
         error={error}
         onRetry={() => refetch()}
+        skeleton={<SectionCardsSkeleton count={3} />}
         empty={items.length === 0}
         emptyTitle="Нет продлений в выбранном периоде"
         emptyDescription="Активные VPS с расчётной датой оплаты не найдены"
       >
         {() => (
           <div className="flex flex-col gap-4">
+            <SectionCards
+              items={[
+                {
+                  label: 'Просрочено',
+                  value: overdueCount,
+                  icon: <AlertTriangleIcon className="size-4" />,
+                  variant: overdueCount > 0 ? 'destructive' : 'default',
+                },
+                {
+                  label: 'В периоде',
+                  value: items.length,
+                  icon: <ServerIcon className="size-4" />,
+                  hint: `за ${horizon} дн`,
+                },
+                {
+                  label: 'Стоимость продлений',
+                  value: formatCurrency(renewalCost, baseCurrency),
+                  icon: <CoinsIcon className="size-4" />,
+                  hint: baseCurrency,
+                },
+              ]}
+            />
             {grouped.map(([weekLabel, weekItems]) => (
               <Card key={weekLabel}>
                 <CardHeader>
