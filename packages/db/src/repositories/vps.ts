@@ -16,10 +16,37 @@ export type VpsDto = Omit<VpsRow, 'additionalIps' | 'userOverrides' | 'projectId
 }
 
 const USER_OVERRIDABLE_FIELDS = [
-  'country', 'city', 'datacenter', 'os', 'vcpu', 'ramGb', 'diskGb', 'diskType',
-  'virtualization', 'purpose', 'environment', 'project', 'notes', 'sshPort',
-  'rootUser', 'bandwidthTb', 'monitoringEnabled', 'backupEnabled',
+  'country',
+  'city',
+  'datacenter',
+  'os',
+  'notes',
+  'status',
+  'tariffType',
+  'currency',
+  'dailyRate',
+  'monthlyRate',
+  'paidUntil',
+  'project',
+  'vcpu',
+  'ramGb',
+  'diskGb',
+  'diskType',
+  'virtualization',
+  'purpose',
+  'environment',
+  'sshPort',
+  'rootUser',
+  'bandwidthTb',
+  'monitoringEnabled',
+  'backupEnabled',
 ] as const
+
+function normNum(v: unknown): number | null {
+  if (v === '' || v == null) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
 
 function toDto(row: VpsRow | undefined): VpsDto | undefined {
   if (!row) return undefined
@@ -177,9 +204,7 @@ export const vpsRepository = {
     } catch {
       userOverrides = []
     }
-    const clearOverrides =
-      input.userOverrides === 'clear' ||
-      (Array.isArray(input.userOverrides) && input.userOverrides.length === 0)
+    const clearOverrides = input.userOverrides === 'clear'
     if (clearOverrides) userOverrides = []
 
     const additionalIps = Array.isArray(input.additionalIps) ? JSON.stringify(input.additionalIps) : '[]'
@@ -213,7 +238,10 @@ export const vpsRepository = {
         }
         const newVal = (input as Record<string, unknown>)[f]
         const oldVal = (existing as Record<string, unknown>)[f]
-        const changed = String(newVal ?? '') !== String(oldVal ?? '')
+        const changed =
+          f === 'dailyRate' || f === 'monthlyRate'
+            ? normNum(newVal) !== normNum(oldVal)
+            : String(newVal ?? '') !== String(oldVal ?? '')
         if (changed && !userOverrides.includes(f)) {
           userOverrides.push(f)
         }

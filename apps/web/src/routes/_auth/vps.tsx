@@ -149,8 +149,9 @@ function VpsPage() {
     setSheetOpen(true)
   }
   const submit = (values: VpsFormValues) => {
+    const { userOverrides: _ignored, ...rest } = values
     const payload = {
-      ...values,
+      ...rest,
       customData: JSON.stringify(values.customData ?? {}),
     } as unknown as Partial<Vps>
     if (editingId) {
@@ -174,6 +175,25 @@ function VpsPage() {
     }
     return [...names].sort((a, b) => a.localeCompare(b, 'ru'))
   }, [snapshot])
+
+  const projectFormOptions = useMemo(() => {
+    const colorByName = new Map<string, string | null>()
+    for (const p of snapshot?.serverProjects ?? []) {
+      const row = p as { name?: string; color?: string | null }
+      const name = row.name?.trim()
+      if (name) colorByName.set(name, row.color ?? null)
+    }
+    return projectNameOptions.map((name) => {
+      const color = colorByName.get(name)
+      return {
+        value: name,
+        label: name,
+        leading: color ? (
+          <span className="size-2.5 shrink-0 rounded-full ring-1 ring-foreground/10" style={{ backgroundColor: color }} />
+        ) : undefined,
+      }
+    })
+  }, [snapshot?.serverProjects, projectNameOptions])
 
   const filteredVps = useMemo(() => {
     let rows = applyVpsFilters(snapshot?.vps ?? [], filters)
@@ -593,6 +613,7 @@ function VpsPage() {
           providerAccounts={snapshot.providerAccounts}
           vpsRows={snapshot.vps}
           formCountryOptions={formCountryOptions}
+          projectFormOptions={projectFormOptions}
           customFieldDefs={parseCustomFieldDefs(
             (snapshot.settings[0] as { customFields?: unknown })?.customFields,
           )}

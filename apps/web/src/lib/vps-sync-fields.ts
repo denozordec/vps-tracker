@@ -4,6 +4,7 @@ export const VPS_SYNC_OVERRIDE_FIELDS = [
   { key: 'city', label: 'Город' },
   { key: 'datacenter', label: 'Дата-центр' },
   { key: 'os', label: 'ОС' },
+  { key: 'project', label: 'Проект' },
   { key: 'notes', label: 'Заметки' },
   { key: 'status', label: 'Статус' },
   { key: 'tariffType', label: 'Тип тарифа' },

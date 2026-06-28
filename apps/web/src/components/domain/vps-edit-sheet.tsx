@@ -3,10 +3,8 @@ import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
 import { SelectField } from '@/components/select-field'
-import { AutoCompleteInput } from '@/components/auto-complete-input'
+import { AutoCompleteInput, type AutoCompleteOption } from '@/components/auto-complete-input'
 import { Textarea } from '@cfdm/ui/components/textarea'
-import { Checkbox } from '@cfdm/ui/components/checkbox'
-import { Label } from '@cfdm/ui/components/label'
 import {
   NumberField,
   NumberFieldGroup,
@@ -18,7 +16,7 @@ import { FormDatePicker } from '@/components/form-date-picker'
 import { vpsSchema, type VpsFormValues } from '@/lib/schemas'
 import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { buildCityOptions, cityMatchesCountry, resolveCountryForCityFromRows } from '@cfdm/shared/geo'
-import { VPS_SYNC_OVERRIDE_FIELDS, parseUserOverrides } from '@/lib/vps-sync-fields'
+import { parseUserOverrides } from '@/lib/vps-sync-fields'
 import { CustomFieldValues } from '@/components/domain/custom-field-values'
 import { parseCustomData, type CustomFieldDef } from '@/lib/custom-fields'
 import type { Provider, ProviderAccount, Vps } from '@/types/entities'
@@ -82,6 +80,7 @@ interface VpsEditSheetProps {
   providerAccounts: ProviderAccount[]
   vpsRows: Vps[]
   formCountryOptions: Array<{ value: string; label: string }>
+  projectFormOptions: AutoCompleteOption[]
   customFieldDefs?: CustomFieldDef[]
   onSubmit: (values: VpsFormValues) => void
   submitting?: boolean
@@ -96,6 +95,7 @@ export function VpsEditSheet({
   providerAccounts,
   vpsRows,
   formCountryOptions,
+  projectFormOptions,
   customFieldDefs = [],
   onSubmit,
   submitting,
@@ -116,6 +116,7 @@ export function VpsEditSheet({
         const providerId = watch('providerId')
         const formCountry = watch('country') ?? ''
         const formCity = watch('city') ?? ''
+        const formProject = watch('project') ?? ''
         const formCityOptions = buildCityOptions(vpsRows, formCountry.trim() || undefined)
 
         return (
@@ -147,7 +148,16 @@ export function VpsEditSheet({
               />
             </FormField>
             <FormField label="Проект" htmlFor="vps-project">
-              <Input id="vps-project" {...register('project')} />
+              <AutoCompleteInput
+                id="vps-project"
+                placeholder="Любой"
+                value={formProject}
+                onChange={(v) => setValue('project', v, { shouldDirty: true })}
+                options={projectFormOptions}
+                searchPlaceholder="Поиск проекта…"
+                emptyText="Нет вариантов"
+                showLeadingInInput={false}
+              />
             </FormField>
             <FormField label="Страна" htmlFor="vps-country">
               <AutoCompleteInput
@@ -155,7 +165,7 @@ export function VpsEditSheet({
                 placeholder="Любая"
                 value={formCountry}
                 onChange={(v) => {
-                  setValue('country', v)
+                  setValue('country', v, { shouldDirty: true })
                   if (v.trim() && formCity.trim() && !cityMatchesCountry(formCity, v, vpsRows)) {
                     setValue('city', '')
                   }
@@ -171,9 +181,9 @@ export function VpsEditSheet({
                 placeholder="Любой"
                 value={formCity}
                 onChange={(v) => {
-                  setValue('city', v)
+                  setValue('city', v, { shouldDirty: true })
                   const country = resolveCountryForCityFromRows(v, vpsRows)
-                  if (country) setValue('country', country)
+                  if (country) setValue('country', country, { shouldDirty: true })
                 }}
                 options={formCityOptions}
                 searchPlaceholder="Поиск города…"
@@ -338,36 +348,6 @@ export function VpsEditSheet({
               <Textarea id="vps-notes" {...register('notes')} />
             </FormField>
             <CustomFieldValues defs={customFieldDefs} watch={watch} setValue={setValue} />
-            {editingId ? (
-              <FormField
-                label="Не перезаписывать при синке"
-                description="Отмеченные поля сохранят ручные значения при синхронизации с BILLmanager"
-              >
-                <div className="flex flex-col gap-2">
-                  {VPS_SYNC_OVERRIDE_FIELDS.map(({ key, label }) => {
-                    const overrides = watch('userOverrides') ?? []
-                    const checked = overrides.includes(key)
-                    return (
-                      <div key={key} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`vps-override-${key}`}
-                          checked={checked}
-                          onCheckedChange={(value) => {
-                            const next = value
-                              ? [...overrides, key]
-                              : overrides.filter((f) => f !== key)
-                            setValue('userOverrides', next)
-                          }}
-                        />
-                        <Label htmlFor={`vps-override-${key}`} className="font-normal">
-                          {label}
-                        </Label>
-                      </div>
-                    )
-                  })}
-                </div>
-              </FormField>
-            ) : null}
           </>
         )
       }}

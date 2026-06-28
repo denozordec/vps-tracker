@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -43,10 +44,11 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title="Поиск" description="VPS, аккаунты, проекты и навигация">
-      <CommandInput placeholder="IP, DNS, проект, аккаунт…" />
-      <CommandList>
-        <CommandEmpty>Ничего не найдено</CommandEmpty>
-        <CommandGroup heading="Навигация">
+      <Command>
+        <CommandInput placeholder="IP, DNS, проект, аккаунт…" />
+        <CommandList>
+          <CommandEmpty>Ничего не найдено</CommandEmpty>
+          <CommandGroup heading="Навигация">
           <CommandItem onSelect={() => go('/dashboard')}>
             <LayoutDashboardIcon />
             Дашборд
@@ -55,9 +57,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             <ServerIcon />
             Все VPS
           </CommandItem>
-        </CommandGroup>
-        <CommandSeparator />
-        <CommandGroup heading="VPS">
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="VPS">
           {vpsItems.slice(0, 50).map((v) => (
             <CommandItem key={v.id} value={`${v.ip} ${v.dns} ${v.project}`} onSelect={() => go('/vps/$vpsId', { vpsId: v.id })}>
               <ServerIcon />
@@ -65,8 +67,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               {v.project ? <span className="text-muted-foreground text-xs">· {v.project}</span> : null}
             </CommandItem>
           ))}
-        </CommandGroup>
-        <CommandGroup heading="Аккаунты">
+          </CommandGroup>
+          <CommandGroup heading="Аккаунты">
           {accountItems.map((a) => (
             <CommandItem
               key={a.id}
@@ -77,8 +79,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               {a.name}
             </CommandItem>
           ))}
-        </CommandGroup>
-        <CommandGroup heading="Проекты">
+          </CommandGroup>
+          <CommandGroup heading="Проекты">
           {projectItems.map((p) => {
             const row = p as { id: string; name: string }
             return (
@@ -88,16 +90,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               </CommandItem>
             )
           })}
-        </CommandGroup>
-        <CommandGroup heading="Хостеры">
+          </CommandGroup>
+          <CommandGroup heading="Хостеры">
           {(snapshot?.providers ?? []).map((p) => (
             <CommandItem key={p.id} value={p.name} onSelect={() => go('/providers')}>
               <Building2Icon />
               {p.name}
             </CommandItem>
           ))}
-        </CommandGroup>
-      </CommandList>
+          </CommandGroup>
+        </CommandList>
+      </Command>
     </CommandDialog>
   )
 }
