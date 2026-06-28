@@ -7,7 +7,7 @@ VPS Tracker — приложение для учёта виртуальных с
 ## Стек
 
 - **Monorepo:** pnpm workspaces (`apps/*`, `packages/*`)
-- **Frontend** (`apps/web`): Vite + React 19 + TypeScript, TanStack Router v1 + Query v5, shadcn/ui (`@cfdm/ui`), Tailwind v4, lucide-react, Recharts (через shadcn Chart), react-hook-form + Zod
+- **Frontend** (`apps/web`): Vite + React 19 + TypeScript, TanStack Router v1 + Query v5, shadcn/ui (`@cfdm/ui`), **ReUI** (`@reui` → `@/components/reui`), Tailwind v4, lucide-react, Recharts (через shadcn Chart), react-hook-form + Zod
 - **Backend** (`apps/api`): Fastify 5 + TypeScript, `@fastify/*` plugins, контракты через `@cfdm/shared` (Zod)
 - **DB** (`packages/db`): Drizzle ORM + better-sqlite3 (WAL, `foreign_keys=ON`)
 - **Тесты:** Vitest (`app.inject()` для backend, `happy-dom` для frontend)
@@ -17,11 +17,12 @@ VPS Tracker — приложение для учёта виртуальных с
 ```
 vps-tracker/
 ├── apps/
-│   ├── web/              # Vite SPA (TSX) — TanStack + shadcn/ui
+│   ├── web/              # Vite SPA (TSX) — TanStack + shadcn/ui + ReUI
 │   │   └── src/
 │   │       ├── routes/           # file-based (TanStack Router)
 │   │       ├── queries/          # queryOptions + key factories
 │   │       ├── components/       # shared + layout + domain
+│   │       │   └── reui/         # ReUI CLI output (@reui/*)
 │   │       └── lib/              # api-client, queryClient, router, schemas
 │   └── api/              # Fastify 5 API (TS)
 │       └── src/
@@ -66,8 +67,9 @@ vps-tracker/
 - **VPS CRUD** — `apps/api/src/routes/vps.ts`, `packages/db/src/repositories/vps.ts`
 - **Платежи/баланс** — `apps/api/src/routes/payments.ts`, `apps/api/src/routes/balance-ledger.ts`
 - **Курсы валют** — `apps/web/src/lib/format.ts` (convertCurrency, formatInBaseCurrency), настройки в `settings.ratesUrl`
-- **UI shared** — `apps/web/src/components/` (PageShell, PageHeader, EmptyState, QueryState, ConfirmDialog, DataTableCard, SectionCards, StatusBadge, FormSheet, FormField, TableCard, LoadingButton)
+- **UI shared** — `apps/web/src/components/` (PageShell, PageHeader, EmptyState, QueryState, ConfirmDialog, **DataGridCard**, VpsFiltersToolbar, AutoCompleteInput, SectionCards, StatusBadge, FormSheet, FormField, LoadingButton)
 - **UI primitives** — `packages/ui/src/components/*` (только output `shadcn add`)
+- **ReUI enterprise** — `apps/web/src/components/reui/*` (output `shadcn add @reui/*`); см. [`reui-mcp.mdc`](.cursor/rules/reui-mcp.mdc)
 
 ## BILLmanager API
 
@@ -88,9 +90,17 @@ pnpm --filter api test         # Vitest backend
 pnpm --filter web test         # Vitest frontend
 ```
 
+## ReUI
+
+- Registry: `@reui` в [`apps/web/components.json`](apps/web/components.json)
+- AI-карта: [llms.txt](https://reui.io/llms.txt)
+- Установка: `cd apps/web && pnpm dlx shadcn@latest add @reui/<name>`
+- Правила: [`reui-mcp.mdc`](.cursor/rules/reui-mcp.mdc), [`shadcn-mcp.mdc`](.cursor/rules/shadcn-mcp.mdc)
+- Зависимости ReUI в `apps/web`: `@tanstack/react-table`, `@tanstack/react-virtual`, `@dnd-kit/*`, `date-fns`, `react-day-picker`
+
 ## Соглашения
 
-- UI — только [shadcn/ui](https://ui.shadcn.com) через MCP `plugin-shadcn-shadcn` (см. [`shadcn-mcp.mdc`](.cursor/rules/shadcn-mcp.mdc))
+- UI — [shadcn/ui](https://ui.shadcn.com) + [ReUI](https://reui.io/docs/get-started) через MCP `plugin-shadcn-shadcn`
 - Коммиты — на русском, см. [`commit-messages-ru.mdc`](.cursor/rules/commit-messages-ru.mdc)
 - Gitflow — см. [`gitflow.mdc`](.cursor/rules/gitflow.mdc)
 - Структура — см. [`project-structure.mdc`](.cursor/rules/project-structure.mdc)

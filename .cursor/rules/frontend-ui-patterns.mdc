@@ -6,23 +6,24 @@ alwaysApply: false
 
 # Frontend UI Patterns
 
-См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks).
+См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [Components](https://ui.shadcn.com/docs/components), [ReUI llms.txt](https://reui.io/llms.txt).
 
 ## Docs workflow (обязательно)
 
 0. Codegraph `codegraph_explore` — найти существующие shared/domain-компоненты
-1. Skill [`.agents/skills/shadcn/SKILL.md`](../.agents/skills/shadcn/SKILL.md) — component selection
-2. MCP `plugin-shadcn-shadcn` — search → examples → add command
-3. CLI: `cd apps/web && pnpm dlx shadcn@latest docs <component>` → сверить API с [Components](https://ui.shadcn.com/docs/components)
+1. [`reui-mcp.mdc`](reui-mcp.mdc) — если нужен Data Grid, Filters, Autocomplete и др.
+2. MCP `plugin-shadcn-shadcn` — search → examples → add command (`@shadcn` / `@reui`)
+3. CLI: `@shadcn/*` → `pnpm dlx shadcn@latest docs <component>`; `@reui/*` → ReUI docs + llms.txt
 4. Код по examples + docs API (только после совпадения MCP ↔ docs)
-5. Context7 — **только** TanStack Router/Query, Recharts (не shadcn primitives)
+5. Context7 — **только** TanStack Router/Query, Recharts (не shadcn/ReUI primitives)
 6. MCP `get_audit_checklist` — перед merge
 7. Codegraph `codegraph_status` — Pending sync пустой
 
 ## Иерархия компонентов
 
 ```
-@cfdm/ui/components/*     ← только CLI (packages/ui)
+@cfdm/ui/components/*     ← shadcn CLI (packages/ui)
+@/components/reui/*       ← ReUI CLI @reui/* (apps/web)
 apps/web/src/components/  ← shared + domain + layout
   page-shell.tsx          ← обёртка страницы
   page-header.tsx
@@ -48,10 +49,14 @@ apps/web/src/components/  ← shared + domain + layout
 | Page wrapper | `PageShell` | — |
 | Page title | `PageHeader` | — |
 | Stat metrics | `SectionCards` | `Card` |
-| Data list | `DataGridCard` | `Table`, `InputGroup` |
+| Data list | `DataGridCard` | `@reui/data-grid`, `Table` |
+| Filters toolbar | `VpsFiltersToolbar` | `@reui/filters` |
+| Autocomplete | `AutoCompleteInput` | `@reui/autocomplete` |
+| Number input | — | `@reui/number-field` |
+| Date range | `lib/date-selector-i18n.ts` | `@reui/date-selector` |
 | Empty | `EmptyState` | `Empty` |
 | Loading / Error | `QueryState` | `Skeleton`, `Alert` |
-| Status | `StatusBadge` | `Badge` |
+| Status | `StatusBadge` | `Badge`, `@reui/badge` |
 | Create/Edit | `FormSheet` + `*-edit-sheet.tsx` | `Sheet`, `Field` |
 | Form field | `FormField` | `Field`, `Input`, `Select` |
 | Submit button | `LoadingButton` | `Button`, `Spinner` |

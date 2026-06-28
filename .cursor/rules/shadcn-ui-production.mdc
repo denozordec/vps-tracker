@@ -5,9 +5,9 @@ alwaysApply: true
 
 # shadcn/ui — правила проекта
 
-UI строится **исключительно** по [shadcn/ui](https://ui.shadcn.com/docs/installation): [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks), [Monorepo](https://ui.shadcn.com/docs/monorepo).
+UI строится по [shadcn/ui](https://ui.shadcn.com/docs/installation) + **ReUI registry** (`@reui`): [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks), [ReUI Get Started](https://reui.io/docs/get-started).
 
-**Первый шаг любой UI-задачи — MCP `plugin-shadcn-shadcn`** (см. [`shadcn-mcp.mdc`](shadcn-mcp.mdc)): search → examples → add command → CLI.
+**Первый шаг любой UI-задачи — MCP `plugin-shadcn-shadcn`** (см. [`shadcn-mcp.mdc`](shadcn-mcp.mdc)): search → examples → add command → CLI. Enterprise-компоненты — [`reui-mcp.mdc`](reui-mcp.mdc).
 
 ## Разработка frontend
 
@@ -18,9 +18,9 @@ UI строится **исключительно** по [shadcn/ui](https://ui.s
 ## Стек
 
 - Monorepo: `apps/web` + `packages/ui` (`@cfdm/ui`), pnpm workspaces
-- Vite + TanStack Router/Query + shadcn **base-nova**
+- Vite + TanStack Router/Query + shadcn **base-nova** + ReUI **@reui**
 - Конфиг: [`apps/web/components.json`](apps/web/components.json), [`packages/ui/components.json`](packages/ui/components.json)
-- Тема: `pnpm dlx shadcn@latest apply b2fA --only theme -y` — единственный способ менять `packages/ui/src/styles/globals.css`
+- Тема: `pnpm dlx shadcn@latest apply b2fA --only theme -y` — единственный способ менять базовую тему `globals.css`; ReUI semantic tokens — [Styling](https://reui.io/docs/styling)
 
 ## Backend → UI
 

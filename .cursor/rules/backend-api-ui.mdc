@@ -12,7 +12,7 @@ Fastify backend: `apps/api/`. Контракты — `@cfdm/shared` (Zod). Front
 
 1. **Backend** — route, service, Vitest (`app.inject()`)
 2. **Схемы** — `@cfdm/shared` (не дублировать в `apps/web/src/lib/schemas.ts`)
-3. **UI** — shadcn MCP ([`shadcn-mcp.mdc`](shadcn-mcp.mdc))
+3. **UI** — shadcn MCP ([`shadcn-mcp.mdc`](shadcn-mcp.mdc)); списки/фильтры — ReUI ([`reui-mcp.mdc`](reui-mcp.mdc))
 
 ## Запрещено на frontend при доработке API
 
@@ -24,7 +24,7 @@ Fastify backend: `apps/api/`. Контракты — `@cfdm/shared` (Zod). Front
 
 | API-данные | UI |
 |------------|-----|
-| Список | `Table` / `DataTableCard` |
+| Список | `DataGridCard` (сложные) / `Table` (простые) |
 | Создание | `Card` + `FieldGroup` + RHF |
 | Статус | `Badge` variants |
 | Ошибка | `sonner` `toast.error` |

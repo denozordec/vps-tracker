@@ -1,0 +1,108 @@
+---
+description: ReUI registry (@reui) — enterprise-компоненты, MCP workflow, зависимости, матрица выбора shadcn vs ReUI
+alwaysApply: true
+---
+
+# ReUI MCP — обязательно для enterprise-компонентов
+
+ReUI — first-class shadcn registry с enterprise-компонентами (Data Grid, Filters, Stepper и др.). Проект использует **Base UI** (`style: base-nova`), не Radix.
+
+Связанные правила: [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`frontend-monorepo.mdc`](frontend-monorepo.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc).
+
+| Документ | URL |
+|----------|-----|
+| **llms.txt (карта для ИИ)** | https://reui.io/llms.txt |
+| **Get Started** | https://reui.io/docs/get-started |
+| **Styling (semantic tokens)** | https://reui.io/docs/styling |
+| **MCP** | https://reui.io/docs/mcp |
+| **Base UI components** | https://reui.io/docs/components/base/<name> |
+
+## Когда использовать ReUI vs shadcn
+
+| Задача | Registry | Импорт |
+|--------|----------|--------|
+| Button, Card, Sheet, Field, Sidebar | `@shadcn` | `@cfdm/ui/components/*` |
+| Blocks (sidebar-07, dashboard-01) | `@shadcn` | blocks → `apps/web/src/components/` |
+| Data Grid (sort, pagination, virtual, columns) | `@reui` | `@/components/reui/data-grid/*` → обёртка `DataGridCard` |
+| Мультифильтры | `@reui` | `@/components/reui/filters` → `VpsFiltersToolbar` |
+| Number field со stepper | `@reui` | `@/components/reui/number-field` |
+| Autocomplete | `@reui` | `@/components/reui/autocomplete` → `AutoCompleteInput` |
+| Date selector / range | `@reui` | `@/components/reui/date-selector` |
+| Semantic badge (success/info/warning) | `@reui` | `@/components/reui/badge` или `StatusBadge` |
+
+**Простые списки** — shadcn `Table`. **Сложные data-списки** — `DataGridCard` (ReUI data-grid), не shadcn Data Table.
+
+## Источники для ИИ (порядок)
+
+1. [ReUI llms.txt](https://reui.io/llms.txt) — полный каталог компонентов
+2. MCP `plugin-shadcn-shadcn` с `registries: ["@reui"]`
+3. Docs с **Copy Markdown**: `https://reui.io/docs/components/base/<name>`
+4. CLI dry-run: `cd apps/web && pnpm dlx shadcn@latest add @reui/<name> --dry-run`
+
+## MCP workflow (ветка ReUI)
+
+0. **Codegraph** `codegraph_explore` — найти `DataGridCard`, `VpsFiltersToolbar` и существующие `@/components/reui/*`
+1. **`get_project_registries`** — должен содержать `@reui`
+2. **`search_items_in_registries`** с `registries: ["@reui"]`, `query`: `"data grid"`, `"filters"`, `"stepper"` и т.д.
+3. **`get_item_examples_from_registries`** — полный код перед JSX
+4. **`get_add_command_for_items`** — точная CLI-команда
+5. Выполнить add из `apps/web` (см. [`frontend-monorepo.mdc`](frontend-monorepo.mdc))
+6. **Docs:** ReUI `https://reui.io/docs/components/base/<name>` + llms.txt — **не** ui.shadcn.com для `@reui/*`
+7. Post-add: импорты shadcn-примитивов → `@cfdm/ui/components/*`
+8. `pnpm install` + `pnpm --filter web build`
+
+## Размещение и импорты
+
+| Слой | Путь | Импорт |
+|------|------|--------|
+| shadcn primitives | `packages/ui/src/components/` | `@cfdm/ui/components/*` |
+| ReUI enterprise | `apps/web/src/components/reui/` | `@/components/reui/*` |
+| Проектные обёртки | `apps/web/src/components/` | `@/components/data-grid-card` и т.д. |
+
+```bash
+cd apps/web
+pnpm dlx shadcn@latest add @reui/data-grid
+pnpm dlx shadcn@latest add @reui/filters
+```
+
+## Уже установленные ReUI-компоненты
+
+`autocomplete`, `badge`, `color-picker`, `data-grid/*`, `date-selector`, `filters`, `number-field` — в [`apps/web/src/components/reui/`](apps/web/src/components/reui/).
+
+Перед добавлением дубликата — проверить Codegraph и существующие обёртки.
+
+## Зависимости (только `apps/web`, не `packages/ui`)
+
+| npm-пакет | ReUI-компоненты |
+|-----------|-----------------|
+| `@tanstack/react-table` | data-grid |
+| `@tanstack/react-virtual` | data-grid (virtual) |
+| `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/modifiers`, `@dnd-kit/utilities` | data-grid dnd, sortable, kanban |
+| `date-fns`, `react-day-picker` | date-selector |
+
+После `shadcn add @reui/...` — проверить, что CLI добавил недостающие deps в [`apps/web/package.json`](apps/web/package.json).
+
+## Semantic tokens (Styling)
+
+ReUI расширяет тему shadcn токенами `--success`, `--info`, `--warning`, `--destructive-foreground`, `--invert` — уже в [`packages/ui/src/styles/globals.css`](packages/ui/src/styles/globals.css).
+
+- Badge/Alert: `variant="success"` / `"info"` / `"warning"` — не `bg-emerald-*`
+- Базовая тема: `pnpm dlx shadcn@latest apply b2fA --only theme`
+- ReUI-токены: по [Styling guide](https://reui.io/docs/styling); не править `globals.css` вручную без сверки с docs
+
+## Запрещено
+
+- Копипаст с reui.io без CLI `add @reui/...`
+- Класть ReUI в `packages/ui` или импортировать как `@cfdm/ui`
+- Radix-варианты (`/docs/components/radix/...`) — только Base UI
+- Raw Tailwind-цвета вместо ReUI semantic `variant`
+- Писать data-grid/filters с нуля, если есть `@reui/*` и shared-обёртки
+
+## Чеклист
+
+- [ ] Задача требует ReUI? (см. матрицу выше)
+- [ ] MCP search с `registries: ["@reui"]` + examples
+- [ ] `shadcn add @reui/<name>` из `apps/web`
+- [ ] Импорты: `@cfdm/ui` для примитивов, `@/components/reui` для ReUI
+- [ ] Зависимости в `apps/web/package.json`
+- [ ] `pnpm --filter web build` без ошибок

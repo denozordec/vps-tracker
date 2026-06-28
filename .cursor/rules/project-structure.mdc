@@ -5,14 +5,14 @@ alwaysApply: true
 
 # Структура проекта vps-tracker
 
-pnpm workspaces monorepo. Frontend — shadcn/ui + TanStack Router/Query + TS. Backend — Fastify + Drizzle + better-sqlite3 + TS.
+pnpm workspaces monorepo. Frontend — shadcn/ui + ReUI (`@reui`) + TanStack Router/Query + TS. Backend — Fastify + Drizzle + better-sqlite3 + TS.
 
 ## Layout
 
 ```
 vps-tracker/
 ├── apps/
-│   ├── web/              # Vite SPA (TSX) — TanStack Router + Query, shadcn/ui
+│   ├── web/              # Vite SPA (TSX) — TanStack Router + Query, shadcn/ui + ReUI
 │   └── api/              # Fastify 5 API (TS) — @fastify/* + Drizzle
 ├── packages/
 │   ├── ui/               # @cfdm/ui — shadcn primitives (output `shadcn add`)
@@ -76,6 +76,6 @@ packages/db/src/
 
 ## Скоупы правил
 
-- Frontend (`apps/web`, `packages/ui`) — [`frontend-monorepo.mdc`](frontend-monorepo.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc), [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`shadcn-ui-production.mdc`](shadcn-ui-production.mdc)
+- Frontend (`apps/web`, `packages/ui`) — [`frontend-monorepo.mdc`](frontend-monorepo.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc), [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [`shadcn-ui-production.mdc`](shadcn-ui-production.mdc)
 - Backend (`apps/api`, `packages/db`, `packages/shared`) — [`backend-fastify.mdc`](backend-fastify.mdc), [`backend-drizzle.mdc`](backend-drizzle.mdc), [`backend-mcp.mdc`](backend-mcp.mdc), [`backend-testing.mdc`](backend-testing.mdc), [`backend-api-ui.mdc`](backend-api-ui.mdc), [`sqlite.mdc`](sqlite.mdc)
 - API + UI-связка — [`backend-api-ui.mdc`](backend-api-ui.mdc)

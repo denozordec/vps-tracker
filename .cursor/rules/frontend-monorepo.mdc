@@ -4,9 +4,9 @@ globs: apps/web/**/*,packages/ui/**/*
 alwaysApply: false
 ---
 
-# Frontend Monorepo (shadcn/ui)
+# Frontend Monorepo (shadcn/ui + ReUI)
 
-**Обязательный стандарт структуры** — [Monorepo docs](https://ui.shadcn.com/docs/monorepo).
+**Обязательный стандарт структуры** — [Monorepo docs](https://ui.shadcn.com/docs/monorepo), ReUI — [Get Started](https://reui.io/docs/get-started).
 
 ## Layout
 
@@ -25,7 +25,13 @@ packages/db/           # @cfdm/db — Drizzle schema, repositories
 | [`apps/web/components.json`](apps/web/components.json) | App aliases; `ui` → `@cfdm/ui/components` |
 | [`packages/ui/components.json`](packages/ui/components.json) | UI package aliases |
 
-**Синхронизировать:** `style`, `iconLibrary`, `baseColor` в обоих файлах.
+**Синхронизировать:** `style`, `iconLibrary`, `baseColor`, `registries` в обоих файлах.
+
+```json
+"registries": {
+  "@reui": "https://reui.io/r/{style}/{name}.json"
+}
+```
 
 ## CLI — только из apps/web
 
@@ -35,6 +41,8 @@ pnpm dlx shadcn@latest docs button
 pnpm dlx shadcn@latest add button
 pnpm dlx shadcn@latest add sidebar-07
 pnpm dlx shadcn@latest add login-03
+pnpm dlx shadcn@latest add @reui/data-grid
+pnpm dlx shadcn@latest add @reui/filters
 pnpm dlx shadcn@latest apply b2fA --only theme -y
 ```
 
@@ -52,6 +60,8 @@ pnpm dlx shadcn@latest info --json
 |---------|------|
 | `add button` | `packages/ui/src/components/button.tsx` |
 | `add login-03` | примитивы → `packages/ui`, block → `apps/web/src/components/` |
+| `add @reui/data-grid` | `apps/web/src/components/reui/data-grid/` |
+| `add @reui/filters` | `apps/web/src/components/reui/filters.tsx` |
 
 ## Импорты
 
@@ -65,15 +75,24 @@ import '@cfdm/ui/globals.css'   // только в main.tsx
 | Запрещено | Разрешено |
 |-----------|-----------|
 | `@/components/ui/*` | `@cfdm/ui/components/*` |
+| `@/components/reui/*` в `packages/ui` | `apps/web/src/components/reui/` |
 | `apps/web/src/components/ui/` | `packages/ui/src/components/` |
 | Ручное редактирование `globals.css` | `pnpm dlx shadcn@latest apply b2fA --only theme` |
 
-Community registry: переписывать импорты на `@cfdm/ui/...`.
+**Registry imports после add:**
+- shadcn community → переписывать на `@cfdm/ui/...`
+- ReUI `@reui/*` → остаётся `@/components/reui/...`; shadcn-примитивы внутри ReUI → `@cfdm/ui/...`
+
+**Post-add checklist ReUI:**
+- [ ] Импорты `@/components/ui/*` → `@cfdm/ui/components/*`
+- [ ] Зависимости в `apps/web/package.json` (не в `packages/ui`)
+- [ ] `pnpm --filter web build`
 
 ## Разделение ответственности
 
 - **`packages/ui`** — только output `shadcn add` (примитивы, registry hooks, `cn`)
-- **`apps/web/src/components`** — blocks, layout, domain (`login-form`, `app-shell`, `PageHeader`)
+- **`apps/web/src/components/reui`** — только output `shadcn add @reui/*` (см. [`reui-mcp.mdc`](reui-mcp.mdc))
+- **`apps/web/src/components`** — blocks, layout, domain (`login-form`, `app-shell`, `DataGridCard`)
 
 ## Стили (Tailwind v4 monorepo)
 
@@ -94,10 +113,10 @@ pnpm --filter web build
 
 ## Чеклист
 
-- [ ] Два `components.json` согласованы
+- [ ] Два `components.json` согласованы (включая `@reui` registry)
 - [ ] `shadcn add` из `apps/web`
-- [ ] UI-импорты через `@cfdm/ui/components/*`
+- [ ] shadcn → `@cfdm/ui`; ReUI → `@/components/reui`
 - [ ] Нет `apps/web/src/components/ui/`
 - [ ] `pnpm --filter web build` без ошибок
 
-См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc).
+См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc).
