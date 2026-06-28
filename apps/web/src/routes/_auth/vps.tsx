@@ -225,6 +225,15 @@ function VpsPage() {
         const d = getPaidUntilDate(v, ctx)
         return d != null && d < todayStart
       })
+    } else if (health === 'expiring-soon') {
+      const in7Days = new Date(now)
+      in7Days.setDate(in7Days.getDate() + 7)
+      rows = rows.filter((v) => {
+        if (v.status !== 'active') return false
+        const d = getPaidUntilDate(v, ctx)
+        if (d == null) return false
+        return d >= todayStart && d <= in7Days
+      })
     }
     return rows
   }, [snapshot, filters, health])

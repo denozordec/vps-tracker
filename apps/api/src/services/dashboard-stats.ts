@@ -1,12 +1,14 @@
 import { getSnapshot } from '@cfdm/db/repositories/snapshot'
+import { countExpiringWithin7Days, countInventoryIssues } from '@cfdm/shared/utils/inventory-health'
+import { accountBalanceApi } from '@cfdm/shared/utils/account-balance'
 
 const STALE_SYNC_HOURS = 48
 
 function vpsBurnRate(v: {
-  status: string
-  tariffType: string
-  dailyRate: number | null
-  monthlyRate: number | null
+  status?: string | null
+  tariffType?: string | null
+  dailyRate?: number | string | null
+  monthlyRate?: number | string | null
 }): number {
   if (v.status !== 'active') return 0
   const monthly = Number(v.monthlyRate || 0)
@@ -43,9 +45,6 @@ export interface DashboardStats {
 export function computeDashboardStats(): DashboardStats {
   const snap = getSnapshot()
   const now = new Date()
-  const in7Days = new Date(now)
-  in7Days.setDate(in7Days.getDate() + 7)
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
   const activeVps = snap.vps.filter((v) => v.status === 'active')
   const monthlyBurnEstimate = activeVps.reduce((acc, v) => acc + vpsBurnRate(v), 0)
@@ -57,7 +56,9 @@ export function computeDashboardStats(): DashboardStats {
   const burnByAccount = new Map<string, number>()
   for (const v of activeVps) {
     const burn = vpsBurnRate(v)
-    burnByAccount.set(v.providerAccountId, (burnByAccount.get(v.providerAccountId) ?? 0) + burn)
+    const accountId = v.providerAccountId
+    if (!accountId) continue
+    burnByAccount.set(accountId, (burnByAccount.get(accountId) ?? 0) + burn)
   }
 
   let minRunwayDays: number | null = null
@@ -69,12 +70,17 @@ export function computeDashboardStats(): DashboardStats {
     if (minRunwayDays == null || days < minRunwayDays) minRunwayDays = days
   }
 
-  const expiringWithin7Days = activeVps.filter((v) => {
-    if (!v.paidUntil) return false
-    const d = new Date(v.paidUntil)
-    if (Number.isNaN(d.getTime())) return false
-    return d >= todayStart && d <= in7Days
-  }).length
+  const expiringWithin7Days = countExpiringWithin7Days(
+    {
+      vps: snap.vps,
+      providerAccounts: snap.providerAccounts,
+      providers: snap.providers,
+      payments: snap.payments,
+      balanceLedger: snap.balanceLedger,
+      syncLog: snap.syncLog,
+    },
+    now,
+  )
 
   const providerById = new Map(snap.providers.map((p) => [p.id, p]))
   const staleMs = STALE_SYNC_HOURS * 60 * 60 * 1000
@@ -91,46 +97,18 @@ export function computeDashboardStats(): DashboardStats {
   const lowBalanceAccountCount = snap.providerAccounts.filter((a) => {
     const threshold = Number(a.balanceAlertBelow ?? 0)
     if (!Number.isFinite(threshold) || threshold <= 0) return false
-    const balance = Number(a.balanceApi ?? 0)
-    return balance < threshold
+    const balance = accountBalanceApi(a)
+    return balance != null && balance < threshold
   }).length
 
-  const noRateCount = activeVps.filter((v) => {
-    const dr = Number(v.dailyRate || 0)
-    const mr = Number(v.monthlyRate || 0)
-    const noMoney = (!Number.isFinite(dr) || dr <= 0) && (!Number.isFinite(mr) || mr <= 0)
-    const noCur = !(v.currency || '').trim()
-    return noMoney || noCur
-  }).length
-
-  const paidOverdueCount = activeVps.filter((v) => {
-    if (!v.paidUntil) return false
-    const d = new Date(v.paidUntil)
-    if (Number.isNaN(d.getTime())) return false
-    return d < todayStart
-  }).length
-
-  const balanceMismatchCount = snap.providerAccounts.filter((a) => {
-    const apiBalance = a.balanceApi != null ? Number(a.balanceApi) : null
-    if (apiBalance == null || !Number.isFinite(apiBalance)) return false
-    const rows = snap.balanceLedger.filter((r) => r.providerAccountId === a.id)
-    if (rows.length === 0) return false
-    const credits = rows.filter((r) => r.direction === 'credit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
-    const debits = rows.filter((r) => r.direction === 'debit').reduce((acc, r) => acc + Number(r.amount || 0), 0)
-    const ledger = credits - debits
-    if (!Number.isFinite(ledger)) return false
-    const diff = Math.abs(apiBalance - ledger)
-    const tol = Math.max(10, Math.abs(apiBalance) * 0.05)
-    return diff > tol
-  }).length
-
-  let issuesCount = 0
-  if (noRateCount > 0) issuesCount++
-  if (paidOverdueCount > 0) issuesCount++
-  if (expiringWithin7Days > 0) issuesCount++
-  if (staleSyncAccountCount > 0) issuesCount++
-  if (lowBalanceAccountCount > 0) issuesCount++
-  if (balanceMismatchCount > 0) issuesCount++
+  const issuesCount = countInventoryIssues({
+    vps: snap.vps,
+    providerAccounts: snap.providerAccounts,
+    providers: snap.providers,
+    payments: snap.payments,
+    balanceLedger: snap.balanceLedger,
+    syncLog: snap.syncLog,
+  })
 
   let lastGlobalSyncAt: string | null = null
   for (const row of snap.syncLog) {

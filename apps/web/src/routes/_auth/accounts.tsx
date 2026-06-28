@@ -206,6 +206,8 @@ function AccountsPage() {
       } else if (health === 'balance-mismatch') {
         const ids = new Set(getBalanceMismatchAccountIds(snapshot.providerAccounts, snapshot.balanceLedger))
         result = accounts.filter((a) => ids.has(a.id))
+      } else if (health === 'low-balance') {
+        result = accounts.filter((a) => getAccountHealthFlags(a, healthCtx).includes('low-balance'))
       }
     }
     return applyAccountFilters(result, filters, snapshot?.providers ?? [], healthCtx)

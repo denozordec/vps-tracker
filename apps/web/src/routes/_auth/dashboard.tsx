@@ -259,13 +259,13 @@ function DashboardPage() {
                           внимание
                         </Badge>
                       ) : undefined,
-                    onClick: () => navigate({ to: '/vps', search: { health: 'paid-overdue' } }),
+                    onClick: () => navigate({ to: '/vps', search: { health: 'expiring-soon' } }),
                   },
                   {
                     label: 'Проблемы',
-                    value: stats?.issuesCount ?? issues.length,
+                    value: issues.length,
                     icon: <HashIcon className="size-4" />,
-                    variant: (stats?.issuesCount ?? issues.length) > 0 ? 'destructive' : 'default',
+                    variant: issues.length > 0 ? 'destructive' : 'default',
                   },
                 ]}
               />
@@ -318,7 +318,7 @@ function DashboardPage() {
                 <TabsContent value="issues" className="mt-0">
                   <DataGridCard
                     title="Здоровье инвентаря"
-                    description="Ставка, просрочка оплаты, устаревший синк, расхождения баланса"
+                    description="Ставка, оплата, синк, баланс аккаунтов"
                     columns={columnDefFromDataGrid(issueColumns)}
                     data={issues}
                     rowId={(i) => i.key}

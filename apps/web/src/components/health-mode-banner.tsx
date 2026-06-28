@@ -6,7 +6,9 @@ import { Button } from '@cfdm/ui/components/button'
 const HEALTH_LABELS: Record<string, string> = {
   'no-rate': 'Нет ставки или валюты',
   'paid-overdue': 'Просрочена оплата (оценка)',
+  'expiring-soon': 'Истекает в течение 7 дней',
   'stale-sync': 'Нет успешного синка > 48 ч',
+  'low-balance': 'Низкий баланс аккаунта',
   'balance-mismatch': 'Баланс API и ledger расходятся',
 }
 
