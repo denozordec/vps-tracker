@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,10 +8,13 @@ import {
   type ColumnDef,
   type SortingState,
   type RowSelectionState,
+  type VisibilityState,
 } from '@tanstack/react-table'
+import { Columns3Icon } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Checkbox } from '@cfdm/ui/components/checkbox'
+import { Button } from '@cfdm/ui/components/button'
 import { cn } from '@cfdm/ui/lib/utils'
 import {
   DataGrid,
@@ -22,6 +25,7 @@ import { DataGridTableVirtual } from '@/components/reui/data-grid/data-grid-tabl
 import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
+import { DataGridColumnVisibility } from '@/components/reui/data-grid/data-grid-column-visibility'
 import { EmptyState } from './empty-state'
 import type { DataTableColumn } from './data-grid-types'
 
@@ -36,6 +40,16 @@ function resolveHeaderTitle(header: ReactNode, headerTitle?: string): string {
   if (headerTitle) return headerTitle
   if (typeof header === 'string') return header
   return ''
+}
+
+function loadStoredColumnVisibility(key: string): VisibilityState | undefined {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return undefined
+    return JSON.parse(raw) as VisibilityState
+  } catch {
+    return undefined
+  }
 }
 
 export interface DataGridCardProps<TData extends object> {
@@ -70,6 +84,12 @@ export interface DataGridCardProps<TData extends object> {
   enableRowSelection?: boolean
   /** Callback при изменении выбора. */
   onRowSelectionChange?: (selectedIds: string[]) => void
+  /** Показать picker видимости колонок. */
+  enableColumnVisibility?: boolean
+  /** Ключ localStorage для сохранения видимости колонок. */
+  columnVisibilityStorageKey?: string
+  /** Начальная видимость колонок (перекрывает localStorage для отсутствующих ключей). */
+  initialColumnVisibility?: VisibilityState
   className?: string
 }
 
@@ -91,6 +111,7 @@ function DataGridCardBody<TData extends object>({
   height,
   footerContent,
   showPagination,
+  enableColumnVisibility,
 }: {
   table: ReturnType<typeof useReactTable<TData>>
   data: TData[]
@@ -101,6 +122,7 @@ function DataGridCardBody<TData extends object>({
   height: number
   footerContent?: ReactNode
   showPagination: boolean
+  enableColumnVisibility: boolean
 }) {
   return (
     <DataGridContainer border={false}>
@@ -117,7 +139,7 @@ function DataGridCardBody<TData extends object>({
           headerBackground: true,
           headerBorder: true,
           width: 'auto',
-          columnsVisibility: false,
+          columnsVisibility: enableColumnVisibility,
           columnsResizable: false,
           columnsPinnable: false,
           columnsMovable: false,
@@ -167,10 +189,24 @@ export function DataGridCard<TData extends object>({
   height = 480,
   enableRowSelection = false,
   onRowSelectionChange,
+  enableColumnVisibility = false,
+  columnVisibilityStorageKey,
+  initialColumnVisibility,
   className,
 }: DataGridCardProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    const stored = columnVisibilityStorageKey
+      ? loadStoredColumnVisibility(columnVisibilityStorageKey)
+      : undefined
+    return { ...initialColumnVisibility, ...stored }
+  })
+
+  useEffect(() => {
+    if (!columnVisibilityStorageKey) return
+    localStorage.setItem(columnVisibilityStorageKey, JSON.stringify(columnVisibility))
+  }, [columnVisibility, columnVisibilityStorageKey])
 
   const selectColumn: ColumnDef<TData, unknown> = {
     id: 'select',
@@ -191,6 +227,7 @@ export function DataGridCard<TData extends object>({
       />
     ),
     enableSorting: false,
+    enableHiding: false,
     meta: { cellClassName: 'w-10' },
   }
 
@@ -203,8 +240,13 @@ export function DataGridCard<TData extends object>({
   const table = useReactTable<TData>({
     data,
     columns: tableColumns,
-    state: { sorting, ...(enableRowSelection ? { rowSelection } : {}) },
+    state: {
+      sorting,
+      columnVisibility,
+      ...(enableRowSelection ? { rowSelection } : {}),
+    },
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: enableRowSelection
       ? (updater) => {
           setRowSelection((prev) => {
@@ -229,9 +271,29 @@ export function DataGridCard<TData extends object>({
       : undefined,
     enableColumnPinning: pinLastColumn,
     enableRowSelection,
+    enableHiding: enableColumnVisibility,
   })
 
-  const hasHeader = Boolean(title || description || actions)
+  const columnVisibilityAction = enableColumnVisibility ? (
+    <DataGridColumnVisibility
+      table={table}
+      trigger={
+        <Button variant="outline" size="sm">
+          <Columns3Icon data-icon="inline-start" />
+          Колонки
+        </Button>
+      }
+    />
+  ) : null
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      {columnVisibilityAction}
+      {actions}
+    </div>
+  )
+
+  const hasHeader = Boolean(title || description || actions || enableColumnVisibility)
 
   if (data.length === 0) {
     if (!hasHeader) {
@@ -249,7 +311,7 @@ export function DataGridCard<TData extends object>({
             {title ? <CardTitle>{title}</CardTitle> : null}
             {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
           </div>
-          {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+          {headerActions ? <div className="flex items-center gap-2">{headerActions}</div> : null}
         </CardHeader>
         <CardContent>
           <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
@@ -269,11 +331,19 @@ export function DataGridCard<TData extends object>({
       height={height}
       footerContent={footerContent}
       showPagination={showPagination}
+      enableColumnVisibility={enableColumnVisibility}
     />
   )
 
   if (!hasHeader) {
-    return <div className={className}>{gridBody}</div>
+    return (
+      <div className={className}>
+        {enableColumnVisibility ? (
+          <div className="mb-2 flex justify-end">{columnVisibilityAction}</div>
+        ) : null}
+        {gridBody}
+      </div>
+    )
   }
 
   return (
@@ -283,7 +353,9 @@ export function DataGridCard<TData extends object>({
           {title ? <CardTitle>{title}</CardTitle> : null}
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
-        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+        {(actions || enableColumnVisibility) ? (
+          <div className="flex items-center gap-2">{headerActions}</div>
+        ) : null}
       </CardHeader>
       <CardContent className="p-0 pt-2">{gridBody}</CardContent>
     </Card>
@@ -319,6 +391,7 @@ export function columnDefFromDataTable<T>(
         : () => c.header,
       cell: ({ row }) => c.cell(row.original, row.index),
       enableSorting: sortable,
+      enableHiding: c.enableHiding ?? true,
       meta: {
         headerTitle: title || undefined,
         cellClassName: c.className,

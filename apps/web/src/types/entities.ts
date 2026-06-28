@@ -1,3 +1,5 @@
+import type { CustomFieldDef } from '@cfdm/shared/contracts/custom-fields'
+
 export type VpsStatus = 'active' | 'paused' | 'archived'
 export type TariffType = 'daily' | 'monthly'
 export type BillingMode = 'daily' | 'monthly'
@@ -77,6 +79,7 @@ export interface Vps {
   createdAt: string
   paidUntil?: string
   notes?: string
+  customData?: string | Record<string, string | number | boolean>
 }
 
 export interface Payment {
@@ -115,6 +118,7 @@ export interface Settings {
   notifyNewTariffsEnabled?: boolean
   telegramChatId?: string
   telegramBotToken?: string
+  customFields?: CustomFieldDef[]
 }
 
 export interface ActiveTariff {

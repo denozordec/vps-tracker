@@ -19,6 +19,7 @@ import { vpsSchema, type VpsFormValues } from '@/lib/schemas'
 import { vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
 import { buildCityOptions, cityMatchesCountry, resolveCountryForCityFromRows } from '@cfdm/shared/geo'
 import { VPS_SYNC_OVERRIDE_FIELDS, parseUserOverrides } from '@/lib/vps-sync-fields'
+import { CustomFieldValues } from '@/components/domain/custom-field-values'
 import { parseCustomData, type CustomFieldDef } from '@/lib/custom-fields'
 import type { Provider, ProviderAccount, Vps } from '@/types/entities'
 import type { ZodType } from 'zod'
@@ -336,44 +337,7 @@ export function VpsEditSheet({
             <FormField label="Заметки" htmlFor="vps-notes">
               <Textarea id="vps-notes" {...register('notes')} />
             </FormField>
-            {customFieldDefs.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm font-medium">Дополнительные поля</p>
-                {customFieldDefs.map((field) => {
-                  const customData = watch('customData') ?? {}
-                  if (field.type === 'bool') {
-                    return (
-                      <div key={field.key} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`custom-${field.key}`}
-                          checked={Boolean(customData[field.key])}
-                          onCheckedChange={(v) =>
-                            setValue('customData', { ...customData, [field.key]: Boolean(v) })
-                          }
-                        />
-                        <Label htmlFor={`custom-${field.key}`} className="font-normal">
-                          {field.label}
-                        </Label>
-                      </div>
-                    )
-                  }
-                  return (
-                    <FormField key={field.key} label={field.label} htmlFor={`custom-${field.key}`}>
-                      <Input
-                        id={`custom-${field.key}`}
-                        type={field.type === 'number' ? 'number' : 'text'}
-                        value={String(customData[field.key] ?? '')}
-                        onChange={(e) => {
-                          const val =
-                            field.type === 'number' ? Number(e.target.value) : e.target.value
-                          setValue('customData', { ...customData, [field.key]: val })
-                        }}
-                      />
-                    </FormField>
-                  )
-                })}
-              </div>
-            ) : null}
+            <CustomFieldValues defs={customFieldDefs} watch={watch} setValue={setValue} />
             {editingId ? (
               <FormField
                 label="Не перезаписывать при синке"

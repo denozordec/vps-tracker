@@ -11,6 +11,7 @@ export interface DataTableColumn<T> {
   headerTitle?: string
   className?: string
   headerClassName?: string
+  enableHiding?: boolean
 }
 
 /** Унифицированные классы колонок для DataGridCard. */

@@ -31,6 +31,11 @@ import {
 } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 import { VPS_SYNC_OVERRIDE_FIELDS, parseUserOverrides } from '@/lib/vps-sync-fields'
+import {
+  parseCustomFieldDefs,
+  parseCustomData,
+  formatCustomFieldValue,
+} from '@/lib/custom-fields'
 import type { Payment, Vps } from '@/types/entities'
 
 export const Route = createFileRoute('/_auth/vps/$vpsId')({
@@ -74,6 +79,19 @@ function VpsDetailPage() {
   )
 
   const overrides = vps ? parseUserOverrides((vps as Vps & { userOverrides?: unknown }).userOverrides) : []
+
+  const customFieldDefs = useMemo(
+    () => parseCustomFieldDefs((snapshot?.settings[0] as { customFields?: unknown })?.customFields),
+    [snapshot],
+  )
+
+  const customFieldRows = useMemo(() => {
+    if (!vps || customFieldDefs.length === 0) return []
+    const data = parseCustomData((vps as Vps & { customData?: unknown }).customData)
+    return customFieldDefs
+      .map((def) => ({ def, value: data[def.key] }))
+      .filter(({ value }) => value !== undefined && value !== null && value !== '')
+  }, [vps, customFieldDefs])
 
   const paymentColumns: DataTableColumn<Payment>[] = [
     { key: 'date', header: 'Дата', cell: (p) => <span className="tabular-nums">{p.date}</span> },
@@ -167,6 +185,22 @@ function VpsDetailPage() {
                   </CardContent>
                 </Card>
               </div>
+              {customFieldRows.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Дополнительные поля</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-3">
+                    {customFieldRows.map(({ def, value }) => (
+                      <InfoRow
+                        key={def.key}
+                        label={def.label}
+                        value={formatCustomFieldValue(def, value)}
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
             </TabsContent>
 
             <TabsContent value="finance" className="flex flex-col gap-4">

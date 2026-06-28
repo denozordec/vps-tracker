@@ -14,12 +14,13 @@ import { SectionCardsSkeleton } from '@/components/skeletons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
-import { Textarea } from '@cfdm/ui/components/textarea'
+import { parseCustomFieldDefs } from '@cfdm/shared/contracts/custom-fields'
 import { LoadingButton } from '@/components/loading-button'
 import { SelectField } from '@/components/select-field'
 import { FormField } from '@/components/form-field'
 import { Button } from '@cfdm/ui/components/button'
 import { settingsSchema, type SettingsFormValues } from '@/lib/schemas'
+import { CustomFieldsEditor } from '@/components/domain/custom-fields-editor'
 import type { Settings } from '@/types/entities'
 
 export const Route = createFileRoute('/_auth/settings')({
@@ -48,11 +49,7 @@ function settingsToFormValues(s: Settings): SettingsFormValues {
     notifyVpsDownEnabled: (s as Settings & { notifyVpsDownEnabled?: boolean }).notifyVpsDownEnabled !== false,
     webhookUrl: (s as Settings & { webhookUrl?: string }).webhookUrl ?? '',
     webhookEnabled: (s as Settings & { webhookEnabled?: boolean }).webhookEnabled === true,
-    customFieldsJson: JSON.stringify(
-      (s as Settings & { customFields?: unknown[] }).customFields ?? [],
-      null,
-      2,
-    ),
+    customFields: parseCustomFieldDefs(s.customFields),
     telegramMessageThreadId: (s as Settings & { telegramMessageThreadId?: string }).telegramMessageThreadId ?? '',
   }
 }
@@ -96,15 +93,7 @@ function SettingsPage() {
 
   const upsertMut = useMutation({
     mutationFn: (patch: SettingsFormValues) => {
-      const { customFieldsJson, ...rest } = patch
-      let customFields: unknown[] = []
-      try {
-        const parsed = JSON.parse(customFieldsJson || '[]') as unknown
-        if (Array.isArray(parsed)) customFields = parsed
-      } catch {
-        throw new ApiError('Невалидный JSON в кастомных полях')
-      }
-      const payload = { ...rest, customFields }
+      const payload = { ...patch }
       if (current?.id) return api.update<Settings>('settings', current.id, payload)
       return api.create<Settings>('settings', {
         id: 'settings-main',
@@ -400,16 +389,16 @@ function SettingsPage() {
               <Card className="md:col-span-2">
                 <CardHeader>
                   <CardTitle>Кастомные поля VPS</CardTitle>
-                  <CardDescription>JSON-массив: {"{ \"key\", \"label\", \"type\": \"text|number|bool\" }"}</CardDescription>
+                  <CardDescription>
+                    Поля отображаются в таблице VPS и в форме редактирования сервера
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <FormField label="Схема полей" htmlFor="set-custom-fields" error={form.formState.errors.customFieldsJson?.message}>
-                    <Textarea
-                      id="set-custom-fields"
-                      className="min-h-32 font-mono text-xs"
-                      {...form.register('customFieldsJson')}
-                    />
-                  </FormField>
+                  <CustomFieldsEditor
+                    control={form.control}
+                    setValue={form.setValue}
+                    errors={form.formState.errors.customFields}
+                  />
                 </CardContent>
               </Card>
             </div>

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { customFieldsSchema } from './custom-fields.js'
 
 export const settingsSchema = z.object({
   id: z.string().optional(),
@@ -19,7 +20,7 @@ export const settingsSchema = z.object({
   notifyVpsDownEnabled: z.boolean().optional(),
   webhookUrl: z.string().url('Невалидный URL').or(z.literal('')).optional(),
   webhookEnabled: z.boolean().optional(),
-  customFields: z.any().optional(),
+  customFields: customFieldsSchema.optional(),
 })
 
 export type Settings = z.infer<typeof settingsSchema>

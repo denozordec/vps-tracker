@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { billingModeSchema as sharedBillingModeSchema } from '@cfdm/shared/contracts/provider-account'
+import { customFieldsSchema } from '@cfdm/shared/contracts/custom-fields'
 
 export const vpsStatusSchema = z.enum(['active', 'paused', 'archived'])
 export const tariffTypeSchema = z.enum(['daily', 'monthly'])
@@ -100,7 +101,12 @@ export const settingsSchema = z.object({
   notifyVpsDownEnabled: z.boolean().optional().default(true),
   webhookUrl: z.string().url('Невалидный URL').or(z.literal('')).optional().default(''),
   webhookEnabled: z.boolean().optional().default(false),
-  customFieldsJson: z.string().optional().default('[]'),
+  customFields: customFieldsSchema
+    .default([])
+    .refine(
+      (fields) => new Set(fields.map((f) => f.key)).size === fields.length,
+      'Ключи кастомных полей должны быть уникальными',
+    ),
 })
 
 export const projectSchema = z.object({

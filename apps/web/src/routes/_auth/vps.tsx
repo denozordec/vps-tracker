@@ -34,7 +34,7 @@ import type { Vps } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 import { COUNTRIES, COUNTRY_BY_NAME_RU, buildCityOptions } from '@cfdm/shared/geo'
 import { getPaidUntilDate } from '@/lib/paid-until'
-import { parseCustomFieldDefs } from '@/lib/custom-fields'
+import { parseCustomFieldDefs, buildCustomFieldColumns, buildCustomFieldColumnVisibility } from '@/lib/custom-fields'
 
 import { z } from 'zod'
 
@@ -264,7 +264,18 @@ function VpsPage() {
     }))
   }, [filteredVps, filters.groupByProject])
 
-  const columns: DataTableColumn<Vps>[] = [
+  const customFieldDefs = useMemo(
+    () => parseCustomFieldDefs((settings as { customFields?: unknown })?.customFields),
+    [settings],
+  )
+
+  const customColumnVisibility = useMemo(
+    () => buildCustomFieldColumnVisibility(customFieldDefs),
+    [customFieldDefs],
+  )
+
+  const columns: DataTableColumn<Vps>[] = useMemo(() => {
+    const base: DataTableColumn<Vps>[] = [
     {
       key: 'ip',
       header: 'IP / DNS',
@@ -403,6 +414,7 @@ function VpsPage() {
       key: 'actions',
       header: '',
       sortable: false,
+      enableHiding: false,
       className: 'w-24 text-right',
       cell: (v) => (
         <RowActions
@@ -413,7 +425,17 @@ function VpsPage() {
         />
       ),
     },
-  ]
+    ]
+    const customCols = buildCustomFieldColumns<Vps>(customFieldDefs)
+    const actionsCol = base.pop()!
+    return [...base, ...customCols, actionsCol]
+  }, [
+    snapshot,
+    providerById,
+    ratesData,
+    customFieldDefs,
+    deleteMutation,
+  ])
 
   return (
     <PageShell>
@@ -514,6 +536,9 @@ function VpsPage() {
                 onRowSelectionChange={setSelectedIds}
                 virtualization={section.items.length > 200}
                 height={560}
+                enableColumnVisibility
+                columnVisibilityStorageKey="vps-column-visibility"
+                initialColumnVisibility={customColumnVisibility}
               />
             ))}
           </div>
