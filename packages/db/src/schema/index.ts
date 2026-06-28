@@ -126,6 +126,26 @@ export const settings = sqliteTable('settings', {
   notifyVpsDownEnabled: integer('notifyVpsDownEnabled'),
   webhookUrl: text('webhookUrl'),
   webhookEnabled: integer('webhookEnabled'),
+  notifyIntervalMinutes: integer('notifyIntervalMinutes'),
+  uptimeCheckIntervalMinutes: integer('uptimeCheckIntervalMinutes'),
+})
+
+export const notificationLog = sqliteTable('notification_log', {
+  id: text('id').primaryKey(),
+  event: text('event').notNull(),
+  channel: text('channel').notNull(),
+  status: text('status').notNull(),
+  fingerprint: text('fingerprint'),
+  message: text('message'),
+  payload: text('payload'),
+  createdAt: text('createdAt').notNull(),
+})
+
+export const notificationState = sqliteTable('notification_state', {
+  key: text('key').primaryKey(),
+  lastFingerprint: text('lastFingerprint'),
+  lastSentAt: text('lastSentAt'),
+  lastStatus: text('lastStatus'),
 })
 
 export const vpsHealthChecks = sqliteTable('vps_health_checks', {

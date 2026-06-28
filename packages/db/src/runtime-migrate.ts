@@ -7,6 +7,8 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE settings ADD COLUMN notifyVpsDownEnabled INTEGER`,
   `ALTER TABLE settings ADD COLUMN webhookUrl TEXT`,
   `ALTER TABLE settings ADD COLUMN webhookEnabled INTEGER`,
+  `ALTER TABLE settings ADD COLUMN notifyIntervalMinutes INTEGER`,
+  `ALTER TABLE settings ADD COLUMN uptimeCheckIntervalMinutes INTEGER`,
 ]
 
 const TABLE_MIGRATIONS: string[] = [
@@ -26,9 +28,29 @@ const TABLE_MIGRATIONS: string[] = [
     diff TEXT,
     createdAt TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS notification_log (
+    id TEXT PRIMARY KEY,
+    event TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    status TEXT NOT NULL,
+    fingerprint TEXT,
+    message TEXT,
+    payload TEXT,
+    createdAt TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS notification_state (
+    key TEXT PRIMARY KEY,
+    lastFingerprint TEXT,
+    lastSentAt TEXT,
+    lastStatus TEXT
+  )`,
 ]
 
 let migrated = false
+
+export function resetRuntimeMigrate(): void {
+  migrated = false
+}
 
 export function ensureRuntimeSchema(sqlite: Database.Database): void {
   if (migrated) return

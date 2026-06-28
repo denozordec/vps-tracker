@@ -4,6 +4,7 @@ import { settingsSchema } from '@cfdm/shared/contracts/settings'
 
 import { restartScheduler } from '../services/scheduler.js'
 import { sendTelegramMessage } from '../services/telegram.js'
+import { deliverWebhook } from '../services/notifications/channels.js'
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/settings', async () => settingsRepository.list())
@@ -34,12 +35,26 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
     if (!settings?.telegramBotToken?.trim() || !settings.telegramChatId?.trim()) {
       return { ok: false, error: 'Укажите токен бота и chat ID в настройках' }
     }
-    await sendTelegramMessage(
+    const result = await sendTelegramMessage(
       settings.telegramBotToken,
       settings.telegramChatId,
       '✅ VPS Tracker: тестовое сообщение',
       settings.telegramMessageThreadId,
     )
-    return { ok: true }
+    return result.ok ? { ok: true } : { ok: false, error: result.error ?? 'Ошибка Telegram API' }
+  })
+
+  app.post('/api/settings/webhook/test', async () => {
+    const settings = settingsRepository.getRow('settings-main')
+    if (!settings?.webhookEnabled) {
+      return { ok: false, error: 'Включите webhook в настройках' }
+    }
+    const result = await deliverWebhook(settings, {
+      event: 'test',
+      message: 'VPS Tracker: тестовое webhook-сообщение',
+      timestamp: new Date().toISOString(),
+      data: { source: 'settings_test' },
+    })
+    return result.ok ? { ok: true } : { ok: false, error: result.error ?? 'Ошибка webhook' }
   })
 }

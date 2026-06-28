@@ -22,6 +22,7 @@ import { ratesProxyRoutes } from './routes/rates-proxy.js'
 import { migrateRoutes } from './routes/migrate.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { auditRoutes } from './routes/audit.js'
+import { notificationsRoutes } from './routes/notifications.js'
 import { startScheduler } from './services/scheduler.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -56,6 +57,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(migrateRoutes)
   await app.register(dashboardRoutes)
   await app.register(auditRoutes)
+  await app.register(notificationsRoutes)
 
   const staticDir = opts.staticDir ?? join(__dirname, '..', '..', 'web', 'dist')
   if (existsSync(staticDir)) {
@@ -88,4 +90,6 @@ async function start() {
   }
 }
 
-void start()
+if (!process.env.VITEST) {
+  void start()
+}

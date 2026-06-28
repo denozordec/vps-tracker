@@ -79,6 +79,15 @@ vps-tracker/
 
 Формат запроса: `?authinfo=user:pass&out=bjson&func=vds|payment|dashboard.info|vds.order`
 
+## Уведомления
+
+- **Движок:** `apps/api/src/services/notifications/` — rules, dedup, engine, channels
+- **Планировщик:** `apps/api/src/services/scheduler.ts` — sync отдельно; notify/uptime не зависят от `syncEnabled`
+- **События:** `payment_expiry`, `sync_digest`, `low_balance`, `new_tariffs`, `vps_down`, `vps_up`
+- **Каналы:** Telegram (`telegram.ts`) и webhook (`webhook.ts`); webhook работает без Telegram
+- **Журнал:** таблица `notification_log`, API `GET /api/notifications/log`
+- **Дедупликация:** `notification_state` — daily / fingerprint / state_transition
+
 ## Команды
 
 ```bash

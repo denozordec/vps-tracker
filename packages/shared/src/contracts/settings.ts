@@ -10,6 +10,8 @@ export const settingsSchema = z.object({
   syncEnabled: z.boolean().optional(),
   syncIntervalMinutes: z.coerce.number().optional(),
   syncTariffsIntervalMinutes: z.coerce.number().optional(),
+  notifyIntervalMinutes: z.coerce.number().optional(),
+  uptimeCheckIntervalMinutes: z.coerce.number().optional(),
   telegramBotToken: z.string().optional(),
   telegramChatId: z.string().optional(),
   telegramMessageThreadId: z.string().optional(),

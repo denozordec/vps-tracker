@@ -59,6 +59,7 @@ export const vpsSchema = z.object({
   paidUntil: z.string().optional().default(''),
   project: z.string().optional().default(''),
   notes: z.string().optional().default(''),
+  monitoringEnabled: z.boolean().optional().default(false),
   userOverrides: z.array(z.string()).optional().default([]),
   customData: z.record(z.union([z.string(), z.number(), z.boolean()])).optional().default({}),
 })
@@ -91,6 +92,8 @@ export const settingsSchema = z.object({
   syncEnabled: z.boolean().optional().default(true),
   syncIntervalMinutes: z.coerce.number().min(15).optional().default(60),
   syncTariffsIntervalMinutes: z.coerce.number().min(60).optional().default(1440),
+  notifyIntervalMinutes: z.coerce.number().min(15).optional().default(60),
+  uptimeCheckIntervalMinutes: z.coerce.number().min(1).optional().default(5),
   telegramChatId: z.string().optional().default(''),
   telegramBotToken: z.string().optional().default(''),
   telegramMessageThreadId: z.string().optional().default(''),

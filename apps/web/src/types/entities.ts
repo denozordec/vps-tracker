@@ -116,8 +116,15 @@ export interface Settings {
   notifySyncDigestEnabled?: boolean
   notifyPaymentExpiryEnabled?: boolean
   notifyNewTariffsEnabled?: boolean
+  notifyVpsDownEnabled?: boolean
+  notifyIntervalMinutes?: number
+  uptimeCheckIntervalMinutes?: number
+  webhookUrl?: string
+  webhookEnabled?: boolean
   telegramChatId?: string
   telegramBotToken?: string
+  telegramMessageThreadId?: string
+  telegramBotTokenSet?: boolean
   customFields?: CustomFieldDef[]
 }
 
@@ -163,6 +170,17 @@ export interface RatesData {
   base: string
   rates: Record<string, number>
   date?: string
+}
+
+export interface NotificationLogRow {
+  id: string
+  event: string
+  channel: 'telegram' | 'webhook'
+  status: 'sent' | 'failed' | 'skipped'
+  fingerprint: string | null
+  message: string | null
+  payload: Record<string, unknown> | null
+  createdAt: string
 }
 
 export interface DataSnapshot {

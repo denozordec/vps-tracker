@@ -13,6 +13,8 @@ export type SettingsDto = Omit<Row, 'telegramBotToken' | 'autoConvert' | 'syncEn
   notifySyncDigestEnabled: boolean
   notifyVpsDownEnabled: boolean
   webhookEnabled: boolean
+  notifyIntervalMinutes: number
+  uptimeCheckIntervalMinutes: number
   customFields: unknown[]
 }
 
@@ -38,6 +40,8 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
     notifySyncDigestEnabled: Boolean(row.notifySyncDigestEnabled),
     notifyVpsDownEnabled: Boolean(row.notifyVpsDownEnabled),
     webhookEnabled: Boolean(row.webhookEnabled),
+    notifyIntervalMinutes: Number(row.notifyIntervalMinutes) || 60,
+    uptimeCheckIntervalMinutes: Number(row.uptimeCheckIntervalMinutes) || 5,
     customFields: Array.isArray(customFields) ? customFields : [],
   }
 }
@@ -67,6 +71,8 @@ interface SettingsInput {
   notifyVpsDownEnabled?: boolean
   webhookUrl?: string
   webhookEnabled?: boolean
+  notifyIntervalMinutes?: number
+  uptimeCheckIntervalMinutes?: number
   customFields?: unknown
 }
 
@@ -139,6 +145,14 @@ function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
     webhookUrl: r.webhookUrl !== undefined ? r.webhookUrl || '' : existing?.webhookUrl ?? '',
     webhookEnabled:
       r.webhookEnabled !== undefined ? (r.webhookEnabled ? 1 : 0) : existing?.webhookEnabled ? 1 : 0,
+    notifyIntervalMinutes:
+      r.notifyIntervalMinutes !== undefined
+        ? Math.max(15, Number(r.notifyIntervalMinutes) || 60)
+        : existing?.notifyIntervalMinutes ?? 60,
+    uptimeCheckIntervalMinutes:
+      r.uptimeCheckIntervalMinutes !== undefined
+        ? Math.max(1, Number(r.uptimeCheckIntervalMinutes) || 5)
+        : existing?.uptimeCheckIntervalMinutes ?? 5,
     customFields: serializeCustomFields(r.customFields ?? existing?.customFields),
   }
 }

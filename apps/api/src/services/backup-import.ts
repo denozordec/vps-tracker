@@ -123,6 +123,11 @@ export function importJsonSnapshot(data: BackupPayload): void {
           customFields: customFields != null ? String(customFields) : null,
           notifyLowBalanceEnabled: s.notifyLowBalanceEnabled ? 1 : 0,
           notifySyncDigestEnabled: s.notifySyncDigestEnabled ? 1 : 0,
+          notifyVpsDownEnabled: s.notifyVpsDownEnabled ? 1 : 0,
+          webhookUrl: String(s.webhookUrl ?? ''),
+          webhookEnabled: s.webhookEnabled ? 1 : 0,
+          notifyIntervalMinutes: Number(s.notifyIntervalMinutes) || 60,
+          uptimeCheckIntervalMinutes: Number(s.uptimeCheckIntervalMinutes) || 5,
         })
         .run()
     }

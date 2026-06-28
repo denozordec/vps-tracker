@@ -109,7 +109,15 @@ export const api = {
 
   fetchSyncStatus: () => fetchApi('/api/sync/status'),
   sendTelegramTest: () =>
-    fetchApi('/api/settings/telegram/test', { method: 'POST' }),
+    fetchApi<{ ok: boolean; error?: string }>('/api/settings/telegram/test', { method: 'POST' }),
+
+  sendWebhookTest: () =>
+    fetchApi<{ ok: boolean; error?: string }>('/api/settings/webhook/test', { method: 'POST' }),
+
+  fetchNotificationLog: (limit = 50) =>
+    fetchApi<import('@/types/entities').NotificationLogRow[]>(
+      `/api/notifications/log?limit=${limit}`,
+    ),
 
   fetchProjectSuggestions: (q = '', limit = 25) => {
     const params = new URLSearchParams()

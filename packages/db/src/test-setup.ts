@@ -1,4 +1,5 @@
 import { closeDb, getSqlite } from './index.js'
+import { resetRuntimeMigrate } from './runtime-migrate.js'
 
 const TEST_SCHEMA = `
 CREATE TABLE IF NOT EXISTS providers (
@@ -85,10 +86,53 @@ CREATE TABLE IF NOT EXISTS active_tariffs (
   FOREIGN KEY (providerAccountId) REFERENCES provider_accounts(id),
   FOREIGN KEY (providerId) REFERENCES providers(id)
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+  id TEXT PRIMARY KEY,
+  baseCurrency TEXT,
+  ratesUrl TEXT,
+  autoConvert INTEGER,
+  ratesUpdatedAt TEXT,
+  syncEnabled INTEGER,
+  syncIntervalMinutes INTEGER,
+  syncTariffsIntervalMinutes INTEGER,
+  customFields TEXT,
+  telegramBotToken TEXT,
+  telegramChatId TEXT,
+  notifyPaymentExpiryEnabled INTEGER,
+  notifyNewTariffsEnabled INTEGER,
+  telegramMessageThreadId TEXT,
+  notifyLowBalanceEnabled INTEGER,
+  notifySyncDigestEnabled INTEGER,
+  notifyVpsDownEnabled INTEGER,
+  webhookUrl TEXT,
+  webhookEnabled INTEGER,
+  notifyIntervalMinutes INTEGER,
+  uptimeCheckIntervalMinutes INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS notification_log (
+  id TEXT PRIMARY KEY,
+  event TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  status TEXT NOT NULL,
+  fingerprint TEXT,
+  message TEXT,
+  payload TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS notification_state (
+  key TEXT PRIMARY KEY,
+  lastFingerprint TEXT,
+  lastSentAt TEXT,
+  lastStatus TEXT
+);
 `
 
 export function resetTestDb(): void {
   closeDb()
+  resetRuntimeMigrate()
   process.env.DB_PATH = ':memory:'
   const sqlite = getSqlite()
   sqlite.exec(TEST_SCHEMA)

@@ -41,6 +41,7 @@ export const VPS_FORM_EMPTY: VpsFormValues = {
   paidUntil: '',
   project: '',
   notes: '',
+  monitoringEnabled: false,
   userOverrides: [] as string[],
   customData: {} as Record<string, string | number | boolean>,
 }
@@ -66,6 +67,7 @@ export function vpsFormFromRow(v: Vps): VpsFormValues {
     paidUntil: v.paidUntil ?? '',
     project: v.project ?? '',
     notes: v.notes ?? '',
+    monitoringEnabled: Boolean((v as Vps & { monitoringEnabled?: boolean }).monitoringEnabled),
     userOverrides: parseUserOverrides((v as Vps & { userOverrides?: unknown }).userOverrides),
     customData: parseCustomData((v as Vps & { customData?: unknown }).customData),
   }
@@ -284,6 +286,27 @@ export function VpsEditSheet({
                 />
               </FormField>
             </div>
+            <Controller
+              control={control}
+              name="monitoringEnabled"
+              render={({ field }) => (
+                <FormField label="Мониторинг uptime" htmlFor="vps-monitoring">
+                  <SelectField
+                    triggerId="vps-monitoring"
+                    triggerClassName="w-32"
+                    value={field.value ? 'on' : 'off'}
+                    onValueChange={(v) => field.onChange((v ?? 'off') === 'on')}
+                    options={[
+                      { value: 'on', label: 'Вкл' },
+                      { value: 'off', label: 'Выкл' },
+                    ]}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    TCP-проверка SSH-порта; уведомление при переходе в down/up
+                  </p>
+                </FormField>
+              )}
+            />
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Валюта" htmlFor="vps-cur" error={errors.currency?.message}>
                 <Input id="vps-cur" {...register('currency')} />

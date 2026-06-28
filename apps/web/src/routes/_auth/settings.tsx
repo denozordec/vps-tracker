@@ -4,6 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { DownloadIcon, UploadIcon } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -21,7 +22,7 @@ import { FormField } from '@/components/form-field'
 import { Button } from '@cfdm/ui/components/button'
 import { settingsSchema, type SettingsFormValues } from '@/lib/schemas'
 import { CustomFieldsEditor } from '@/components/domain/custom-fields-editor'
-import type { Settings } from '@/types/entities'
+import type { NotificationLogRow, Settings } from '@/types/entities'
 
 export const Route = createFileRoute('/_auth/settings')({
   loader: ({ context: { queryClient } }) =>
@@ -46,11 +47,13 @@ function settingsToFormValues(s: Settings): SettingsFormValues {
     notifyNewTariffsEnabled: s.notifyNewTariffsEnabled !== false,
     notifyLowBalanceEnabled: s.notifyLowBalanceEnabled !== false,
     notifySyncDigestEnabled: s.notifySyncDigestEnabled !== false,
-    notifyVpsDownEnabled: (s as Settings & { notifyVpsDownEnabled?: boolean }).notifyVpsDownEnabled !== false,
-    webhookUrl: (s as Settings & { webhookUrl?: string }).webhookUrl ?? '',
-    webhookEnabled: (s as Settings & { webhookEnabled?: boolean }).webhookEnabled === true,
+    notifyVpsDownEnabled: s.notifyVpsDownEnabled !== false,
+    notifyIntervalMinutes: s.notifyIntervalMinutes ?? 60,
+    uptimeCheckIntervalMinutes: s.uptimeCheckIntervalMinutes ?? 5,
+    webhookUrl: s.webhookUrl ?? '',
+    webhookEnabled: s.webhookEnabled === true,
     customFields: parseCustomFieldDefs(s.customFields),
-    telegramMessageThreadId: (s as Settings & { telegramMessageThreadId?: string }).telegramMessageThreadId ?? '',
+    telegramMessageThreadId: s.telegramMessageThreadId ?? '',
   }
 }
 
@@ -103,6 +106,7 @@ function SettingsPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+      void refetchLog()
       toast.success('Настройки сохранены')
       form.reset(form.getValues())
     },
@@ -111,9 +115,37 @@ function SettingsPage() {
 
   const telegramTestMut = useMutation({
     mutationFn: () => api.sendTelegramTest(),
-    onSuccess: () => toast.success('Тестовое сообщение отправлено'),
+    onSuccess: (data) => {
+      if (!data.ok) {
+        toast.error(data.error ?? 'Ошибка Telegram')
+        return
+      }
+      toast.success('Тестовое сообщение отправлено')
+    },
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка отправки'),
   })
+
+  const webhookTestMut = useMutation({
+    mutationFn: () => api.sendWebhookTest(),
+    onSuccess: (data) => {
+      if (!data.ok) {
+        toast.error(data.error ?? 'Ошибка webhook')
+        return
+      }
+      toast.success('Тестовый webhook отправлен')
+    },
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка отправки'),
+  })
+
+  const { data: notificationLog = [], refetch: refetchLog } = useQuery({
+    queryKey: ['notifications', 'log'],
+    queryFn: () => api.fetchNotificationLog(30),
+  })
+
+  const notificationRows = useMemo(
+    () => notificationLog as NotificationLogRow[],
+    [notificationLog],
+  )
 
   const backupActions = (
     <div className="flex flex-wrap gap-2">
@@ -326,6 +358,28 @@ function SettingsPage() {
                     <FormField label="Интервал тарифов (мин)" htmlFor="set-tariff-int">
                       <Input id="set-tariff-int" type="number" min={60} {...form.register('syncTariffsIntervalMinutes')} />
                     </FormField>
+                  </FieldGroup>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Уведомления</CardTitle>
+                  <CardDescription>События, интервалы и каналы доставки</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <FormField label="Интервал проверки оплаты (мин)" htmlFor="set-notify-int">
+                      <Input id="set-notify-int" type="number" min={15} {...form.register('notifyIntervalMinutes')} />
+                    </FormField>
+                    <FormField label="Интервал uptime-проверки (мин)" htmlFor="set-uptime-int">
+                      <Input
+                        id="set-uptime-int"
+                        type="number"
+                        min={1}
+                        {...form.register('uptimeCheckIntervalMinutes')}
+                      />
+                    </FormField>
                     <Controller
                       control={form.control}
                       name="notifyLowBalanceEnabled"
@@ -382,7 +436,52 @@ function SettingsPage() {
                     <FormField label="Webhook URL" htmlFor="set-webhook-url" error={form.formState.errors.webhookUrl?.message}>
                       <Input id="set-webhook-url" placeholder="https://hooks.example.com/..." {...form.register('webhookUrl')} />
                     </FormField>
+                    <LoadingButton
+                      type="button"
+                      variant="outline"
+                      onClick={() => webhookTestMut.mutate()}
+                      loading={webhookTestMut.isPending}
+                    >
+                      Тест webhook
+                    </LoadingButton>
                   </FieldGroup>
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Журнал уведомлений</CardTitle>
+                  <CardDescription>Последние попытки доставки (Telegram и webhook)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {notificationRows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Записей пока нет</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-md border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50 text-left">
+                            <th className="px-3 py-2 font-medium">Время</th>
+                            <th className="px-3 py-2 font-medium">Событие</th>
+                            <th className="px-3 py-2 font-medium">Канал</th>
+                            <th className="px-3 py-2 font-medium">Статус</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {notificationRows.map((row) => (
+                            <tr key={row.id} className="border-b last:border-0">
+                              <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                                {new Date(row.createdAt).toLocaleString('ru-RU')}
+                              </td>
+                              <td className="px-3 py-2">{row.event}</td>
+                              <td className="px-3 py-2">{row.channel}</td>
+                              <td className="px-3 py-2">{row.status}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

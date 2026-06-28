@@ -5,6 +5,20 @@ import { getDb, schema } from '@cfdm/db'
 
 const CHECK_TIMEOUT_MS = 5000
 
+export interface VpsHealthTransition {
+  id: string
+  label: string
+  previousStatus: string | null
+  currentStatus: 'up' | 'down'
+}
+
+export interface UptimeCheckResult {
+  checked: number
+  down: number
+  newlyDown: VpsHealthTransition[]
+  newlyUp: VpsHealthTransition[]
+}
+
 function tcpCheck(host: string, port: number): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
   const started = Date.now()
   return new Promise((resolve) => {
@@ -19,7 +33,7 @@ function tcpCheck(host: string, port: number): Promise<{ ok: boolean; latencyMs:
   })
 }
 
-export async function runVpsUptimeChecks(): Promise<{ checked: number; down: number }> {
+export async function runVpsUptimeChecks(): Promise<UptimeCheckResult> {
   const db = getDb()
   const rows = db
     .select()
@@ -29,6 +43,8 @@ export async function runVpsUptimeChecks(): Promise<{ checked: number; down: num
 
   let checked = 0
   let down = 0
+  const newlyDown: VpsHealthTransition[] = []
+  const newlyUp: VpsHealthTransition[] = []
   const now = new Date().toISOString()
 
   for (const row of rows) {
@@ -38,8 +54,16 @@ export async function runVpsUptimeChecks(): Promise<{ checked: number; down: num
     const port = Number(row.sshPort) || 22
     const result = await tcpCheck(host, port)
     checked++
-    const status = result.ok ? 'up' : 'down'
-    if (!result.ok) down++
+    const status: 'up' | 'down' = result.ok ? 'up' : 'down'
+    if (status === 'down') down++
+
+    const previous = row.lastHealthStatus
+    const label = row.dns || row.ip || row.id
+    if (status === 'down' && previous !== 'down') {
+      newlyDown.push({ id: row.id, label, previousStatus: previous, currentStatus: 'down' })
+    } else if (status === 'up' && previous === 'down') {
+      newlyUp.push({ id: row.id, label, previousStatus: previous, currentStatus: 'up' })
+    }
 
     db.insert(schema.vpsHealthChecks)
       .values({
@@ -61,7 +85,7 @@ export async function runVpsUptimeChecks(): Promise<{ checked: number; down: num
       .run()
   }
 
-  return { checked, down }
+  return { checked, down, newlyDown, newlyUp }
 }
 
 export function listRecentHealthChecks(vpsId: string, limit = 20) {
