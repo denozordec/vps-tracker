@@ -1,6 +1,9 @@
+import { Controller } from 'react-hook-form'
+
 import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
+import { ColorPicker } from '@/components/reui/color-picker'
 import { projectSchema, type ProjectFormValues } from '@/lib/schemas'
 
 const EMPTY: ProjectFormValues = { name: '', color: '' }
@@ -39,14 +42,36 @@ export function ProjectEditSheet({
       submitting={submitting}
     >
       {(form) => {
-        const { register, formState: { errors } } = form
+        const {
+          register,
+          control,
+          formState: { errors },
+        } = form
         return (
           <>
             <FormField label="Название" htmlFor="project-name" error={errors.name?.message} invalid={!!errors.name}>
               <Input id="project-name" aria-invalid={!!errors.name} {...register('name')} />
             </FormField>
-            <FormField label="Цвет (hex)" htmlFor="project-color" description="Например #3b82f6 — для badge в списке VPS">
-              <Input id="project-color" placeholder="#3b82f6" {...register('color')} />
+            <FormField
+              label="Цвет (hex)"
+              htmlFor="project-color"
+              description="Например #3b82f6 — для badge в списке VPS"
+              error={errors.color?.message}
+              invalid={!!errors.color}
+            >
+              <Controller
+                control={control}
+                name="color"
+                render={({ field }) => (
+                  <ColorPicker
+                    id="project-color"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    aria-invalid={!!errors.color}
+                  />
+                )}
+              />
             </FormField>
           </>
         )
