@@ -27,7 +27,7 @@ import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagina
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { DataGridColumnVisibility } from '@/components/reui/data-grid/data-grid-column-visibility'
 import { EmptyState } from './empty-state'
-import type { DataTableColumn } from './data-grid-types'
+import type { DataGridColumn } from './data-grid-types'
 
 const PAGINATION_LABELS = {
   rowsPerPageLabel: 'Строк на странице',
@@ -59,8 +59,8 @@ export interface DataGridColumnVisibilityOption {
   label: string
 }
 
-export function dataTableColumnVisibilityOptions<T>(
-  cols: DataTableColumn<T>[],
+export function dataGridColumnVisibilityOptions<T>(
+  cols: DataGridColumn<T>[],
 ): DataGridColumnVisibilityOption[] {
   return cols
     .filter((c) => c.enableHiding !== false)
@@ -390,9 +390,9 @@ export function DataGridCard<TData extends object>({
   )
 }
 
-/** Хелпер для конвертации DataTableColumn<T> → ColumnDef<T> с DataGridColumnHeader. */
-export function columnDefFromDataTable<T>(
-  cols: DataTableColumn<T>[],
+/** Хелпер для конвертации DataGridColumn<T> → ColumnDef<T> с DataGridColumnHeader. */
+export function columnDefFromDataGrid<T>(
+  cols: DataGridColumn<T>[],
 ): ColumnDef<T, unknown>[] {
   return cols.map((c) => {
     const title = resolveHeaderTitle(c.header, c.headerTitle)
@@ -428,6 +428,9 @@ export function columnDefFromDataTable<T>(
     }
   })
 }
+
+/** @deprecated Используйте columnDefFromDataGrid */
+export const columnDefFromDataTable = columnDefFromDataGrid
 
 /** re-export flexRender для удобства использования в колонках. */
 export { flexRender }

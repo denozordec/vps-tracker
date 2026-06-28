@@ -28,6 +28,7 @@ ReUI — first-class shadcn registry с enterprise-компонентами (Dat
 | Number field со stepper | `@reui` | `@/components/reui/number-field` |
 | Autocomplete | `@reui` | `@/components/reui/autocomplete` → `AutoCompleteInput` |
 | Date selector / range | `@reui` | `@/components/reui/date-selector` |
+| Color picker (формы) | `@reui` | `@/components/reui/color-picker` — hex только в swatch data |
 | Semantic badge (success/info/warning) | `@reui` | `@/components/reui/badge` или `StatusBadge` |
 
 **Простые списки** — shadcn `Table`. **Сложные data-списки** — `DataGridCard` (ReUI data-grid), не shadcn Data Table.

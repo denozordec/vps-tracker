@@ -11,9 +11,9 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataTable, loadStoredColumnVisibility, dataTableColumnVisibilityOptions } from '@/components/data-grid-card'
+import { DataGridCard, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/data-grid-card'
 import type { VisibilityState } from '@tanstack/react-table'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
 import { CountryFlag } from '@/components/country-flag'
 import { QueryState } from '@/components/query-state'
@@ -196,17 +196,20 @@ function VpsPage() {
   }, [snapshot?.serverProjects, projectNameOptions])
 
   const filteredVps = useMemo(() => {
-    let rows = applyVpsFilters(snapshot?.vps ?? [], filters)
-    if (!health || !snapshot) return rows
     const now = new Date()
+    const paidUntilCtx = snapshot
+      ? {
+          vps: snapshot.vps,
+          providerAccounts: snapshot.providerAccounts,
+          payments: snapshot.payments,
+          balanceLedger: snapshot.balanceLedger,
+          now,
+        }
+      : undefined
+    let rows = applyVpsFilters(snapshot?.vps ?? [], filters, paidUntilCtx)
+    if (!health || !snapshot) return rows
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const ctx = {
-      vps: snapshot.vps,
-      providerAccounts: snapshot.providerAccounts,
-      payments: snapshot.payments,
-      balanceLedger: snapshot.balanceLedger,
-      now,
-    }
+    const ctx = paidUntilCtx!
     if (health === 'no-rate') {
       rows = rows.filter((v) => {
         if (v.status !== 'active') return false
@@ -319,8 +322,8 @@ function VpsPage() {
     })
   }
 
-  const columns: DataTableColumn<Vps>[] = useMemo(() => {
-    const base: DataTableColumn<Vps>[] = [
+  const columns: DataGridColumn<Vps>[] = useMemo(() => {
+    const base: DataGridColumn<Vps>[] = [
     {
       key: 'ip',
       header: 'IP / DNS',
@@ -483,7 +486,7 @@ function VpsPage() {
   ])
 
   const columnVisibilityOptions = useMemo(
-    () => dataTableColumnVisibilityOptions(columns),
+    () => dataGridColumnVisibilityOptions(columns),
     [columns],
   )
 
@@ -582,7 +585,7 @@ function VpsPage() {
               <DataGridCard
                 key={section.key}
                 title={section.label ?? undefined}
-                columns={columnDefFromDataTable(columns)}
+                columns={columnDefFromDataGrid(columns)}
                 data={section.items}
                 rowId={(v) => v.id}
                 emptyTitle="VPS не найдены"

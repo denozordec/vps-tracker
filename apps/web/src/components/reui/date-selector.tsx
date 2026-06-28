@@ -19,7 +19,7 @@ import {
 import { DayButton } from "react-day-picker"
 import type { DateRange } from "react-day-picker"
 
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@cfdm/ui/hooks/use-mobile"
 import { cn } from "@cfdm/ui/lib/utils"
 import { Button } from "@cfdm/ui/components/button"
 import { Calendar, CalendarDayButton } from "@cfdm/ui/components/calendar"

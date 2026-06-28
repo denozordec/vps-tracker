@@ -8,8 +8,8 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
@@ -74,7 +74,7 @@ function ProvidersPage() {
     setOpen(true)
   }
 
-  const columns: DataTableColumn<Provider>[] = [
+  const columns: DataGridColumn<Provider>[] = [
     {
       key: 'name',
       header: 'Хостер',
@@ -152,7 +152,7 @@ function ProvidersPage() {
     >
       {(snap) => (
         <DataGridCard
-          columns={columnDefFromDataTable(columns)}
+          columns={columnDefFromDataGrid(columns)}
           data={snap.providers}
           rowId={(p) => p.id}
           pinLastColumn

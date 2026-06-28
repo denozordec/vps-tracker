@@ -6,8 +6,8 @@ import { api } from '@/lib/api-client'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 
@@ -36,7 +36,7 @@ function AuditPage() {
     queryFn: () => api.fetchAuditLog(200),
   })
 
-  const columns: DataTableColumn<AuditRow>[] = [
+  const columns: DataGridColumn<AuditRow>[] = [
     {
       key: 'createdAt',
       header: 'Время',
@@ -97,7 +97,7 @@ function AuditPage() {
       >
         {(rows) => (
           <DataGridCard
-            columns={columnDefFromDataTable(columns)}
+            columns={columnDefFromDataGrid(columns)}
             data={rows as AuditRow[]}
             rowId={(r) => r.id}
             pageSize={25}

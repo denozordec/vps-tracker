@@ -20,8 +20,8 @@ import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { SectionCards } from '@/components/section-cards'
@@ -73,7 +73,7 @@ function BalancePage() {
 
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
 
-  const columns: DataTableColumn<BalanceLedgerRow>[] = [
+  const columns: DataGridColumn<BalanceLedgerRow>[] = [
     {
       key: 'date',
       header: 'Дата',
@@ -233,7 +233,7 @@ function BalancePage() {
               ]}
             />
             <DataGridCard
-              columns={columnDefFromDataTable(columns)}
+              columns={columnDefFromDataGrid(columns)}
               data={rows}
               rowId={(r) => r.id}
               pinLastColumn

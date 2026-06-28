@@ -18,8 +18,8 @@ import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { getPaidUntilDate } from '@/lib/paid-until'
 import {
   effectiveVpsTariffCurrency,
@@ -93,7 +93,7 @@ function VpsDetailPage() {
       .filter(({ value }) => value !== undefined && value !== null && value !== '')
   }, [vps, customFieldDefs])
 
-  const paymentColumns: DataTableColumn<Payment>[] = [
+  const paymentColumns: DataGridColumn<Payment>[] = [
     { key: 'date', header: 'Дата', cell: (p) => <span className="tabular-nums">{p.date}</span> },
     { key: 'type', header: 'Тип', cell: (p) => paymentTypeLabel(p.type) },
     {
@@ -231,7 +231,7 @@ function VpsDetailPage() {
               </Card>
               <DataGridCard
                 title="Связанные платежи"
-                columns={columnDefFromDataTable(paymentColumns)}
+                columns={columnDefFromDataGrid(paymentColumns)}
                 data={relatedPayments}
                 rowId={(p) => p.id}
                 emptyTitle="Платежей нет"

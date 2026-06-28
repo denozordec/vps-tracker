@@ -6,8 +6,8 @@ import { toast } from 'sonner'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
 import { Button } from '@cfdm/ui/components/button'
@@ -79,7 +79,7 @@ function ProjectsPage() {
     setOpen(true)
   }
 
-  const columns: DataTableColumn<ProjectRow>[] = [
+  const columns: DataGridColumn<ProjectRow>[] = [
     {
       key: 'name',
       header: 'Проект',
@@ -167,7 +167,7 @@ function ProjectsPage() {
     >
       {() => (
         <DataGridCard
-          columns={columnDefFromDataTable(columns)}
+          columns={columnDefFromDataGrid(columns)}
           data={rows}
           rowId={(r) => r.id}
           pinLastColumn

@@ -22,8 +22,8 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { SectionCards } from '@/components/section-cards'
 import { QueryState } from '@/components/query-state'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
@@ -101,7 +101,7 @@ function DashboardPage() {
           const atRisk = buildAtRiskAccounts(snap.providerAccounts, snap.providers, snap.syncLog ?? [])
           const baseCur = snap.settings[0]?.baseCurrency ?? 'RUB'
 
-          const issueColumns: DataTableColumn<InventoryIssue>[] = [
+          const issueColumns: DataGridColumn<InventoryIssue>[] = [
             {
               key: 'title',
               header: 'Проблема',
@@ -134,7 +134,7 @@ function DashboardPage() {
             },
           ]
 
-          const vpsColumns: DataTableColumn<Vps>[] = [
+          const vpsColumns: DataGridColumn<Vps>[] = [
             {
               key: 'ip',
               header: 'IP / DNS',
@@ -174,7 +174,7 @@ function DashboardPage() {
             },
           ]
 
-          const riskColumns: DataTableColumn<AtRiskAccount>[] = [
+          const riskColumns: DataGridColumn<AtRiskAccount>[] = [
             {
               key: 'name',
               header: 'Аккаунт',
@@ -319,7 +319,7 @@ function DashboardPage() {
                   <DataGridCard
                     title="Здоровье инвентаря"
                     description="Ставка, просрочка оплаты, устаревший синк, расхождения баланса"
-                    columns={columnDefFromDataTable(issueColumns)}
+                    columns={columnDefFromDataGrid(issueColumns)}
                     data={issues}
                     rowId={(i) => i.key}
                     emptyTitle="Проблем не найдено"
@@ -336,7 +336,7 @@ function DashboardPage() {
                         Все VPS
                       </Button>
                     }
-                    columns={columnDefFromDataTable(vpsColumns)}
+                    columns={columnDefFromDataGrid(vpsColumns)}
                     data={activeVps.slice(0, 8)}
                     rowId={(v) => v.id}
                     pagination={false}
@@ -347,7 +347,7 @@ function DashboardPage() {
                   <DataGridCard
                     title="Аккаунты под риском"
                     description="Низкий баланс или устаревший синк BILLmanager"
-                    columns={columnDefFromDataTable(riskColumns)}
+                    columns={columnDefFromDataGrid(riskColumns)}
                     data={atRisk}
                     rowId={(r) => r.id}
                     emptyTitle="Рисков нет"

@@ -41,6 +41,7 @@ pnpm dlx shadcn@latest add @reui/filters
 | filters | `VpsFiltersToolbar` |
 | autocomplete | `AutoCompleteInput` |
 | date-selector | `lib/date-selector-i18n.ts` |
+| color-picker | напрямую в domain forms (`project-edit-sheet`) |
 
 ## Матрица выбора
 
@@ -61,3 +62,4 @@ pnpm dlx shadcn@latest add @reui/filters
 - `@/components/ui/*` → `@cfdm/ui/components/*`
 - Не класть ReUI в `packages/ui`
 - Semantic colors: `variant="success"` — не `bg-emerald-*`
+- `color-picker`: hex только в preset data, не в Tailwind `className`

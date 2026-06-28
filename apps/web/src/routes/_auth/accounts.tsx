@@ -21,8 +21,8 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
@@ -251,7 +251,7 @@ function AccountsPage() {
     ]
   }, [snapshot, syncableCount, healthCtx, filters, health])
 
-  const columns: DataTableColumn<ProviderAccount>[] = [
+  const columns: DataGridColumn<ProviderAccount>[] = [
     {
       key: 'name',
       header: 'Аккаунт',
@@ -436,7 +436,7 @@ function AccountsPage() {
           ) : null}
           {health ? <HealthModeBanner health={health} exitTo="/accounts" /> : null}
           <DataGridCard
-            columns={columnDefFromDataTable(columns)}
+            columns={columnDefFromDataGrid(columns)}
             data={filteredAccounts}
             rowId={(a) => a.id}
             pinLastColumn

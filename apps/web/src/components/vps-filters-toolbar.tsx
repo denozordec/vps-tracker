@@ -10,7 +10,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@cfdm/ui/components/popover'
-import { Slider } from '@cfdm/ui/components/slider'
 import { PlusIcon } from 'lucide-react'
 
 import { ListFiltersBar, type FilterChip } from '@/components/list-filters-bar'
@@ -18,12 +17,25 @@ import type { DataGridColumnVisibilityOption } from '@/components/data-grid-card
 import type { VisibilityState } from '@tanstack/react-table'
 
 import {
+  DateSelector,
+  type DateSelectorFilterType,
+  type DateSelectorValue,
+} from '@/components/reui/date-selector'
+import {
+  NumberField,
+  NumberFieldDecrement,
+  NumberFieldGroup,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from '@/components/reui/number-field'
+import {
   Filters,
   createFilter,
   type Filter,
   type FilterFieldConfig,
   type FilterI18nConfig,
   type FilterOption,
+  type CustomRendererProps,
 } from '@/components/reui/filters'
 import {
   type VpsFiltersState,
@@ -34,6 +46,7 @@ import {
   saveFilterPresets,
   type VpsFilterPreset,
 } from '@/components/vps-filters'
+import { RU_DATE_SELECTOR_I18N } from '@/lib/date-selector-i18n'
 import { vpsStatusLabel, tariffTypeLabel, environmentLabel } from '@/lib/format'
 import { CountryFlag } from '@/components/country-flag'
 import type { Provider, ProviderAccount, Vps } from '@/types/entities'
@@ -52,6 +65,47 @@ interface VpsFiltersToolbarProps {
   columnVisibilityOptions?: DataGridColumnVisibilityOption[]
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: (columnId: string, visible: boolean) => void
+}
+
+function toDateSelectorValue(values: string[], operator: string): DateSelectorValue {
+  return {
+    period: 'day',
+    operator: (operator as DateSelectorFilterType) || 'before',
+    startDate: values[0] ? new Date(values[0]) : undefined,
+    endDate: values[1] ? new Date(values[1]) : undefined,
+  }
+}
+
+function fromDateSelectorValue(value: DateSelectorValue): string[] {
+  const out: string[] = []
+  if (value.startDate) out.push(value.startDate.toISOString().slice(0, 10))
+  if (value.endDate) out.push(value.endDate.toISOString().slice(0, 10))
+  return out
+}
+
+function renderMinNumberField(
+  min: number,
+  max: number,
+  values: number[],
+  onChange: (v: number[]) => void,
+) {
+  return (
+    <div className="px-2 py-1">
+      <NumberField
+        value={values[0] ?? null}
+        onValueChange={(v) => onChange([v ?? 0])}
+        min={min}
+        max={max}
+        size="sm"
+      >
+        <NumberFieldGroup>
+          <NumberFieldDecrement />
+          <NumberFieldInput />
+          <NumberFieldIncrement />
+        </NumberFieldGroup>
+      </NumberField>
+    </div>
+  )
 }
 
 const RU_I18N: FilterI18nConfig = {
@@ -135,6 +189,13 @@ function stateToFilters(state: VpsFiltersState): (Filter<string> | Filter<number
   if (state.minVcpu != null) out.push(createFilter<number>('minVcpu', 'is', [state.minVcpu]))
   if (state.minRamGb != null) out.push(createFilter<number>('minRamGb', 'is', [state.minRamGb]))
   if (state.minDiskGb != null) out.push(createFilter<number>('minDiskGb', 'is', [state.minDiskGb]))
+  if (state.paidUntilStart) {
+    const values =
+      state.paidUntilEnd && state.paidUntilOperator === 'between'
+        ? [state.paidUntilStart, state.paidUntilEnd]
+        : [state.paidUntilStart]
+    out.push(createFilter<string>('paidUntil', state.paidUntilOperator ?? 'before', values))
+  }
   return out
 }
 
@@ -160,6 +221,12 @@ function filtersToState(filters: Filter[], base: VpsFiltersState): VpsFiltersSta
       case 'minVcpu': next.minVcpu = (f.values[0] as number) ?? null; break
       case 'minRamGb': next.minRamGb = (f.values[0] as number) ?? null; break
       case 'minDiskGb': next.minDiskGb = (f.values[0] as number) ?? null; break
+      case 'paidUntil': {
+        next.paidUntilOperator = (f.operator as typeof next.paidUntilOperator) ?? 'before'
+        next.paidUntilStart = (f.values[0] as string) ?? null
+        next.paidUntilEnd = (f.values[1] as string) ?? null
+        break
+      }
     }
   }
   return next
@@ -256,24 +323,38 @@ export function VpsFiltersToolbar({
       { key: 'backup', label: 'Бэкап', type: 'multiselect' as const, options: onOffOpts, defaultOperator: 'is_any_of' },
       { key: 'project', label: 'Проект', type: 'multiselect' as const, options: projectOpts, searchable: true, defaultOperator: 'is_any_of' },
       {
+        key: 'paidUntil',
+        label: 'Оплачено до',
+        type: 'custom' as const,
+        defaultOperator: 'before',
+        operators: [
+          { value: 'before', label: 'до' },
+          { value: 'after', label: 'после' },
+          { value: 'between', label: 'между' },
+          { value: 'is', label: '=' },
+        ],
+        customRenderer: ({ values, onChange: onCh, operator }: CustomRendererProps<string>) => (
+          <div className="p-2">
+            <DateSelector
+              value={toDateSelectorValue(values, operator)}
+              onChange={(v) => onCh(fromDateSelectorValue(v))}
+              allowRange={operator === 'between'}
+              presetMode={operator as DateSelectorFilterType}
+              i18n={RU_DATE_SELECTOR_I18N}
+              showTwoMonths={operator === 'between'}
+              dayDateFormat="dd.MM.yyyy"
+            />
+          </div>
+        ),
+      },
+      {
         key: 'minVcpu',
         label: 'vCPU ≥',
         type: 'custom' as const,
         defaultOperator: 'is',
         operators: [{ value: 'is', label: '≥' }],
-        customRenderer: ({ values, onChange: onCh }: { values: number[]; onChange: (v: number[]) => void; operator: string }) => (
-          <div className="flex items-center gap-2 px-2 py-1 w-44">
-            <Slider
-              min={0}
-              max={32}
-              step={1}
-              value={values[0] ?? 0}
-              onValueChange={(v) => onCh([typeof v === 'number' ? v : (v[0] ?? 0)])}
-              className="flex-1"
-            />
-            <span className="w-8 text-sm tabular-nums text-end">{values[0] ?? 0}</span>
-          </div>
-        ),
+        customRenderer: ({ values, onChange: onCh }: CustomRendererProps<number>) =>
+          renderMinNumberField(0, 32, values, onCh),
       },
       {
         key: 'minRamGb',
@@ -281,19 +362,8 @@ export function VpsFiltersToolbar({
         type: 'custom' as const,
         defaultOperator: 'is',
         operators: [{ value: 'is', label: '≥' }],
-        customRenderer: ({ values, onChange: onCh }: { values: number[]; onChange: (v: number[]) => void; operator: string }) => (
-          <div className="flex items-center gap-2 px-2 py-1 w-44">
-            <Slider
-              min={0}
-              max={256}
-              step={1}
-              value={values[0] ?? 0}
-              onValueChange={(v) => onCh([typeof v === 'number' ? v : (v[0] ?? 0)])}
-              className="flex-1"
-            />
-            <span className="w-10 text-sm tabular-nums text-end">{values[0] ?? 0} GB</span>
-          </div>
-        ),
+        customRenderer: ({ values, onChange: onCh }: CustomRendererProps<number>) =>
+          renderMinNumberField(0, 256, values, onCh),
       },
       {
         key: 'minDiskGb',
@@ -301,19 +371,8 @@ export function VpsFiltersToolbar({
         type: 'custom' as const,
         defaultOperator: 'is',
         operators: [{ value: 'is', label: '≥' }],
-        customRenderer: ({ values, onChange: onCh }: { values: number[]; onChange: (v: number[]) => void; operator: string }) => (
-          <div className="flex items-center gap-2 px-2 py-1 w-44">
-            <Slider
-              min={0}
-              max={2000}
-              step={10}
-              value={values[0] ?? 0}
-              onValueChange={(v) => onCh([typeof v === 'number' ? v : (v[0] ?? 0)])}
-              className="flex-1"
-            />
-            <span className="w-14 text-sm tabular-nums text-end">{values[0] ?? 0} GB</span>
-          </div>
-        ),
+        customRenderer: ({ values, onChange: onCh }: CustomRendererProps<number>) =>
+          renderMinNumberField(0, 2000, values, onCh),
       },
     ]
   }, [providers, providerAccounts, vps, countryOptions, cityOptions, projectNameOptions])
@@ -432,6 +491,28 @@ export function VpsFiltersToolbar({
         id: 'minDiskGb',
         label: `Disk ≥ ${filters.minDiskGb} GB`,
         onRemove: () => onChange({ ...filters, minDiskGb: null }),
+      })
+    }
+    if (filters.paidUntilStart) {
+      const op = filters.paidUntilOperator ?? 'before'
+      const start = new Date(filters.paidUntilStart).toLocaleDateString('ru-RU')
+      const end = filters.paidUntilEnd
+        ? new Date(filters.paidUntilEnd).toLocaleDateString('ru-RU')
+        : null
+      const label =
+        op === 'between' && end
+          ? `Оплачено до: ${start} — ${end}`
+          : `Оплачено до ${op === 'after' ? 'после' : op === 'is' ? '' : ''} ${start}`
+      out.push({
+        id: 'paidUntil',
+        label: label.trim(),
+        onRemove: () =>
+          onChange({
+            ...filters,
+            paidUntilOperator: null,
+            paidUntilStart: null,
+            paidUntilEnd: null,
+          }),
       })
     }
     if (filters.groupByProject) {

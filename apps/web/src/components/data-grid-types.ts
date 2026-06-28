@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
-export interface DataTableColumn<T> {
+export interface DataGridColumn<T> {
   key: string
   header: ReactNode
   cell: (row: T, index: number) => ReactNode
@@ -13,6 +13,9 @@ export interface DataTableColumn<T> {
   headerClassName?: string
   enableHiding?: boolean
 }
+
+/** @deprecated Используйте DataGridColumn */
+export type DataTableColumn<T> = DataGridColumn<T>
 
 /** Унифицированные классы колонок для DataGridCard. */
 export const COL = {

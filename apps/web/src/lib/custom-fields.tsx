@@ -14,11 +14,11 @@ import {
   formatCustomFieldValue,
   parseCustomData,
 } from '@cfdm/shared/contracts/custom-fields'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import type { DataGridColumn } from '@/components/data-grid-types'
 
 export function buildCustomFieldColumns<T extends { customData?: unknown }>(
   defs: CustomFieldDef[],
-): DataTableColumn<T>[] {
+): DataGridColumn<T>[] {
   return defs.map((def) => ({
     key: `custom_${def.key}`,
     header: def.label,

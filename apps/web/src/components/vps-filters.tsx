@@ -1,4 +1,8 @@
 import type { Vps } from '@/types/entities'
+import type { PaidUntilContext } from '@/lib/paid-until'
+import { getPaidUntilDate } from '@/lib/paid-until'
+
+export type PaidUntilFilterOperator = 'is' | 'before' | 'after' | 'between'
 
 /**
  * Состояние фильтров VPS.
@@ -21,6 +25,9 @@ export interface VpsFiltersState {
   minVcpu: number | null
   minRamGb: number | null
   minDiskGb: number | null
+  paidUntilOperator: PaidUntilFilterOperator | null
+  paidUntilStart: string | null
+  paidUntilEnd: string | null
   project: string[]
   groupByProject: boolean
   tableCompact: boolean
@@ -42,6 +49,9 @@ export function buildDefaultVpsFilters(): VpsFiltersState {
     minVcpu: null,
     minRamGb: null,
     minDiskGb: null,
+    paidUntilOperator: null,
+    paidUntilStart: null,
+    paidUntilEnd: null,
     project: [],
     groupByProject: false,
     tableCompact: false,
@@ -91,6 +101,41 @@ const matchesNumberGte = (
   return Number(item ?? 0) >= threshold
 }
 
+function startOfDay(d: Date): Date {
+  const next = new Date(d)
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function matchesPaidUntil(
+  itemDate: Date | null,
+  operator: string,
+  values: string[],
+): boolean {
+  if (values.length === 0) return true
+  if (!itemDate) return false
+  const itemDay = startOfDay(itemDate)
+  const start = values[0] ? startOfDay(new Date(values[0])) : null
+  const end = values[1] ? startOfDay(new Date(values[1])) : null
+
+  switch (operator) {
+    case 'is':
+      return start ? itemDay.getTime() === start.getTime() : true
+    case 'before':
+      return start ? itemDay.getTime() < start.getTime() : true
+    case 'after':
+      return start ? itemDay.getTime() > start.getTime() : true
+    case 'between':
+      if (start && end) {
+        return itemDay.getTime() >= start.getTime() && itemDay.getTime() <= end.getTime()
+      }
+      if (start) return itemDay.getTime() >= start.getTime()
+      return true
+    default:
+      return true
+  }
+}
+
 interface ActiveFilter {
   field: string
   operator: string
@@ -105,6 +150,7 @@ interface ActiveFilter {
 export function applyVpsFilters(
   items: Vps[],
   filters: VpsFiltersState | ActiveFilter[],
+  paidUntilCtx?: PaidUntilContext,
 ): Vps[] {
   // Если передан state — конвертируем в active filters
   const activeFilters: ActiveFilter[] = Array.isArray(filters)
@@ -189,6 +235,15 @@ export function applyVpsFilters(
         case 'minDiskGb':
           if (!matchesNumberGte(item.diskGb, f.values as number[])) return false
           break
+        case 'paidUntil': {
+          const itemDate = paidUntilCtx
+            ? getPaidUntilDate(item, paidUntilCtx)
+            : item.paidUntil
+              ? new Date(item.paidUntil)
+              : null
+          if (!matchesPaidUntil(itemDate, f.operator, f.values as string[])) return false
+          break
+        }
       }
     }
     return true
@@ -213,6 +268,15 @@ export function stateToActiveFilters(state: VpsFiltersState): ActiveFilter[] {
   if (state.minVcpu != null) out.push({ field: 'minVcpu', operator: 'gte', values: [state.minVcpu] })
   if (state.minRamGb != null) out.push({ field: 'minRamGb', operator: 'gte', values: [state.minRamGb] })
   if (state.minDiskGb != null) out.push({ field: 'minDiskGb', operator: 'gte', values: [state.minDiskGb] })
+  if (state.paidUntilStart) {
+    out.push({
+      field: 'paidUntil',
+      operator: state.paidUntilOperator ?? 'before',
+      values: state.paidUntilEnd
+        ? [state.paidUntilStart, state.paidUntilEnd]
+        : [state.paidUntilStart],
+    })
+  }
   return out
 }
 
@@ -233,6 +297,7 @@ export function countActiveFilters(filters: VpsFiltersState): number {
   if (filters.minVcpu != null) n++
   if (filters.minRamGb != null) n++
   if (filters.minDiskGb != null) n++
+  if (filters.paidUntilStart) n++
   return n
 }
 

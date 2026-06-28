@@ -4,8 +4,8 @@ import { HistoryIcon, UserRoundIcon, CheckCircle2Icon, XCircleIcon, LoaderIcon }
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { CrudListPage } from '@/components/crud-list-page'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { StatusBadge } from '@/components/status-badge'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { Button } from '@cfdm/ui/components/button'
@@ -29,7 +29,7 @@ function statusIcon(status: SyncLogRow['status']) {
 function SyncJournalPage() {
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
 
-  const columns: DataTableColumn<SyncLogRow>[] = [
+  const columns: DataGridColumn<SyncLogRow>[] = [
     {
       key: 'started',
       header: 'Запуск',
@@ -99,7 +99,7 @@ function SyncJournalPage() {
     >
       {(snap) => (
         <DataGridCard
-          columns={columnDefFromDataTable(columns)}
+          columns={columnDefFromDataGrid(columns)}
           data={snap.syncLog ?? []}
           rowId={(r) => r.id}
           dense

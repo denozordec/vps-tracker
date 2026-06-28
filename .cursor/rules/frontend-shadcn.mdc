@@ -51,12 +51,11 @@ Monorepo layout — [`frontend-monorepo.mdc`](frontend-monorepo.mdc). MCP workfl
 | `EmptyState` | `empty-state.tsx` |
 | `QueryState` | `query-state.tsx` |
 | `ConfirmDialog` | `confirm-dialog.tsx` |
-| `DataTableCard` | `data-table-card.tsx` |
+| `DataGridCard` | `data-grid-card.tsx` |
 | `SectionCards` | `section-cards.tsx` |
 | `StatusBadge` | `status-badge.tsx` |
 | `FormSheet` | `form-sheet.tsx` |
 | `FormField` | `form-field.tsx` |
-| `TableCard` | `table-card.tsx` |
 | `LoadingButton` | `loading-button.tsx` |
 | `SectionCardsSkeleton` | `section-cards-skeleton.tsx` |
 | `TableSkeleton` | `table-skeleton.tsx` |

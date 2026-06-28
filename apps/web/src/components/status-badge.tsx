@@ -1,18 +1,19 @@
-import { Badge } from '@cfdm/ui/components/badge'
 import type { ComponentProps } from 'react'
+
+import { Badge } from '@/components/reui/badge'
 
 type BadgeVariant = NonNullable<ComponentProps<typeof Badge>['variant']>
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
-  active: 'default',
-  ok: 'default',
-  paid: 'default',
+  active: 'success',
+  ok: 'success',
+  paid: 'success',
   paused: 'secondary',
   archived: 'outline',
   error: 'destructive',
-  running: 'secondary',
-  overdue: 'destructive',
-  stale: 'destructive',
+  running: 'info',
+  overdue: 'warning',
+  stale: 'warning',
 }
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {

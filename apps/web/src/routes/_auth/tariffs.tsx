@@ -7,8 +7,8 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataTable } from '@/components/data-grid-card'
-import type { DataTableColumn } from '@/components/data-grid-types'
+import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { Button } from '@cfdm/ui/components/button'
@@ -62,7 +62,7 @@ function TariffsPage() {
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка загрузки тарифов'),
   })
 
-  const columns: DataTableColumn<ActiveTariff>[] = [
+  const columns: DataGridColumn<ActiveTariff>[] = [
     {
       key: 'name',
       header: 'Тариф',
@@ -169,7 +169,7 @@ function TariffsPage() {
             </Alert>
           ) : null}
           <DataGridCard
-            columns={columnDefFromDataTable(columns)}
+            columns={columnDefFromDataGrid(columns)}
             data={snap.activeTariffs}
             rowId={(t) => t.id}
           />
