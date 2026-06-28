@@ -11,9 +11,11 @@ import { mapOperationToPayment, mapServerToVps } from './mappers.js'
 import {
   fetchBalance,
   fetchOperations,
+  fetchPlanCostIndex,
   fetchServersWithDetails,
   fetchTariffList,
   type UserApiBalanceResult,
+  type UserApiPlanCostIndex,
 } from './operations.js'
 
 export interface SyncFromUserApiOptions {
@@ -75,13 +77,16 @@ export async function syncFromUserApi(
 
   const fallbackCurrency = syncFallbackCurrency(account)
 
-  const [servers, balanceInfo, tariffItems, operations] = await Promise.all([
+  const [servers, balanceInfo, tariffItems, operations, planIndex] = await Promise.all([
     fetchVpsData ? fetchServersWithDetails(apiBaseUrl, credentials) : [],
     fetchVpsData
       ? fetchBalance(apiBaseUrl, credentials, fallbackCurrency).catch(() => null)
       : null,
     fetchTariffs ? fetchTariffList(apiBaseUrl, credentials).catch(() => []) : [],
     fetchVpsData ? fetchOperations(apiBaseUrl, credentials).catch(() => []) : [],
+    fetchVpsData
+      ? fetchPlanCostIndex(apiBaseUrl, credentials).catch(() => new Map() as UserApiPlanCostIndex)
+      : (new Map() as UserApiPlanCostIndex),
   ])
 
   let vpsCount = 0
@@ -89,7 +94,7 @@ export async function syncFromUserApi(
 
   if (fetchVpsData) {
     for (const server of servers) {
-      const vps = mapServerToVps(server, apiType, providerId, accountId)
+      const vps = mapServerToVps(server, apiType, providerId, accountId, planIndex)
       const id = `vps-${idPrefix}-${accountId}-${vps.externalId}`
       const additionalIps = JSON.stringify(vps.additionalIps || [])
       const dailyRate = vps.dailyRate

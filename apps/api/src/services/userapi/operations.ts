@@ -16,11 +16,24 @@ export interface UserApiDatacenter {
 }
 
 export interface UserApiTariffSpec {
-  cpu?: { value?: number; for?: string }
-  ram?: { value?: number; for?: string }
-  disk?: { value?: number; for?: string }
+  cpu?: { value?: number; total?: number; for?: string }
+  ram?: { value?: number; total?: number; for?: string }
+  disk?: { value?: number; total?: number; for?: string }
   gpu?: { value?: number; for?: string } | null
   traff?: { value?: number; for?: string }
+}
+
+export interface UserApiPlanParamCost {
+  cost?: number
+  min?: number
+  max?: number
+}
+
+export interface UserApiPlanParams {
+  cpu?: UserApiPlanParamCost
+  ram?: UserApiPlanParamCost
+  disk?: UserApiPlanParamCost
+  ip4?: UserApiPlanParamCost
 }
 
 export interface UserApiServerListItem {
@@ -62,8 +75,11 @@ export interface UserApiServerPlan {
   active?: boolean
   enable?: boolean
   has_params?: boolean
+  params?: UserApiPlanParams | null
   data?: UserApiTariffSpec | null
 }
+
+export type UserApiPlanCostIndex = Map<string, UserApiServerPlan>
 
 export interface UserApiOperation {
   id: number
@@ -263,6 +279,23 @@ export async function fetchServerPlans(
   const { baseUrl: url, token } = parseCredentials(baseUrl, credentials)
   const data = await userApiRequest<UserApiServerPlan[]>(url, token, `/server-plan/${groupId}`)
   return Array.isArray(data) ? data : []
+}
+
+export async function fetchPlanCostIndex(
+  baseUrl: string,
+  credentials: string,
+): Promise<UserApiPlanCostIndex> {
+  const groups = await fetchServerGroups(baseUrl, credentials)
+  const index: UserApiPlanCostIndex = new Map()
+
+  for (const group of groups) {
+    const plans = await fetchServerPlans(baseUrl, credentials, group.id)
+    for (const plan of plans) {
+      if (plan?.id != null) index.set(String(plan.id), plan)
+    }
+  }
+
+  return index
 }
 
 export async function fetchTariffList(

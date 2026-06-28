@@ -25,7 +25,18 @@ const server: UserApiServerDetail = {
 
 describe('mapServerToVps', () => {
   it('maps macloud server with apiType prefix in notes', () => {
-    const vps = mapServerToVps(server, 'macloud', 'prov-1', 'acc-1')
+    const planIndex = new Map([
+      [
+        '1',
+        {
+          id: 1,
+          name: '2 RAM / 1 CPU / 40 NVMe',
+          cost: 1.55,
+          period: 'day',
+        },
+      ],
+    ])
+    const vps = mapServerToVps(server, 'macloud', 'prov-1', 'acc-1', planIndex)
     expect(vps.externalId).toBe('12345')
     expect(vps.ip).toBe('91.84.101.78')
     expect(vps.os).toBe('Ubuntu 24.04')
@@ -37,6 +48,63 @@ describe('mapServerToVps', () => {
     expect(vps.paidUntil).toBe('2029-02-20')
     expect(vps.notes).toContain('macloud-12345')
     expect(vps.tariffType).toBe('daily')
+    expect(vps.dailyRate).toBe(1.55)
+    expect(vps.monthlyRate).toBeNull()
+  })
+
+  it('maps monthly plan cost from plan index', () => {
+    const planIndex = new Map([
+      [
+        '1',
+        {
+          id: 1,
+          name: '2 RAM / 1 CPU / 40 NVMe',
+          cost: 500,
+          period: 'month',
+        },
+      ],
+    ])
+    const vps = mapServerToVps(server, 'vdsina', 'prov-1', 'acc-1', planIndex)
+    expect(vps.tariffType).toBe('monthly')
+    expect(vps.monthlyRate).toBe(500)
+    expect(vps.dailyRate).toBeNull()
+  })
+
+  it('adds constructor plan extra cost from server totals', () => {
+    const planIndex = new Map([
+      [
+        '1',
+        {
+          id: 1,
+          name: 'Constructor',
+          cost: 10,
+          period: 'day',
+          has_params: true,
+          params: {
+            cpu: { cost: 1 },
+            ram: { cost: 0.5 },
+            disk: { cost: 0.1 },
+          },
+          data: { cpu: { value: 1 }, ram: { value: 1 }, disk: { value: 1 } },
+        },
+      ],
+    ])
+    const vps = mapServerToVps(
+      {
+        ...server,
+        data: {
+          cpu: { value: 1, total: 4 },
+          ram: { value: 1, total: 8 },
+          disk: { value: 1, total: 10 },
+        },
+      },
+      'vdsina',
+      'prov-1',
+      'acc-1',
+      planIndex,
+    )
+    // 10 + 3*1 + 7*0.5 + 9*0.1 = 10 + 3 + 3.5 + 0.9 = 17.4
+    expect(vps.dailyRate).toBe(17.4)
   })
 
   it('maps vdsina server with vdsina prefix in notes', () => {

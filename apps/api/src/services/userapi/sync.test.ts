@@ -10,12 +10,14 @@ vi.mock('./operations.js', () => ({
   fetchServersWithDetails: vi.fn(),
   fetchBalance: vi.fn(),
   fetchTariffList: vi.fn(),
+  fetchPlanCostIndex: vi.fn(),
   fetchOperations: vi.fn(),
 }))
 
 import {
   fetchBalance,
   fetchOperations,
+  fetchPlanCostIndex,
   fetchServersWithDetails,
   fetchTariffList,
 } from './operations.js'
@@ -56,7 +58,7 @@ describe('syncFromUserApi', () => {
         ip: { ip: '1.2.3.4', type: '4' },
         template: { name: 'Debian 12' },
         datacenter: { id: 1, name: 'DC1', country: 'ru' },
-        'server-plan': { name: '2 RAM / 1 CPU / 40 NVMe' },
+        'server-plan': { id: 13, name: '2 RAM / 1 CPU / 40 NVMe' },
         data: { cpu: { value: 1 }, ram: { value: 2 }, disk: { value: 40 } },
       },
     ])
@@ -85,6 +87,19 @@ describe('syncFromUserApi', () => {
         price: '1.55 ₽/день',
       },
     ])
+    vi.mocked(fetchPlanCostIndex).mockResolvedValue(
+      new Map([
+        [
+          '13',
+          {
+            id: 13,
+            name: '2 RAM / 1 CPU / 40 NVMe',
+            cost: 1.55,
+            period: 'day',
+          },
+        ],
+      ]),
+    )
     vi.mocked(fetchOperations).mockResolvedValue([
       {
         id: 999,
@@ -122,11 +137,15 @@ describe('syncFromUserApi', () => {
     expect(result.tariffsCount).toBe(1)
     expect(result.balance?.balance).toBe(500)
 
-    const vps = getSqlite().prepare('SELECT id, notes FROM vps WHERE id = ?').get('vps-macloud-acc-macloud-100') as {
+    const vps = getSqlite().prepare('SELECT id, notes, dailyRate, tariffType FROM vps WHERE id = ?').get('vps-macloud-acc-macloud-100') as {
       id: string
       notes: string
+      dailyRate: number
+      tariffType: string
     }
     expect(vps.notes).toContain('macloud-100')
+    expect(vps.dailyRate).toBe(1.55)
+    expect(vps.tariffType).toBe('daily')
   })
 
   it('syncs vdsina account with vdsina id prefix', async () => {
