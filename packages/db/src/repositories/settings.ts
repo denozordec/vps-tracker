@@ -95,7 +95,9 @@ function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
         ? Math.max(60, Number(r.syncTariffsIntervalMinutes) || 1440)
         : existing?.syncTariffsIntervalMinutes ?? 1440,
     telegramBotToken:
-      r.telegramBotToken !== undefined ? r.telegramBotToken || '' : existing?.telegramBotToken ?? '',
+      r.telegramBotToken !== undefined && String(r.telegramBotToken || '').trim() !== ''
+        ? r.telegramBotToken
+        : existing?.telegramBotToken ?? '',
     telegramChatId:
       r.telegramChatId !== undefined ? r.telegramChatId || '' : existing?.telegramChatId ?? '',
     telegramMessageThreadId:

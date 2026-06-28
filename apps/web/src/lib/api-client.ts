@@ -108,8 +108,15 @@ export const api = {
     }),
 
   fetchSyncStatus: () => fetchApi('/api/sync/status'),
-  sendTelegramTest: () =>
-    fetchApi<{ ok: boolean; error?: string }>('/api/settings/telegram/test', { method: 'POST' }),
+  sendTelegramTest: (body?: {
+    telegramBotToken?: string
+    telegramChatId?: string
+    telegramMessageThreadId?: string
+  }) =>
+    fetchApi<{ ok: boolean; error?: string }>('/api/settings/telegram/test', {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
 
   sendWebhookTest: () =>
     fetchApi<{ ok: boolean; error?: string }>('/api/settings/webhook/test', { method: 'POST' }),

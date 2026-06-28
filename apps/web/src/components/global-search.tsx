@@ -43,61 +43,85 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const projectItems = useMemo(() => snapshot?.serverProjects ?? [], [snapshot])
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title="Поиск" description="VPS, аккаунты, проекты и навигация">
-      <Command>
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Поиск"
+      description="VPS, аккаунты, проекты и навигация"
+      className="sm:max-w-lg"
+    >
+      <Command className="**:data-[selected=true]:bg-muted **:data-selected:bg-transparent">
         <CommandInput placeholder="IP, DNS, проект, аккаунт…" />
-        <CommandList>
+        <CommandList className="max-h-96">
           <CommandEmpty>Ничего не найдено</CommandEmpty>
           <CommandGroup heading="Навигация">
-          <CommandItem onSelect={() => go('/dashboard')}>
-            <LayoutDashboardIcon />
-            Дашборд
-          </CommandItem>
-          <CommandItem onSelect={() => go('/vps')}>
-            <ServerIcon />
-            Все VPS
-          </CommandItem>
+            <CommandItem onSelect={() => go('/dashboard')}>
+              <LayoutDashboardIcon />
+              <span>Дашборд</span>
+            </CommandItem>
+            <CommandItem onSelect={() => go('/vps')}>
+              <ServerIcon />
+              <span>Все VPS</span>
+            </CommandItem>
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading="VPS">
-          {vpsItems.slice(0, 50).map((v) => (
-            <CommandItem key={v.id} value={`${v.ip} ${v.dns} ${v.project}`} onSelect={() => go('/vps/$vpsId', { vpsId: v.id })}>
-              <ServerIcon />
-              <span>{v.ip || v.dns || v.id}</span>
-              {v.project ? <span className="text-muted-foreground text-xs">· {v.project}</span> : null}
-            </CommandItem>
-          ))}
-          </CommandGroup>
-          <CommandGroup heading="Аккаунты">
-          {accountItems.map((a) => (
-            <CommandItem
-              key={a.id}
-              value={`${a.name} ${providerById.get(a.providerId)?.name ?? ''}`}
-              onSelect={() => go('/accounts')}
-            >
-              <WalletIcon />
-              {a.name}
-            </CommandItem>
-          ))}
-          </CommandGroup>
-          <CommandGroup heading="Проекты">
-          {projectItems.map((p) => {
-            const row = p as { id: string; name: string }
-            return (
-              <CommandItem key={row.id} value={row.name} onSelect={() => go('/vps', { project: row.name })}>
-                <FolderKanbanIcon />
-                {row.name}
+            {vpsItems.slice(0, 50).map((v) => (
+              <CommandItem
+                key={v.id}
+                value={`${v.ip} ${v.dns} ${v.project}`}
+                onSelect={() => go('/vps/$vpsId', { vpsId: v.id })}
+              >
+                <ServerIcon />
+                <span className="truncate">{v.ip || v.dns || v.id}</span>
+                {v.project ? (
+                  <span className="text-muted-foreground text-xs">{v.project}</span>
+                ) : null}
               </CommandItem>
-            )
-          })}
+            ))}
           </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Аккаунты">
+            {accountItems.map((a) => (
+              <CommandItem
+                key={a.id}
+                value={`${a.name} ${providerById.get(a.providerId)?.name ?? ''}`}
+                onSelect={() => go('/accounts')}
+              >
+                <WalletIcon />
+                <span className="truncate">{a.name}</span>
+                {providerById.get(a.providerId)?.name ? (
+                  <span className="text-muted-foreground text-xs">
+                    {providerById.get(a.providerId)?.name}
+                  </span>
+                ) : null}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Проекты">
+            {projectItems.map((p) => {
+              const row = p as { id: string; name: string }
+              return (
+                <CommandItem
+                  key={row.id}
+                  value={row.name}
+                  onSelect={() => go('/vps', { project: row.name })}
+                >
+                  <FolderKanbanIcon />
+                  <span className="truncate">{row.name}</span>
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
+          <CommandSeparator />
           <CommandGroup heading="Хостеры">
-          {(snapshot?.providers ?? []).map((p) => (
-            <CommandItem key={p.id} value={p.name} onSelect={() => go('/providers')}>
-              <Building2Icon />
-              {p.name}
-            </CommandItem>
-          ))}
+            {(snapshot?.providers ?? []).map((p) => (
+              <CommandItem key={p.id} value={p.name} onSelect={() => go('/providers')}>
+                <Building2Icon />
+                <span className="truncate">{p.name}</span>
+              </CommandItem>
+            ))}
           </CommandGroup>
         </CommandList>
       </Command>

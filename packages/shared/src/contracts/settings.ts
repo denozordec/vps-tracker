@@ -26,3 +26,11 @@ export const settingsSchema = z.object({
 })
 
 export type Settings = z.infer<typeof settingsSchema>
+
+export const telegramTestBodySchema = z.object({
+  telegramBotToken: z.string().optional(),
+  telegramChatId: z.string().optional(),
+  telegramMessageThreadId: z.string().optional(),
+})
+
+export type TelegramTestBody = z.infer<typeof telegramTestBodySchema>

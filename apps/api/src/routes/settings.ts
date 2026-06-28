@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
-import { settingsSchema } from '@cfdm/shared/contracts/settings'
+import { settingsSchema, telegramTestBodySchema } from '@cfdm/shared/contracts/settings'
 
 import { restartScheduler } from '../services/scheduler.js'
 import { sendTelegramMessage } from '../services/telegram.js'
@@ -30,16 +30,26 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
     return result
   })
 
-  app.post('/api/settings/telegram/test', async () => {
+  app.post('/api/settings/telegram/test', async (req) => {
+    const parsed = telegramTestBodySchema.safeParse(req.body ?? {})
+    const body = parsed.success ? parsed.data : {}
     const settings = settingsRepository.getRow('settings-main')
-    if (!settings?.telegramBotToken?.trim() || !settings.telegramChatId?.trim()) {
+
+    const token = body.telegramBotToken?.trim() || settings?.telegramBotToken?.trim() || ''
+    const chatId = body.telegramChatId?.trim() || settings?.telegramChatId?.trim() || ''
+    const messageThreadId =
+      body.telegramMessageThreadId !== undefined
+        ? body.telegramMessageThreadId
+        : settings?.telegramMessageThreadId
+
+    if (!token || !chatId) {
       return { ok: false, error: 'Укажите токен бота и chat ID в настройках' }
     }
     const result = await sendTelegramMessage(
-      settings.telegramBotToken,
-      settings.telegramChatId,
+      token,
+      chatId,
       '✅ VPS Tracker: тестовое сообщение',
-      settings.telegramMessageThreadId,
+      messageThreadId,
     )
     return result.ok ? { ok: true } : { ok: false, error: result.error ?? 'Ошибка Telegram API' }
   })

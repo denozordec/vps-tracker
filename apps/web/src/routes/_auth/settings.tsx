@@ -42,7 +42,7 @@ function settingsToFormValues(s: Settings): SettingsFormValues {
     syncIntervalMinutes: s.syncIntervalMinutes ?? 60,
     syncTariffsIntervalMinutes: s.syncTariffsIntervalMinutes ?? 1440,
     telegramChatId: s.telegramChatId ?? '',
-    telegramBotToken: s.telegramBotToken ?? '',
+    telegramBotToken: '',
     notifyPaymentExpiryEnabled: s.notifyPaymentExpiryEnabled !== false,
     notifyNewTariffsEnabled: s.notifyNewTariffsEnabled !== false,
     notifyLowBalanceEnabled: s.notifyLowBalanceEnabled !== false,
@@ -55,6 +55,26 @@ function settingsToFormValues(s: Settings): SettingsFormValues {
     customFields: parseCustomFieldDefs(s.customFields),
     telegramMessageThreadId: s.telegramMessageThreadId ?? '',
   }
+}
+
+function buildSettingsSavePayload(r: SettingsFormValues): SettingsFormValues {
+  const { telegramBotToken, ...rest } = r
+  const token = telegramBotToken?.trim() ?? ''
+  return token ? { ...rest, telegramBotToken: token } : (rest as SettingsFormValues)
+}
+
+function buildTelegramTestPayload(values: SettingsFormValues) {
+  const token = values.telegramBotToken?.trim() ?? ''
+  const payload: {
+    telegramChatId?: string
+    telegramMessageThreadId?: string
+    telegramBotToken?: string
+  } = {
+    telegramChatId: values.telegramChatId?.trim() || undefined,
+    telegramMessageThreadId: values.telegramMessageThreadId ?? '',
+  }
+  if (token) payload.telegramBotToken = token
+  return payload
 }
 
 function BoolSelect({
@@ -96,7 +116,7 @@ function SettingsPage() {
 
   const upsertMut = useMutation({
     mutationFn: (patch: SettingsFormValues) => {
-      const payload = { ...patch }
+      const payload = buildSettingsSavePayload(patch)
       if (current?.id) return api.update<Settings>('settings', current.id, payload)
       return api.create<Settings>('settings', {
         id: 'settings-main',
@@ -114,15 +134,15 @@ function SettingsPage() {
   })
 
   const telegramTestMut = useMutation({
-    mutationFn: () => api.sendTelegramTest(),
+    mutationFn: () => api.sendTelegramTest(buildTelegramTestPayload(form.getValues())),
     onSuccess: (data) => {
       if (!data.ok) {
-        toast.error(data.error ?? 'Ошибка Telegram')
+        toast.error(data.error ?? 'Ошибка Telegram', { duration: 10_000 })
         return
       }
       toast.success('Тестовое сообщение отправлено')
     },
-    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка отправки'),
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка отправки', { duration: 10_000 }),
   })
 
   const webhookTestMut = useMutation({
@@ -319,7 +339,10 @@ function SettingsPage() {
                       <Input
                         id="set-tg-token"
                         type="password"
-                        placeholder="123456:ABC-DEF..."
+                        autoComplete="new-password"
+                        placeholder={
+                          current?.telegramBotTokenSet ? 'Токен установлен — введите новый для замены' : '123456:ABC-DEF...'
+                        }
                         {...form.register('telegramBotToken')}
                       />
                     </FormField>
@@ -465,10 +488,16 @@ function SettingsPage() {
                             <th className="px-3 py-2 font-medium">Событие</th>
                             <th className="px-3 py-2 font-medium">Канал</th>
                             <th className="px-3 py-2 font-medium">Статус</th>
+                            <th className="px-3 py-2 font-medium">Ошибка</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {notificationRows.map((row) => (
+                          {notificationRows.map((row) => {
+                            const errorText =
+                              row.status === 'failed' && row.payload?.error != null
+                                ? String(row.payload.error)
+                                : ''
+                            return (
                             <tr key={row.id} className="border-b last:border-0">
                               <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
                                 {new Date(row.createdAt).toLocaleString('ru-RU')}
@@ -476,8 +505,12 @@ function SettingsPage() {
                               <td className="px-3 py-2">{row.event}</td>
                               <td className="px-3 py-2">{row.channel}</td>
                               <td className="px-3 py-2">{row.status}</td>
+                              <td className="max-w-xs px-3 py-2 text-xs text-destructive break-words">
+                                {errorText || '—'}
+                              </td>
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>

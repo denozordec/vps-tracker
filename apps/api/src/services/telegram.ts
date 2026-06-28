@@ -7,6 +7,49 @@ export interface TelegramSendResult {
   error?: string
 }
 
+interface TelegramApiResponse {
+  ok?: boolean
+  description?: string
+  error_code?: number
+}
+
+/** Маппинг частых ошибок Telegram API на подсказки (для тестов и UI). */
+export function telegramErrorHint(description: string): string | null {
+  const d = description.toLowerCase()
+  if (d.includes('message thread not found')) {
+    return 'Проверьте Thread ID и что в группе включены топики'
+  }
+  if (d.includes('chat not found')) {
+    return 'Бот не добавлен в чат или неверный Chat ID'
+  }
+  if (d.includes('not enough rights')) {
+    return 'Дайте боту право отправлять сообщения (администратор в группе)'
+  }
+  if (d.includes('unauthorized')) {
+    return 'Неверный токен бота'
+  }
+  if (d.includes('bot was blocked')) {
+    return 'Пользователь заблокировал бота'
+  }
+  return null
+}
+
+export function formatTelegramApiError(
+  chatId: string,
+  res: Pick<Response, 'status' | 'statusText'>,
+  data: TelegramApiResponse,
+  rawBody?: string,
+): string {
+  const description = data.description?.trim()
+  if (description) {
+    const hint = telegramErrorHint(description)
+    return hint ? `${chatId}: ${description} — ${hint}` : `${chatId}: ${description}`
+  }
+  const snippet = rawBody?.trim().slice(0, 200)
+  const fallback = snippet || res.statusText || `HTTP ${res.status}`
+  return `${chatId}: ${fallback}`
+}
+
 export async function sendTelegramMessage(
   token: string,
   chatIds: string | string[],
@@ -43,12 +86,18 @@ export async function sendTelegramMessage(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, chat_id: chatId }),
       })
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string }
+      const rawBody = await res.text()
+      let data: TelegramApiResponse = {}
+      try {
+        data = JSON.parse(rawBody) as TelegramApiResponse
+      } catch {
+        /* non-JSON body */
+      }
       if (data.ok) {
         anyOk = true
       } else {
-        const err = data.description || res.statusText || 'Unknown error'
-        errors.push(`${chatId}: ${err}`)
+        const err = formatTelegramApiError(chatId, res, data, rawBody)
+        errors.push(err)
         console.warn(`Telegram sendMessage failed for chat ${chatId}:`, err)
       }
     } catch (err) {
