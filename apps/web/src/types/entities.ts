@@ -1,5 +1,7 @@
 import type { CustomFieldDef } from '@cfdm/shared/contracts/custom-fields'
 
+import type { ApiType as SharedApiType } from '@cfdm/shared/contracts/provider'
+
 export type VpsStatus = 'active' | 'paused' | 'archived'
 export type TariffType = 'daily' | 'monthly'
 export type BillingMode = 'daily' | 'monthly'
@@ -9,7 +11,7 @@ export type PaymentType =
   | 'daily_debit'
   | 'monthly_debit'
 export type LedgerDirection = 'credit' | 'debit'
-export type ApiType = 'billmanager' | 'none'
+export type ApiType = SharedApiType
 
 export interface Provider {
   id: string

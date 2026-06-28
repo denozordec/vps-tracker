@@ -14,6 +14,7 @@ import { providerAccountSchema, type ProviderAccountFormValues } from '@/lib/sch
 import type { BillingMode, Provider } from '@/types/entities'
 import { billingModeLabel } from '@/lib/format'
 import { api, ApiError } from '@/lib/api-client'
+import { accountCredentialLabels } from '@/lib/provider-sync'
 
 const EMPTY: ProviderAccountFormValues = {
   providerId: '',
@@ -59,10 +60,11 @@ export function ProviderAccountEditSheet({
   onBalanceRefreshed,
 }: ProviderAccountEditSheetProps) {
   const isEdit = Boolean(defaultValues.id)
+  const initialProvider = providers.find((p) => p.id === defaultValues.providerId)
 
   const testMut = useMutation({
-    mutationFn: async (values: { apiBaseUrl: string; apiCredentials: string }) =>
-      api.testConnection(values.apiBaseUrl, values.apiCredentials),
+    mutationFn: async (values: { apiBaseUrl: string; apiCredentials: string; apiType: string }) =>
+      api.testConnection(values.apiBaseUrl, values.apiCredentials, values.apiType),
     onSuccess: () => toast.success('Подключение успешно'),
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка подключения'),
   })
@@ -81,7 +83,11 @@ export function ProviderAccountEditSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? 'Редактировать аккаунт' : 'Новый аккаунт'}
-      description="API-креды хранятся на сервере и используются для синка с BILLmanager"
+      description={
+        initialProvider?.apiType === '4vps'
+          ? 'Panel ID и API Key хранятся на сервере и используются для синка с 4VPS'
+          : 'API-креды хранятся на сервере и используются для синка с BILLmanager'
+      }
       schema={providerAccountSchema as unknown as ZodType<ProviderAccountFormValues>}
       defaultValues={defaultValues}
       onSubmit={onSubmit}
@@ -96,6 +102,7 @@ export function ProviderAccountEditSheet({
         const apiPassword = watch('apiPassword')?.trim() ?? ''
         const apiCredentials = buildApiCredentials(apiLogin, apiPassword)
         const canTest = Boolean(apiBaseUrl && apiCredentials)
+        const credLabels = accountCredentialLabels(provider?.apiType)
 
         return (
           <>
@@ -111,13 +118,18 @@ export function ProviderAccountEditSheet({
             <FormField label="Название" htmlFor="acc-name" error={errors.name?.message} invalid={!!errors.name}>
               <Input id="acc-name" aria-invalid={!!errors.name} {...register('name')} />
             </FormField>
-            <FormField label="Логин API" htmlFor="acc-login">
-              <Input id="acc-login" autoComplete="off" {...register('apiLogin')} />
+            <FormField label={credLabels.loginLabel} htmlFor="acc-login">
+              <Input
+                id="acc-login"
+                autoComplete="off"
+                placeholder={credLabels.loginPlaceholder || undefined}
+                {...register('apiLogin')}
+              />
             </FormField>
             <FormField
-              label={isEdit ? 'Пароль API (необязательно)' : 'Пароль API'}
+              label={isEdit ? `${credLabels.passwordLabel} (необязательно)` : credLabels.passwordLabel}
               htmlFor="acc-password"
-              description={isEdit ? 'Оставьте пустым, чтобы сохранить существующий пароль' : undefined}
+              description={isEdit ? 'Оставьте пустым, чтобы сохранить существующий ключ' : undefined}
             >
               <Input id="acc-password" type="password" autoComplete="new-password" {...register('apiPassword')} />
             </FormField>
@@ -128,7 +140,13 @@ export function ProviderAccountEditSheet({
                 size="sm"
                 disabled={!canTest}
                 loading={testMut.isPending}
-                onClick={() => testMut.mutate({ apiBaseUrl, apiCredentials })}
+                onClick={() =>
+                  testMut.mutate({
+                    apiBaseUrl,
+                    apiCredentials,
+                    apiType: provider?.apiType ?? 'billmanager',
+                  })
+                }
               >
                 <PlugIcon data-icon="inline-start" />
                 Проверить подключение

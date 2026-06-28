@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { apiTypeSchema as sharedApiTypeSchema } from '@cfdm/shared/contracts/provider'
 import { billingModeSchema as sharedBillingModeSchema } from '@cfdm/shared/contracts/provider-account'
 import { customFieldsSchema } from '@cfdm/shared/contracts/custom-fields'
 
@@ -12,7 +13,7 @@ export const paymentTypeSchema = z.enum([
   'monthly_debit',
 ])
 export const ledgerDirectionSchema = z.enum(['credit', 'debit'])
-export const apiTypeSchema = z.enum(['billmanager', 'none'])
+export const apiTypeSchema = sharedApiTypeSchema
 
 export const providerSchema = z.object({
   id: z.string().min(1).optional(),

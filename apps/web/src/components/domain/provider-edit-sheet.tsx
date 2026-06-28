@@ -68,12 +68,25 @@ export function ProviderEditSheet({
                 onValueChange={(v) => setValue('apiType', (v ?? 'none') as ApiType, { shouldValidate: true })}
                 options={[
                   { value: 'billmanager', label: 'BILLmanager' },
+                  { value: '4vps', label: '4VPS.SU' },
                   { value: 'none', label: 'Нет' },
                 ]}
               />
             </FormField>
-            <FormField label="API URL" htmlFor="pr-apiurl" description="Один URL на хостера для BILLmanager">
-              <Input id="pr-apiurl" {...register('apiBaseUrl')} />
+            <FormField
+              label="API URL"
+              htmlFor="pr-apiurl"
+              description={
+                watch('apiType') === '4vps'
+                  ? 'Базовый URL API, например https://4vps.su/api'
+                  : 'Один URL на хостера для BILLmanager'
+              }
+            >
+              <Input
+                id="pr-apiurl"
+                placeholder={watch('apiType') === '4vps' ? 'https://4vps.su/api' : undefined}
+                {...register('apiBaseUrl')}
+              />
             </FormField>
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Валюта" htmlFor="pr-cur">

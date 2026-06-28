@@ -21,4 +21,9 @@ export interface ProviderAdapter {
     account: unknown,
     options?: { skipTariffs?: boolean; skipVpsPayments?: boolean },
   ): Promise<SyncResult>
+  fetchBalance?(account: unknown): Promise<{
+    balance?: number
+    currency?: string
+    enoughmoneyto?: string
+  }>
 }

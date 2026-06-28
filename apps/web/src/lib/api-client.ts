@@ -101,10 +101,10 @@ export const api = {
       `/api/sync/${encodeURIComponent(accountId)}/balance`,
     ),
 
-  testConnection: (apiBaseUrl: string, apiCredentials: string) =>
+  testConnection: (apiBaseUrl: string, apiCredentials: string, apiType?: string) =>
     fetchApi('/api/sync/test-connection', {
       method: 'POST',
-      body: JSON.stringify({ apiBaseUrl, apiCredentials }),
+      body: JSON.stringify({ apiBaseUrl, apiCredentials, apiType }),
     }),
 
   fetchSyncStatus: () => fetchApi('/api/sync/status'),

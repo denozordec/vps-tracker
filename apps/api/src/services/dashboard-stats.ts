@@ -1,6 +1,7 @@
 import { getSnapshot } from '@cfdm/db/repositories/snapshot'
 import { countExpiringWithin7Days, countInventoryIssues } from '@cfdm/shared/utils/inventory-health'
 import { accountBalanceApi } from '@cfdm/shared/utils/account-balance'
+import { isSyncApiType } from '@cfdm/shared/contracts/provider'
 
 const STALE_SYNC_HOURS = 48
 
@@ -84,11 +85,11 @@ export function computeDashboardStats(): DashboardStats {
 
   const providerById = new Map(snap.providers.map((p) => [p.id, p]))
   const staleMs = STALE_SYNC_HOURS * 60 * 60 * 1000
-  const bmAccounts = snap.providerAccounts.filter((a) => {
+  const syncAccounts = snap.providerAccounts.filter((a) => {
     const p = providerById.get(a.providerId)
-    return p?.apiType === 'billmanager' && Boolean((p.apiBaseUrl || '').trim()) && a.apiCredentialsSet
+    return isSyncApiType(p?.apiType) && Boolean((p?.apiBaseUrl || '').trim()) && a.apiCredentialsSet
   })
-  const staleSyncAccountCount = bmAccounts.filter((a) => {
+  const staleSyncAccountCount = syncAccounts.filter((a) => {
     const t = lastOkSyncAt(a.id, snap.syncLog)
     if (t == null) return true
     return now.getTime() - t > staleMs

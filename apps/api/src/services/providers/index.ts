@@ -1,28 +1,16 @@
-import type { ProviderAdapter, SyncResult } from './types.js'
-import { syncFromBillmanager } from '../billmanager/sync.js'
+import type { schema } from '@cfdm/db'
+
+import { billmanagerAccountRowForSync } from '../billmanager/context.js'
+import { fourvpsAccountRowForSync } from '../fourvps/context.js'
 import type { BillmanagerSyncAccount } from '../billmanager/context.js'
-import { testConnection as bmTestConnection } from '../billmanager/operations.js'
+import type { FourvpsSyncAccount } from '../fourvps/context.js'
 
-export const billmanagerAdapter: ProviderAdapter = {
-  type: 'billmanager',
+import { billmanagerAdapter } from './billmanager-adapter.js'
+import { fourvpsAdapter } from './fourvps-adapter.js'
+import type { ProviderAdapter } from './types.js'
 
-  async testConnection(apiBaseUrl: string, apiCredentials: string) {
-    const result = await bmTestConnection(apiBaseUrl, apiCredentials)
-    return { ok: result.ok, message: result.error }
-  },
-
-  async syncAccount(account: BillmanagerSyncAccount, options?: { skipTariffs?: boolean; skipVpsPayments?: boolean }): Promise<SyncResult> {
-    const result = await syncFromBillmanager(account, options)
-    return {
-      vpsCount: result.vpsCount,
-      paymentsCount: result.paymentsCount,
-      tariffsCount: result.tariffsCount,
-      balance: result.balance,
-      syncSummary: result.syncSummary,
-      newTariffs: result.newTariffs,
-    }
-  },
-}
+export { billmanagerAdapter } from './billmanager-adapter.js'
+export { fourvpsAdapter } from './fourvps-adapter.js'
 
 export const manualAdapter: ProviderAdapter = {
   type: 'manual',
@@ -43,6 +31,7 @@ export const manualAdapter: ProviderAdapter = {
 
 const adapters: Record<string, ProviderAdapter> = {
   billmanager: billmanagerAdapter,
+  '4vps': fourvpsAdapter,
   manual: manualAdapter,
   none: manualAdapter,
 }
@@ -50,4 +39,34 @@ const adapters: Record<string, ProviderAdapter> = {
 export function getProviderAdapter(apiType: string | null | undefined): ProviderAdapter {
   const key = (apiType || 'none').toLowerCase().trim()
   return adapters[key] ?? manualAdapter
+}
+
+type AccountRow = typeof schema.providerAccounts.$inferSelect
+type ProviderRow = typeof schema.providers.$inferSelect
+
+export type SyncReadyAccount = BillmanagerSyncAccount | FourvpsSyncAccount
+
+export function resolveSyncAccount(
+  accountRow: AccountRow | null | undefined,
+  providerRow: ProviderRow | null | undefined,
+): { apiType: string; account: SyncReadyAccount } | null {
+  if (!accountRow) return null
+  const apiType = String(providerRow?.apiType || accountRow.apiType || '')
+    .trim()
+    .toLowerCase()
+
+  if (apiType === 'billmanager') {
+    const account = billmanagerAccountRowForSync(accountRow, providerRow)
+    return account ? { apiType, account } : null
+  }
+  if (apiType === '4vps') {
+    const account = fourvpsAccountRowForSync(accountRow, providerRow)
+    return account ? { apiType, account } : null
+  }
+  return null
+}
+
+export const SYNC_SETUP_ERRORS: Record<string, string> = {
+  billmanager: 'Укажите в настройках хостера тип API BILLmanager и URL; в аккаунте — логин и пароль API',
+  '4vps': 'Укажите в настройках хостера тип API 4VPS и URL; в аккаунте — Panel ID и API Key',
 }

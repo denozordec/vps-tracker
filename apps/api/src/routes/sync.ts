@@ -5,11 +5,11 @@ import { providerAccountsRepository } from '@cfdm/db/repositories/provider-accou
 import { providersRepository } from '@cfdm/db/repositories/providers'
 
 import {
-  billmanagerAccountRowForSync,
-  fetchDashboardInfo,
-  runBillmanagerAccountSync,
-  testConnection,
-} from '../services/billmanager/index.js'
+  getProviderAdapter,
+  resolveSyncAccount,
+  SYNC_SETUP_ERRORS,
+} from '../services/providers/index.js'
+import { runAccountSync } from '../services/providers/sync-job.js'
 
 interface SyncLogRow {
   id: string
@@ -45,8 +45,9 @@ function mapSyncLog(row: typeof schema.syncLog.$inferSelect): SyncLogRow {
   }
 }
 
-const BILLMANAGER_SETUP_ERROR =
-  'Укажите в настройках хостера тип API BILLmanager и URL; в аккаунте — логин и пароль API'
+function setupErrorMessage(apiType: string): string {
+  return SYNC_SETUP_ERRORS[apiType] ?? 'Настройте API хостера и учётные данные аккаунта'
+}
 
 export const syncRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/sync/status', async () => {
@@ -67,16 +68,18 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Account not found' } })
       }
       const provider = account.providerId ? providersRepository.get(account.providerId) : undefined
-      const syncRow = billmanagerAccountRowForSync(account, provider)
-      if (!syncRow) {
-        return reply.code(400).send({ error: { code: 'VALIDATION', message: BILLMANAGER_SETUP_ERROR } })
+      const resolved = resolveSyncAccount(account, provider)
+      if (!resolved) {
+        const apiType = String(provider?.apiType || 'billmanager').toLowerCase()
+        return reply.code(400).send({ error: { code: 'VALIDATION', message: setupErrorMessage(apiType) } })
       }
 
       const onlyTariffs = Boolean(req.body?.onlyTariffs)
       const opts = onlyTariffs ? { skipVpsPayments: true } : {}
+      const adapter = getProviderAdapter(resolved.apiType)
 
       try {
-        const result = await runBillmanagerAccountSync(syncRow, opts)
+        const result = await runAccountSync(adapter, resolved.account, opts)
         return {
           ok: true,
           synced: {
@@ -99,15 +102,19 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Account not found' } })
     }
     const provider = account.providerId ? providersRepository.get(account.providerId) : undefined
-    const syncRow = billmanagerAccountRowForSync(account, provider)
-    if (!syncRow) {
-      return reply.code(400).send({ error: { code: 'VALIDATION', message: BILLMANAGER_SETUP_ERROR } })
+    const resolved = resolveSyncAccount(account, provider)
+    if (!resolved) {
+      const apiType = String(provider?.apiType || 'billmanager').toLowerCase()
+      return reply.code(400).send({ error: { code: 'VALIDATION', message: setupErrorMessage(apiType) } })
+    }
+
+    const adapter = getProviderAdapter(resolved.apiType)
+    if (!adapter.fetchBalance) {
+      return reply.code(400).send({ error: { code: 'VALIDATION', message: 'Баланс через API недоступен для этого типа хостера' } })
     }
 
     try {
-      const info = await fetchDashboardInfo(syncRow.apiBaseUrl, String(syncRow.apiCredentials).trim(), {
-        fallbackCurrency: account.currency,
-      })
+      const info = await adapter.fetchBalance(resolved.account)
       getDb()
         .update(schema.providerAccounts)
         .set({
@@ -127,15 +134,17 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/api/sync/test-connection', async (req, reply) => {
-    const { apiBaseUrl, apiCredentials } = (req.body ?? {}) as {
+    const { apiBaseUrl, apiCredentials, apiType } = (req.body ?? {}) as {
       apiBaseUrl?: string
       apiCredentials?: string
+      apiType?: string
     }
     if (!apiBaseUrl?.trim() || !apiCredentials?.trim()) {
       return reply.code(400).send({ ok: false, error: 'Укажите URL и учётные данные' })
     }
     try {
-      const result = await testConnection(apiBaseUrl.trim(), apiCredentials.trim())
+      const adapter = getProviderAdapter(apiType || 'billmanager')
+      const result = await adapter.testConnection(apiBaseUrl.trim(), apiCredentials.trim())
       return result
     } catch (err) {
       req.log.error(err)

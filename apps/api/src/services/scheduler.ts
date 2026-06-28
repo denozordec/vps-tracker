@@ -2,8 +2,8 @@ import { sql } from 'drizzle-orm'
 import { getDb, schema } from '@cfdm/db'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
 
-import { billmanagerAccountRowForSync } from './billmanager/context.js'
-import { runBillmanagerAccountSync } from './billmanager/sync-job.js'
+import { resolveSyncAccount, getProviderAdapter, type SyncReadyAccount } from './providers/index.js'
+import { runAccountSync } from './providers/sync-job.js'
 import { runVpsUptimeChecks } from './uptime-check.js'
 import { publishMany, publishNotification } from './notifications/engine.js'
 import {
@@ -23,21 +23,29 @@ const SETTINGS_ID = 'settings-main'
 
 type AccountRow = typeof schema.providerAccounts.$inferSelect
 
-function getBillmanagerAccounts(): NonNullable<ReturnType<typeof billmanagerAccountRowForSync>>[] {
+interface SyncableAccountEntry {
+  account: SyncReadyAccount
+  apiType: string
+}
+
+function getSyncableAccounts(): SyncableAccountEntry[] {
   const db = getDb()
   const rows = db
     .all<AccountRow>(sql`
       SELECT pa.* FROM provider_accounts pa
       INNER JOIN providers p ON p.id = pa.providerId
-      WHERE lower(trim(COALESCE(p.apiType, ''))) = 'billmanager'
+      WHERE lower(trim(COALESCE(p.apiType, ''))) IN ('billmanager', '4vps')
         AND length(trim(COALESCE(p.apiBaseUrl, ''))) > 0
         AND pa.apiCredentials IS NOT NULL AND length(trim(pa.apiCredentials)) > 0
     `)
   const providers = db.select().from(schema.providers).all()
   const providerById = new Map(providers.map((p) => [p.id, p]))
   return rows
-    .map((a) => billmanagerAccountRowForSync(a, providerById.get(a.providerId)))
-    .filter((a): a is NonNullable<typeof a> => a != null)
+    .map((a) => {
+      const resolved = resolveSyncAccount(a, providerById.get(a.providerId))
+      return resolved ? { account: resolved.account, apiType: resolved.apiType } : null
+    })
+    .filter((e): e is SyncableAccountEntry => e != null)
 }
 
 export async function runNotificationTick(): Promise<void> {
@@ -56,13 +64,14 @@ export async function runScheduledSync(): Promise<void> {
     const settings = settingsRepository.getRow(SETTINGS_ID)
     if (!settings?.syncEnabled) return
 
-    const accounts = getBillmanagerAccounts()
+    const entries = getSyncableAccounts()
     const digestLines: string[] = []
     const lowBalanceLines: string[] = []
 
-    for (const account of accounts) {
+    for (const { account, apiType } of entries) {
       try {
-        const result = await runBillmanagerAccountSync(account, { skipTariffs: true })
+        const adapter = getProviderAdapter(apiType)
+        const result = await runAccountSync(adapter, account, { skipTariffs: true })
         const s = result.syncSummary
         const parts: string[] = []
         if (s.added?.length) parts.push(`+${s.added.length} VPS`)
@@ -103,12 +112,13 @@ export async function runScheduledSyncTariffs(): Promise<void> {
     const settings = settingsRepository.getRow(SETTINGS_ID)
     if (!settings?.syncEnabled) return
 
-    const accounts = getBillmanagerAccounts()
+    const entries = getSyncableAccounts()
     const providers = getDb().select().from(schema.providers).all()
 
-    for (const account of accounts) {
+    for (const { account, apiType } of entries) {
       try {
-        const result = await runBillmanagerAccountSync(account, { skipVpsPayments: true })
+        const adapter = getProviderAdapter(apiType)
+        const result = await runAccountSync(adapter, account, { skipVpsPayments: true })
         const newTariffs = result.newTariffs || []
         if (newTariffs.length > 0 && settings.notifyNewTariffsEnabled) {
           const provider = providers.find((p) => p.id === account.providerId)

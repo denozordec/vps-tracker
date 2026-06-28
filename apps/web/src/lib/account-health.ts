@@ -5,7 +5,8 @@ import type {
   BalanceLedgerRow,
 } from '@/types/entities'
 import { accountBalanceApi } from '@/lib/account'
-import { accountBillmanagerUiReady } from '@/lib/billmanager'
+import { isSyncApiType } from '@cfdm/shared/contracts/provider'
+import { accountSyncUiReady } from '@/lib/provider-sync'
 import {
   accountHasApiLedgerMismatch,
   getStaleSyncAccountIds,
@@ -40,7 +41,7 @@ export function getAccountHealthFlags(
   const provider = ctx.providers.find((p) => p.id === account.providerId)
   const flags: AccountHealthFlag[] = []
 
-  if (provider?.apiType === 'billmanager' && !account.apiCredentialsSet) {
+  if (isSyncApiType(provider?.apiType) && !account.apiCredentialsSet) {
     flags.push('no-creds')
   }
 
@@ -99,5 +100,5 @@ export function countLowBalanceAccounts(
 
 export function isAccountSyncable(account: ProviderAccount, providers: Provider[]): boolean {
   const provider = providers.find((p) => p.id === account.providerId)
-  return accountBillmanagerUiReady(account, provider)
+  return accountSyncUiReady(account, provider)
 }

@@ -1,4 +1,5 @@
 import { accountBalanceApi } from './account-balance.js'
+import { isSyncApiType } from '../contracts/provider.js'
 import { getPaidUntilDate, type PaidUntilContext } from './paid-until.js'
 
 export const STALE_SYNC_HOURS = 48
@@ -166,12 +167,12 @@ export function computeInventoryHealth(input: InventoryHealthInput): InventoryIs
     })
   }
 
-  const bmAccounts = providerAccounts.filter((a) => {
+  const syncAccounts = providerAccounts.filter((a) => {
     const p = providerById.get(a.providerId)
-    return p?.apiType === 'billmanager' && Boolean((p.apiBaseUrl || '').trim()) && a.apiCredentialsSet
+    return isSyncApiType(p?.apiType) && Boolean((p?.apiBaseUrl || '').trim()) && a.apiCredentialsSet
   })
   const staleMs = STALE_SYNC_HOURS * 60 * 60 * 1000
-  const staleAccounts = bmAccounts.filter((a) => {
+  const staleAccounts = syncAccounts.filter((a) => {
     const t = lastOkSyncFinishedAt(a.id, syncLog)
     if (t == null) return true
     return now.getTime() - t > staleMs
@@ -226,12 +227,12 @@ export function getStaleSyncAccountIds(
   now = new Date(),
 ): string[] {
   const providerById = new Map(providers.map((p) => [p.id, p]))
-  const bmAccounts = providerAccounts.filter((a) => {
+  const syncAccounts = providerAccounts.filter((a) => {
     const p = providerById.get(a.providerId)
-    return p?.apiType === 'billmanager' && Boolean((p.apiBaseUrl || '').trim()) && a.apiCredentialsSet
+    return isSyncApiType(p?.apiType) && Boolean((p?.apiBaseUrl || '').trim()) && a.apiCredentialsSet
   })
   const staleMs = STALE_SYNC_HOURS * 60 * 60 * 1000
-  return bmAccounts
+  return syncAccounts
     .filter((a) => {
       const t = lastOkSyncFinishedAt(a.id, syncLog)
       if (t == null) return true
