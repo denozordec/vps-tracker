@@ -9,6 +9,7 @@ export interface UserApiSyncAccount extends AccountRow {
   apiType: UserApiType
   apiBaseUrl: string
   apiToken: string
+  providerBaseCurrency?: string | null
 }
 
 export function resolveUserApi(
@@ -31,5 +32,11 @@ export function userApiAccountRowForSync(
   const resolved = resolveUserApi(accountRow, providerRow)
   const apiToken = parseUserApiToken(accountRow.apiCredentials)
   if (!resolved || !resolved.apiBaseUrl || !apiToken) return null
-  return { ...accountRow, apiType: resolved.apiType, apiBaseUrl: resolved.apiBaseUrl, apiToken }
+  return {
+    ...accountRow,
+    apiType: resolved.apiType,
+    apiBaseUrl: resolved.apiBaseUrl,
+    apiToken,
+    providerBaseCurrency: providerRow?.baseCurrency ?? null,
+  }
 }

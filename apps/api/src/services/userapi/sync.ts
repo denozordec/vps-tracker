@@ -6,6 +6,7 @@ import { and, eq, like, or } from 'drizzle-orm'
 import { getDb, schema } from '@cfdm/db'
 
 import type { UserApiSyncAccount } from './context.js'
+import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
 import { mapOperationToPayment, mapServerToVps } from './mappers.js'
 import {
   fetchBalance,
@@ -72,10 +73,12 @@ export async function syncFromUserApi(
   const fetchVpsData = !skipVpsPayments
   const fetchTariffs = !skipTariffs
 
+  const fallbackCurrency = syncFallbackCurrency(account)
+
   const [servers, balanceInfo, tariffItems, operations] = await Promise.all([
     fetchVpsData ? fetchServersWithDetails(apiBaseUrl, credentials) : [],
     fetchVpsData
-      ? fetchBalance(apiBaseUrl, credentials, account.currency || 'RUB').catch(() => null)
+      ? fetchBalance(apiBaseUrl, credentials, fallbackCurrency).catch(() => null)
       : null,
     fetchTariffs ? fetchTariffList(apiBaseUrl, credentials).catch(() => []) : [],
     fetchVpsData ? fetchOperations(apiBaseUrl, credentials).catch(() => []) : [],
@@ -223,7 +226,7 @@ export async function syncFromUserApi(
     )
 
     for (const item of operations) {
-      const payment = mapOperationToPayment(item, apiType, accountId, account.currency || 'RUB')
+      const payment = mapOperationToPayment(item, apiType, accountId, fallbackCurrency)
       if (!payment) continue
       const note = payment.note
       if (existingPayments.has(note)) continue
@@ -250,7 +253,7 @@ export async function syncFromUserApi(
     db.update(schema.providerAccounts)
       .set({
         balanceApi: balanceInfo.balance,
-        balanceCurrency: balanceInfo.currency || 'RUB',
+        balanceCurrency: balanceInfo.currency || fallbackCurrency,
         balanceUpdatedAt: new Date().toISOString(),
         enoughmoneyto: balanceInfo.enoughmoneyto || '',
       })

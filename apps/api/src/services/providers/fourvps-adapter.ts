@@ -4,6 +4,7 @@ import {
   testConnection as fourvpsTestConnection,
 } from '../fourvps/operations.js'
 import type { FourvpsSyncAccount } from '../fourvps/context.js'
+import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
 
 import type { ProviderAdapter, SyncResult } from './types.js'
 
@@ -33,10 +34,11 @@ export const fourvpsAdapter: ProviderAdapter = {
   async fetchBalance(account: FourvpsSyncAccount) {
     const cred =
       account.panelId != null ? `${account.panelId}:${account.apiKey}` : account.apiKey
-    const info = await fetchFourvpsBalance(account.apiBaseUrl, cred, account.currency || 'RUB')
+    const fallbackCurrency = syncFallbackCurrency(account)
+    const info = await fetchFourvpsBalance(account.apiBaseUrl, cred, fallbackCurrency)
     return {
       balance: info.balance,
-      currency: info.currency || 'RUB',
+      currency: info.currency || fallbackCurrency,
       enoughmoneyto: '',
     }
   },

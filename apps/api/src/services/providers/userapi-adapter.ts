@@ -1,6 +1,7 @@
 import { syncFromUserApi } from '../userapi/sync.js'
 import { fetchBalance, testConnection } from '../userapi/operations.js'
 import type { UserApiSyncAccount } from '../userapi/context.js'
+import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
 
 import type { ProviderAdapter, SyncResult } from './types.js'
 
@@ -28,14 +29,15 @@ export const userapiAdapter: ProviderAdapter = {
   },
 
   async fetchBalance(account: UserApiSyncAccount) {
+    const fallbackCurrency = syncFallbackCurrency(account)
     const info = await fetchBalance(
       account.apiBaseUrl,
       account.apiToken,
-      account.currency || 'RUB',
+      fallbackCurrency,
     )
     return {
       balance: info.balance,
-      currency: info.currency || 'RUB',
+      currency: info.currency || fallbackCurrency,
       enoughmoneyto: info.enoughmoneyto || '',
     }
   },

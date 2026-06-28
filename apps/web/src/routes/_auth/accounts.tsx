@@ -33,7 +33,7 @@ import {
   providerAccountFormDefaults,
 } from '@/components/domain/account-edit-sheet'
 import type { ProviderAccountFormValues } from '@/lib/schemas'
-import { accountBalanceApi, accountBalanceCurrency } from '@/lib/account'
+import { accountBalanceApi, effectiveAccountBalanceCurrency } from '@/lib/account'
 import type { ProviderAccount } from '@/types/entities'
 import { providerByIdMap, accountBillmanagerUiReady, billmanagerSyncableAccounts } from '@/lib/billmanager'
 import { billingModeLabel, formatCurrency, formatRelativeTime } from '@/lib/format'
@@ -337,7 +337,7 @@ function AccountsPage() {
       cell: (a) => {
         const provider = providerById.get(a.providerId)
         if (!accountBillmanagerUiReady(a, provider)) return <span className="text-muted-foreground">—</span>
-        const cur = accountBalanceCurrency(a)
+        const cur = effectiveAccountBalanceCurrency(a, provider)
         const ext = a as ProviderAccount & { enoughmoneyto?: string }
         return dataGridCellStack(
           formatCurrency(accountBalanceApi(a) ?? 0, cur),

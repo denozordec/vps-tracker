@@ -6,6 +6,7 @@ import { and, eq, like, or } from 'drizzle-orm'
 import { getDb, schema } from '@cfdm/db'
 
 import type { FourvpsSyncAccount } from './context.js'
+import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
 import { mapServerToVps } from './mappers.js'
 import {
   fetchDcList,
@@ -77,10 +78,12 @@ export async function syncFromFourvps(
   const fetchVpsData = !skipVpsPayments
   const fetchTariffs = !skipTariffs
 
+  const fallbackCurrency = syncFallbackCurrency(account)
+
   const [servers, balanceInfo, tariffItems, dcMap] = await Promise.all([
     fetchVpsData ? fetchMyServers(apiBaseUrl, credentials) : [],
     fetchVpsData
-      ? fetchUserBalance(apiBaseUrl, credentials, account.currency || 'RUB').catch(() => null)
+      ? fetchUserBalance(apiBaseUrl, credentials, fallbackCurrency).catch(() => null)
       : null,
     fetchTariffs ? fetchTarifList(apiBaseUrl, credentials).catch(() => []) : [],
     fetchVpsData || fetchTariffs ? fetchDcList(apiBaseUrl, credentials).catch(() => new Map()) : new Map(),
@@ -217,7 +220,7 @@ export async function syncFromFourvps(
     db.update(schema.providerAccounts)
       .set({
         balanceApi: balanceInfo.balance,
-        balanceCurrency: balanceInfo.currency || 'RUB',
+        balanceCurrency: balanceInfo.currency || fallbackCurrency,
         balanceUpdatedAt: new Date().toISOString(),
         enoughmoneyto: '',
       })

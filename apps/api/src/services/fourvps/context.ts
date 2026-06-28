@@ -9,6 +9,7 @@ export interface FourvpsSyncAccount extends AccountRow {
   apiBaseUrl: string
   panelId: number | null
   apiKey: string
+  providerBaseCurrency?: string | null
 }
 
 export function resolveFourvpsApi(
@@ -29,5 +30,5 @@ export function fourvpsAccountRowForSync(
   const cred = String(accountRow.apiCredentials || '').trim()
   const { panelId, apiKey } = parseFourVpsCredentials(cred)
   if (apiType !== '4vps' || !apiBaseUrl || !apiKey) return null
-  return { ...accountRow, apiType: '4vps', apiBaseUrl, panelId, apiKey }
+  return { ...accountRow, apiType: '4vps', apiBaseUrl, panelId, apiKey, providerBaseCurrency: providerRow?.baseCurrency ?? null }
 }

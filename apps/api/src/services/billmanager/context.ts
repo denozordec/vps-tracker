@@ -6,6 +6,7 @@ type ProviderRow = typeof schema.providers.$inferSelect
 export interface BillmanagerSyncAccount extends AccountRow {
   apiType: 'billmanager'
   apiBaseUrl: string
+  providerBaseCurrency?: string | null
 }
 
 export function resolveBillmanagerApi(
@@ -25,5 +26,5 @@ export function billmanagerAccountRowForSync(
   const { apiType, apiBaseUrl } = resolveBillmanagerApi(accountRow, providerRow)
   const cred = String(accountRow.apiCredentials || '').trim()
   if (apiType !== 'billmanager' || !apiBaseUrl || !cred) return null
-  return { ...accountRow, apiType: 'billmanager', apiBaseUrl }
+  return { ...accountRow, apiType: 'billmanager', apiBaseUrl, providerBaseCurrency: providerRow?.baseCurrency ?? null }
 }

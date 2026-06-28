@@ -6,6 +6,7 @@ import { and, eq, like, or } from 'drizzle-orm'
 import { getDb, schema } from '@cfdm/db'
 
 import type { BillmanagerSyncAccount } from './context.js'
+import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
 import { mapPaymentToPayment, mapVdsToVps } from './mappers.js'
 import {
   fetchDashboardInfo,
@@ -72,11 +73,13 @@ export async function syncFromBillmanager(
   const fetchVpsPayments = !skipVpsPayments
   const fetchTariffs = !skipTariffs
 
+  const fallbackCurrency = syncFallbackCurrency(account)
+
   const [vdsItems, paymentItems, dashboardInfo, tariffResult] = await Promise.all([
     fetchVpsPayments ? fetchVds(apiBaseUrl, authinfo) : [],
     fetchVpsPayments ? fetchPayments(apiBaseUrl, authinfo, {}) : [],
     fetchVpsPayments
-      ? fetchDashboardInfo(apiBaseUrl, authinfo, { fallbackCurrency: account.currency }).catch(() => null)
+      ? fetchDashboardInfo(apiBaseUrl, authinfo, { fallbackCurrency }).catch(() => null)
       : null,
     fetchTariffs
       ? fetchVdsOrderPricelistAllDatacenters(apiBaseUrl, authinfo).catch((err) => {
@@ -253,7 +256,7 @@ export async function syncFromBillmanager(
     db.update(schema.providerAccounts)
       .set({
         balanceApi: dashboardInfo.balance,
-        balanceCurrency: dashboardInfo.currency || 'RUB',
+        balanceCurrency: dashboardInfo.currency || fallbackCurrency,
         balanceUpdatedAt: new Date().toISOString(),
         enoughmoneyto: dashboardInfo.enoughmoneyto || '',
       })
