@@ -1,4 +1,5 @@
-import { asc, eq } from 'drizzle-orm'
+import { asc, count, eq } from 'drizzle-orm'
+import { parseApiLogin } from '@cfdm/shared'
 import { getDb, schema } from '../index.js'
 import { generateId } from './utils.js'
 
@@ -10,12 +11,25 @@ type AccountInsert = Partial<typeof schema.providerAccounts.$inferInsert> & {
 
 export interface PublicAccountRow extends Omit<AccountRow, 'apiCredentials'> {
   apiCredentialsSet: boolean
+  apiLogin: string
+}
+
+export interface AccountDependencyCounts {
+  vps: number
+  payments: number
+  balanceLedger: number
+  activeTariffs: number
+  syncLog: number
 }
 
 function sanitize(row: AccountRow | undefined): PublicAccountRow | undefined {
   if (!row) return undefined
   const { apiCredentials, ...rest } = row
-  return { ...rest, apiCredentialsSet: Boolean(apiCredentials) }
+  return {
+    ...rest,
+    apiCredentialsSet: Boolean(apiCredentials),
+    apiLogin: parseApiLogin(apiCredentials),
+  }
 }
 
 function normalize(input: Partial<AccountRow>) {
@@ -33,6 +47,36 @@ function normalize(input: Partial<AccountRow>) {
     apiCredentials: input.apiCredentials ?? '',
     balanceAlertBelow: Number.isFinite(alertBelow) ? alertBelow : null,
   }
+}
+
+function countVpsForAccount(id: string): number {
+  return Number(
+    getDb().select({ count: count() }).from(schema.vps).where(eq(schema.vps.providerAccountId, id)).get()?.count ?? 0,
+  )
+}
+
+function countPaymentsForAccount(id: string): number {
+  return Number(
+    getDb().select({ count: count() }).from(schema.payments).where(eq(schema.payments.providerAccountId, id)).get()?.count ?? 0,
+  )
+}
+
+function countLedgerForAccount(id: string): number {
+  return Number(
+    getDb().select({ count: count() }).from(schema.balanceLedger).where(eq(schema.balanceLedger.providerAccountId, id)).get()?.count ?? 0,
+  )
+}
+
+function countTariffsForAccount(id: string): number {
+  return Number(
+    getDb().select({ count: count() }).from(schema.activeTariffs).where(eq(schema.activeTariffs.providerAccountId, id)).get()?.count ?? 0,
+  )
+}
+
+function countSyncLogForAccount(id: string): number {
+  return Number(
+    getDb().select({ count: count() }).from(schema.syncLog).where(eq(schema.syncLog.accountId, id)).get()?.count ?? 0,
+  )
 }
 
 export const providerAccountsRepository = {
@@ -62,6 +106,16 @@ export const providerAccountsRepository = {
       .get()
   },
 
+  getDependencyCounts(id: string): AccountDependencyCounts {
+    return {
+      vps: countVpsForAccount(id),
+      payments: countPaymentsForAccount(id),
+      balanceLedger: countLedgerForAccount(id),
+      activeTariffs: countTariffsForAccount(id),
+      syncLog: countSyncLogForAccount(id),
+    }
+  },
+
   create(input: AccountInsert, id?: string): PublicAccountRow {
     const db = getDb()
     const finalId = id ?? input.id ?? generateId('account')
@@ -76,8 +130,8 @@ export const providerAccountsRepository = {
     const existing = this.getWithCredentials(id)
     if (!existing) return undefined
     const apiCredentials =
-      input.apiCredentials !== undefined
-        ? String(input.apiCredentials || '')
+      input.apiCredentials !== undefined && String(input.apiCredentials || '').trim() !== ''
+        ? String(input.apiCredentials)
         : (existing.apiCredentials || '')
 
     let balanceAlertBelow = existing.balanceAlertBelow
@@ -112,3 +166,5 @@ export const providerAccountsRepository = {
     return res.changes > 0
   },
 }
+
+export { parseApiLogin }

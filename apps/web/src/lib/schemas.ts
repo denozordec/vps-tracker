@@ -1,8 +1,9 @@
 import { z } from 'zod'
+import { billingModeSchema as sharedBillingModeSchema } from '@cfdm/shared/contracts/provider-account'
 
 export const vpsStatusSchema = z.enum(['active', 'paused', 'archived'])
 export const tariffTypeSchema = z.enum(['daily', 'monthly'])
-export const billingModeSchema = z.enum(['daily', 'monthly'])
+export const billingModeSchema = sharedBillingModeSchema
 export const paymentTypeSchema = z.enum([
   'direct_vps_payment',
   'provider_balance_topup',
@@ -30,8 +31,8 @@ export const providerAccountSchema = z.object({
   id: z.string().min(1).optional(),
   providerId: z.string().min(1, 'Выберите хостера'),
   name: z.string().min(1, 'Название обязательно'),
-  login: z.string().optional().default(''),
-  apiCredentials: z.string().optional().default(''),
+  apiLogin: z.string().optional().default(''),
+  apiPassword: z.string().optional().default(''),
   billingMode: billingModeSchema.default('monthly'),
   balanceAlertBelow: z.union([z.coerce.number().min(0), z.literal('')]).optional(),
   notes: z.string().optional().default(''),

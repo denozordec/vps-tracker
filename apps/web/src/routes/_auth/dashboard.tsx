@@ -33,13 +33,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/ta
 import { StatusBadge } from '@/components/status-badge'
 import { cn } from '@cfdm/ui/lib/utils'
 
-import { computeInventoryHealth, getStaleSyncAccountIds } from '@/lib/inventory-health'
+import { computeInventoryHealth } from '@/lib/inventory-health'
+import { buildAtRiskAccounts, type AtRiskAccount } from '@/lib/account-health'
 import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel } from '@/lib/format'
-import { accountBalanceApi } from '@/lib/account'
 import { exportActiveVpsCsv } from '@/lib/export-csv'
 import { MonthlyTrendChart, MonthlyExpenseChart } from '@/components/domain/charts'
 
-import type { Vps, ProviderAccount, Provider, SyncLogRow } from '@/types/entities'
+import type { Vps } from '@/types/entities'
 
 const DASHBOARD_TAB_TRIGGER_CLASS =
   'flex-none rounded-none border-0 border-b-2 border-transparent px-3 pb-2.5 pt-2 shadow-none after:hidden data-active:border-foreground data-active:bg-transparent data-active:shadow-none dark:data-active:border-foreground dark:data-active:bg-transparent'
@@ -54,33 +54,6 @@ export const Route = createFileRoute('/_auth/dashboard')({
 })
 
 type InventoryIssue = { key: string; title: string; count: number; to: string; hint?: string }
-
-interface AtRiskAccount {
-  id: string
-  name: string
-  reason: string
-  severity: 'warning' | 'destructive'
-}
-
-function buildAtRiskAccounts(
-  accounts: ProviderAccount[],
-  providers: Provider[],
-  syncLog: SyncLogRow[] = [],
-): AtRiskAccount[] {
-  const staleIds = new Set(getStaleSyncAccountIds(accounts, providers, syncLog))
-  const rows: AtRiskAccount[] = []
-  for (const a of accounts) {
-    const ext = a as ProviderAccount & { balanceAlertBelow?: number | null }
-    const threshold = Number(ext.balanceAlertBelow ?? 0)
-    const balance = accountBalanceApi(a)
-    if (Number.isFinite(threshold) && threshold > 0 && balance != null && balance < threshold) {
-      rows.push({ id: a.id, name: a.name, reason: 'Низкий баланс', severity: 'destructive' })
-    } else if (staleIds.has(a.id)) {
-      rows.push({ id: a.id, name: a.name, reason: 'Устаревший синк', severity: 'warning' })
-    }
-  }
-  return rows
-}
 
 function DashboardPage() {
   const navigate = useNavigate()

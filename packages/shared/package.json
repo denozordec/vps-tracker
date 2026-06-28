@@ -25,6 +25,10 @@
     "./geo/*": {
       "types": "./dist/geo/*.d.ts",
       "default": "./dist/geo/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "default": "./dist/utils/*.js"
     }
   },
   "scripts": {

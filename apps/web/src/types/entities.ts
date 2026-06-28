@@ -27,6 +27,8 @@ export interface ProviderAccount {
   id: string
   providerId: string
   name: string
+  apiLogin?: string
+  /** @deprecated используйте apiLogin */
   login?: string
   apiCredentialsSet?: boolean
   billingMode?: BillingMode

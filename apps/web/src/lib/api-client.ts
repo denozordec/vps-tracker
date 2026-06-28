@@ -29,8 +29,11 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (!res.ok) {
     let message = res.statusText || 'API error'
     try {
-      const data = (await res.json()) as { error?: string }
-      if (data?.error) message = data.error
+      const data = (await res.json()) as {
+        error?: string | { message?: string; code?: string }
+      }
+      if (typeof data?.error === 'string') message = data.error
+      else if (data?.error?.message) message = data.error.message
     } catch {
       /* ignore */
     }

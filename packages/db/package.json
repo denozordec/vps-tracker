@@ -17,19 +17,26 @@
     "./repositories/*": {
       "types": "./dist/repositories/*.d.ts",
       "default": "./dist/repositories/*.js"
+    },
+    "./test-setup": {
+      "types": "./dist/test-setup.d.ts",
+      "default": "./dist/test-setup.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "drizzle-orm": "^0.40.0",
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^11.10.0",
+    "@cfdm/shared": "workspace:*"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.0.0"
   }
 }

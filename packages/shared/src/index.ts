@@ -1,5 +1,6 @@
 export * from './contracts/provider.js'
 export * from './contracts/provider-account.js'
+export * from './utils/api-credentials.js'
 export * from './contracts/vps.js'
 export * from './contracts/payment.js'
 export * from './contracts/balance-ledger.js'

@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { PlugIcon, RefreshCwIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { buildApiCredentials } from '@cfdm/shared/utils/api-credentials'
 
 import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
@@ -17,8 +18,8 @@ import { api, ApiError } from '@/lib/api-client'
 const EMPTY: ProviderAccountFormValues = {
   providerId: '',
   name: '',
-  login: '',
-  apiCredentials: '',
+  apiLogin: '',
+  apiPassword: '',
   billingMode: 'monthly',
   balanceAlertBelow: '',
   notes: '',
@@ -91,8 +92,10 @@ export function ProviderAccountEditSheet({
         const providerId = watch('providerId')
         const provider = providers.find((p) => p.id === providerId)
         const apiBaseUrl = (provider?.apiBaseUrl ?? '').trim()
-        const creds = watch('apiCredentials')?.trim() ?? ''
-        const canTest = Boolean(apiBaseUrl && creds)
+        const apiLogin = watch('apiLogin')?.trim() ?? ''
+        const apiPassword = watch('apiPassword')?.trim() ?? ''
+        const apiCredentials = buildApiCredentials(apiLogin, apiPassword)
+        const canTest = Boolean(apiBaseUrl && apiCredentials)
 
         return (
           <>
@@ -108,15 +111,15 @@ export function ProviderAccountEditSheet({
             <FormField label="Название" htmlFor="acc-name" error={errors.name?.message} invalid={!!errors.name}>
               <Input id="acc-name" aria-invalid={!!errors.name} {...register('name')} />
             </FormField>
-            <FormField label="Логин" htmlFor="acc-login">
-              <Input id="acc-login" {...register('login')} />
+            <FormField label="Логин API" htmlFor="acc-login">
+              <Input id="acc-login" autoComplete="off" {...register('apiLogin')} />
             </FormField>
             <FormField
-              label={isEdit ? 'Новый API-пароль (необязательно)' : 'API-пароль (логин:пароль)'}
-              htmlFor="acc-creds"
-              description="Оставьте пустым при редактировании, чтобы сохранить существующий"
+              label={isEdit ? 'Пароль API (необязательно)' : 'Пароль API'}
+              htmlFor="acc-password"
+              description={isEdit ? 'Оставьте пустым, чтобы сохранить существующий пароль' : undefined}
             >
-              <Input id="acc-creds" type="password" {...register('apiCredentials')} />
+              <Input id="acc-password" type="password" autoComplete="new-password" {...register('apiPassword')} />
             </FormField>
             <div className="flex flex-wrap gap-2">
               <LoadingButton
@@ -125,7 +128,7 @@ export function ProviderAccountEditSheet({
                 size="sm"
                 disabled={!canTest}
                 loading={testMut.isPending}
-                onClick={() => testMut.mutate({ apiBaseUrl, apiCredentials: creds })}
+                onClick={() => testMut.mutate({ apiBaseUrl, apiCredentials })}
               >
                 <PlugIcon data-icon="inline-start" />
                 Проверить подключение

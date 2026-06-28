@@ -96,6 +96,22 @@ export function billingModeLabel(mode: string): string {
   return BILLING_MODE_LABELS[mode] ?? mode
 }
 
+/** Относительное время для дат синка и обновлений. */
+export function formatRelativeTime(isoOrMs: string | number | null | undefined): string {
+  if (isoOrMs == null) return '—'
+  const t = typeof isoOrMs === 'number' ? isoOrMs : new Date(isoOrMs).getTime()
+  if (Number.isNaN(t)) return '—'
+  const diffMs = Date.now() - t
+  if (diffMs < 0) return 'только что'
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 1) return 'только что'
+  if (mins < 60) return `${mins} мин назад`
+  const hours = Math.floor(mins / 60)
+  if (hours < 48) return `${hours} ч назад`
+  const days = Math.floor(hours / 24)
+  return `${days} дн назад`
+}
+
 const TARIFF_TYPE_LABELS: Record<string, string> = {
   daily: 'Суточный', monthly: 'Месячный',
 }

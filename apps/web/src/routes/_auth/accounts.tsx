@@ -9,9 +9,13 @@ import {
   PlugIcon,
   ReceiptIcon,
   WalletIcon,
+  ActivityIcon,
+  ClockIcon,
+  ServerIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { buildApiCredentials } from '@cfdm/shared/utils/api-credentials'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -23,6 +27,7 @@ import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
 import { HealthModeBanner } from '@/components/health-mode-banner'
+import { SectionCards } from '@/components/section-cards'
 import {
   ProviderAccountEditSheet,
   providerAccountFormDefaults,
@@ -31,15 +36,37 @@ import type { ProviderAccountFormValues } from '@/lib/schemas'
 import { accountBalanceApi, accountBalanceCurrency } from '@/lib/account'
 import type { ProviderAccount } from '@/types/entities'
 import { providerByIdMap, accountBillmanagerUiReady, billmanagerSyncableAccounts } from '@/lib/billmanager'
-import { billingModeLabel, formatCurrency } from '@/lib/format'
+import { billingModeLabel, formatCurrency, formatRelativeTime } from '@/lib/format'
 import {
   getBalanceMismatchAccountIds,
   getStaleSyncAccountIds,
+  lastOkSyncFinishedAt,
 } from '@/lib/inventory-health'
+import {
+  ACCOUNT_HEALTH_LABELS,
+  buildAtRiskAccounts,
+  countAccountsWithIssues,
+  countLowBalanceAccounts,
+  getAccountHealthFlags,
+  type AccountHealthFlag,
+} from '@/lib/account-health'
+import {
+  applyAccountFilters,
+  buildDefaultAccountFilters,
+  type AccountFiltersState,
+} from '@/components/account-filters'
+import { AccountFiltersToolbar } from '@/components/account-filters-toolbar'
 
 const accountsSearchSchema = z.object({
   health: z.string().optional(),
 })
+
+const HEALTH_BADGE_VARIANT: Record<AccountHealthFlag, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  'stale-sync': 'secondary',
+  'low-balance': 'destructive',
+  'balance-mismatch': 'outline',
+  'no-creds': 'outline',
+}
 
 export const Route = createFileRoute('/_auth/accounts')({
   validateSearch: (search) => accountsSearchSchema.parse(search),
@@ -48,25 +75,31 @@ export const Route = createFileRoute('/_auth/accounts')({
   component: AccountsPage,
 })
 
+function buildSavePayload(r: ProviderAccountFormValues) {
+  const { apiLogin, apiPassword, balanceAlertBelow, ...rest } = r
+  const alertRaw = balanceAlertBelow === '' || balanceAlertBelow == null ? '' : String(balanceAlertBelow)
+  const alertNum = alertRaw ? Number(alertRaw) : null
+  const base = {
+    ...rest,
+    balanceAlertBelow: Number.isFinite(alertNum) ? alertNum : null,
+  }
+  const creds = buildApiCredentials(apiLogin ?? '', apiPassword ?? '')
+  return creds ? { ...base, apiCredentials: creds } : base
+}
+
 function AccountsPage() {
   const { health } = Route.useSearch()
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [open, setOpen] = useState(false)
+  const [filters, setFilters] = useState<AccountFiltersState>(buildDefaultAccountFilters())
   const [formDefaults, setFormDefaults] = useState<ProviderAccountFormValues>(
     providerAccountFormDefaults(null, snapshot?.providers[0]?.id ?? ''),
   )
 
   const saveMut = useMutation({
     mutationFn: (r: ProviderAccountFormValues) => {
-      const { apiCredentials, balanceAlertBelow, ...rest } = r
-      const alertRaw = balanceAlertBelow === '' || balanceAlertBelow == null ? '' : String(balanceAlertBelow)
-      const alertNum = alertRaw ? Number(alertRaw) : null
-      const base = {
-        ...rest,
-        balanceAlertBelow: Number.isFinite(alertNum) ? alertNum : null,
-      }
-      const payload = apiCredentials ? { ...base, apiCredentials } : base
+      const payload = buildSavePayload(r)
       return r.id
         ? api.update<ProviderAccount>('providerAccounts', r.id, payload as unknown as Partial<ProviderAccount>)
         : api.create('providerAccounts', payload as unknown as ProviderAccount)
@@ -126,8 +159,8 @@ function AccountsPage() {
         id: a.id,
         providerId: a.providerId,
         name: a.name,
-        login: a.login ?? '',
-        apiCredentials: '',
+        apiLogin: a.apiLogin ?? a.login ?? '',
+        apiPassword: '',
         billingMode: a.billingMode ?? 'monthly',
         balanceAlertBelow: ext.balanceAlertBelow != null ? ext.balanceAlertBelow : '',
         notes: a.notes ?? '',
@@ -141,21 +174,70 @@ function AccountsPage() {
     ? billmanagerSyncableAccounts(snapshot.providerAccounts, snapshot.providers).length
     : 0
 
+  const healthCtx = useMemo(
+    () => ({
+      providers: snapshot?.providers ?? [],
+      syncLog: snapshot?.syncLog ?? [],
+      balanceLedger: snapshot?.balanceLedger ?? [],
+    }),
+    [snapshot],
+  )
+
+  const vpsCountByAccount = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const v of snapshot?.vps ?? []) {
+      if (!v.providerAccountId) continue
+      map.set(v.providerAccountId, (map.get(v.providerAccountId) ?? 0) + 1)
+    }
+    return map
+  }, [snapshot?.vps])
+
   const filteredAccounts = useMemo(() => {
     const accounts = snapshot?.providerAccounts ?? []
-    if (!health || !snapshot) return accounts
-    if (health === 'stale-sync') {
-      const ids = new Set(
-        getStaleSyncAccountIds(snapshot.providerAccounts, snapshot.providers, snapshot.syncLog ?? []),
-      )
-      return accounts.filter((a) => ids.has(a.id))
+    let result = accounts
+    if (health && snapshot) {
+      if (health === 'stale-sync') {
+        const ids = new Set(
+          getStaleSyncAccountIds(snapshot.providerAccounts, snapshot.providers, snapshot.syncLog ?? []),
+        )
+        result = accounts.filter((a) => ids.has(a.id))
+      } else if (health === 'balance-mismatch') {
+        const ids = new Set(getBalanceMismatchAccountIds(snapshot.providerAccounts, snapshot.balanceLedger))
+        result = accounts.filter((a) => ids.has(a.id))
+      }
     }
-    if (health === 'balance-mismatch') {
-      const ids = new Set(getBalanceMismatchAccountIds(snapshot.providerAccounts, snapshot.balanceLedger))
-      return accounts.filter((a) => ids.has(a.id))
-    }
-    return accounts
-  }, [snapshot, health])
+    return applyAccountFilters(result, filters, snapshot?.providers ?? [], healthCtx)
+  }, [snapshot, health, filters, healthCtx])
+
+  const summaryCards = useMemo(() => {
+    if (!snapshot) return []
+    const accounts = snapshot.providerAccounts
+    const atRisk = buildAtRiskAccounts(accounts, snapshot.providers, snapshot.syncLog ?? [])
+    return [
+      {
+        label: 'Всего аккаунтов',
+        value: accounts.length,
+        onClick: () => setFilters(buildDefaultAccountFilters()),
+      },
+      {
+        label: 'Готовы к синку',
+        value: syncableCount,
+        onClick: () => setFilters({ ...buildDefaultAccountFilters(), syncableOnly: true }),
+      },
+      {
+        label: 'С проблемами',
+        value: countAccountsWithIssues(accounts, healthCtx),
+        variant: atRisk.length ? ('warning' as const) : ('default' as const),
+        onClick: () => setFilters({ ...buildDefaultAccountFilters(), issuesOnly: true }),
+      },
+      {
+        label: 'Низкий баланс',
+        value: countLowBalanceAccounts(accounts, healthCtx),
+        variant: countLowBalanceAccounts(accounts, healthCtx) ? ('destructive' as const) : ('default' as const),
+        onClick: () => setFilters({ ...buildDefaultAccountFilters(), lowBalanceOnly: true }),
+      },
+    ]
+  }, [snapshot, syncableCount, healthCtx])
 
   const columns: DataTableColumn<ProviderAccount>[] = [
     {
@@ -168,7 +250,30 @@ function AccountsPage() {
       key: 'login',
       header: 'Логин',
       icon: KeyRoundIcon,
-      cell: (a) => <span className="text-muted-foreground">{a.login || '—'}</span>,
+      cell: (a) => (
+        <span className="text-muted-foreground">{a.apiLogin ?? a.login ?? '—'}</span>
+      ),
+    },
+    {
+      key: 'health',
+      header: 'Статус',
+      icon: ActivityIcon,
+      sortable: false,
+      cell: (a) => {
+        const flags = getAccountHealthFlags(a, healthCtx)
+        if (!flags.length) {
+          return <Badge variant="outline">OK</Badge>
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {flags.map((flag) => (
+              <Badge key={flag} variant={HEALTH_BADGE_VARIANT[flag]}>
+                {ACCOUNT_HEALTH_LABELS[flag]}
+              </Badge>
+            ))}
+          </div>
+        )
+      },
     },
     {
       key: 'creds',
@@ -185,6 +290,28 @@ function AccountsPage() {
       header: 'Биллинг',
       icon: ReceiptIcon,
       cell: (a) => <span>{billingModeLabel(a.billingMode ?? 'monthly')}</span>,
+    },
+    {
+      key: 'vps',
+      header: 'VPS',
+      icon: ServerIcon,
+      headerClassName: 'text-right',
+      className: 'text-right tabular-nums',
+      sortValue: (a) => vpsCountByAccount.get(a.id) ?? 0,
+      cell: (a) => {
+        const count = vpsCountByAccount.get(a.id) ?? 0
+        return count ? <Badge variant="secondary">{count}</Badge> : <span className="text-muted-foreground">0</span>
+      },
+    },
+    {
+      key: 'sync',
+      header: 'Последний синк',
+      icon: ClockIcon,
+      sortValue: (a) => lastOkSyncFinishedAt(a.id, snapshot?.syncLog ?? []) ?? 0,
+      cell: (a) => {
+        const t = lastOkSyncFinishedAt(a.id, snapshot?.syncLog ?? [])
+        return <span className="text-muted-foreground">{formatRelativeTime(t)}</span>
+      },
     },
     {
       key: 'balance',
@@ -283,15 +410,23 @@ function AccountsPage() {
         ) : null
       }
     >
-      {( ) => (
+      {() => (
         <div className="flex flex-col gap-4">
+          {snapshot ? <SectionCards items={summaryCards} /> : null}
+          {snapshot ? (
+            <AccountFiltersToolbar
+              filters={filters}
+              onChange={setFilters}
+              providers={snapshot.providers}
+            />
+          ) : null}
           {health ? <HealthModeBanner health={health} exitTo="/accounts" /> : null}
           <DataGridCard
             columns={columnDefFromDataTable(columns)}
             data={filteredAccounts}
             rowId={(a) => a.id}
             pinLastColumn
-            emptyTitle={health ? 'Нет аккаунтов с этой проблемой' : 'Нет записей'}
+            emptyTitle={health || filters.search ? 'Нет аккаунтов с этими фильтрами' : 'Нет записей'}
           />
         </div>
       )}

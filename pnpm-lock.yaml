@@ -199,6 +199,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@cfdm/shared':
+        specifier: workspace:*
+        version: link:../shared
       better-sqlite3:
         specifier: ^11.10.0
         version: 11.10.0
@@ -218,6 +221,9 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.6(@types/node@22.20.0)(happy-dom@18.0.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)
 
   packages/shared:
     dependencies:
