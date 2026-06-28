@@ -34,6 +34,11 @@ export function parseFourVpsCredentials(credentials: string | null | undefined):
   }
 }
 
+/** Bearer token для Macloud / VDSina UserAPI. */
+export function parseUserApiToken(credentials: string | null | undefined): string {
+  return String(credentials ?? '').trim()
+}
+
 /** Собрать 4VPS-креды: panelId + API key. */
 export function buildFourVpsCredentials(panelId: string, apiKey: string): string {
   const pid = panelId.trim()

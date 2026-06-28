@@ -1,8 +1,8 @@
-import { isSyncApiType } from '@cfdm/shared/contracts/provider'
+import { isSyncApiType, isUserApiType } from '@cfdm/shared/contracts/provider'
 
 import type { ProviderAccount, Provider } from '@/types/entities'
 
-export { isSyncApiType }
+export { isSyncApiType, isUserApiType }
 
 export function providerByIdMap(providers: Provider[]): Map<string, Provider> {
   return new Map(providers.map((p) => [p.id, p]))
@@ -67,6 +67,13 @@ export function accountCredentialLabels(apiType?: string | null): {
       loginLabel: 'Panel ID',
       passwordLabel: 'API Key',
       loginPlaceholder: '1',
+    }
+  }
+  if (isUserApiType(apiType)) {
+    return {
+      loginLabel: '',
+      passwordLabel: 'API Token',
+      loginPlaceholder: '',
     }
   }
   return {

@@ -6,6 +6,7 @@ import { SelectField } from '@/components/select-field'
 import type { ZodType } from 'zod'
 import { providerSchema, type ProviderFormValues } from '@/lib/schemas'
 import type { ApiType } from '@/types/entities'
+import { isUserApiType, USER_API_DEFAULT_BASE_URL } from '@cfdm/shared/contracts/provider'
 
 const EMPTY: ProviderFormValues = {
   name: '',
@@ -53,6 +54,20 @@ export function ProviderEditSheet({
     >
       {(form) => {
         const { register, formState: { errors }, watch, setValue } = form
+        const apiType = watch('apiType')
+        const apiUrlHint =
+          apiType === '4vps'
+            ? 'Базовый URL API, например https://4vps.su/api'
+            : isUserApiType(apiType)
+              ? `Базовый URL UserAPI, например ${USER_API_DEFAULT_BASE_URL[apiType]}`
+              : 'Один URL на хостера для BILLmanager'
+        const apiUrlPlaceholder =
+          apiType === '4vps'
+            ? 'https://4vps.su/api'
+            : isUserApiType(apiType)
+              ? USER_API_DEFAULT_BASE_URL[apiType]
+              : undefined
+
         return (
           <>
             <FormField label="Название" htmlFor="pr-name" error={errors.name?.message} invalid={!!errors.name}>
@@ -69,24 +84,14 @@ export function ProviderEditSheet({
                 options={[
                   { value: 'billmanager', label: 'BILLmanager' },
                   { value: '4vps', label: '4VPS.SU' },
+                  { value: 'macloud', label: 'Маклауд' },
+                  { value: 'vdsina', label: 'VDSina' },
                   { value: 'none', label: 'Нет' },
                 ]}
               />
             </FormField>
-            <FormField
-              label="API URL"
-              htmlFor="pr-apiurl"
-              description={
-                watch('apiType') === '4vps'
-                  ? 'Базовый URL API, например https://4vps.su/api'
-                  : 'Один URL на хостера для BILLmanager'
-              }
-            >
-              <Input
-                id="pr-apiurl"
-                placeholder={watch('apiType') === '4vps' ? 'https://4vps.su/api' : undefined}
-                {...register('apiBaseUrl')}
-              />
+            <FormField label="API URL" htmlFor="pr-apiurl" description={apiUrlHint}>
+              <Input id="pr-apiurl" placeholder={apiUrlPlaceholder} {...register('apiBaseUrl')} />
             </FormField>
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Валюта" htmlFor="pr-cur">

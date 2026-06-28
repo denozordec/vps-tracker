@@ -14,7 +14,7 @@ import { providerAccountSchema, type ProviderAccountFormValues } from '@/lib/sch
 import type { BillingMode, Provider } from '@/types/entities'
 import { billingModeLabel } from '@/lib/format'
 import { api, ApiError } from '@/lib/api-client'
-import { accountCredentialLabels } from '@/lib/provider-sync'
+import { accountCredentialLabels, isUserApiType } from '@/lib/provider-sync'
 
 const EMPTY: ProviderAccountFormValues = {
   providerId: '',
@@ -84,9 +84,11 @@ export function ProviderAccountEditSheet({
       onOpenChange={onOpenChange}
       title={isEdit ? 'Редактировать аккаунт' : 'Новый аккаунт'}
       description={
-        initialProvider?.apiType === '4vps'
-          ? 'Panel ID и API Key хранятся на сервере и используются для синка с 4VPS'
-          : 'API-креды хранятся на сервере и используются для синка с BILLmanager'
+        isUserApiType(initialProvider?.apiType)
+          ? 'API Token хранится на сервере и используется для синка с UserAPI'
+          : initialProvider?.apiType === '4vps'
+            ? 'Panel ID и API Key хранятся на сервере и используются для синка с 4VPS'
+            : 'API-креды хранятся на сервере и используются для синка с BILLmanager'
       }
       schema={providerAccountSchema as unknown as ZodType<ProviderAccountFormValues>}
       defaultValues={defaultValues}
@@ -103,6 +105,7 @@ export function ProviderAccountEditSheet({
         const apiCredentials = buildApiCredentials(apiLogin, apiPassword)
         const canTest = Boolean(apiBaseUrl && apiCredentials)
         const credLabels = accountCredentialLabels(provider?.apiType)
+        const tokenOnly = isUserApiType(provider?.apiType)
 
         return (
           <>
@@ -118,14 +121,16 @@ export function ProviderAccountEditSheet({
             <FormField label="Название" htmlFor="acc-name" error={errors.name?.message} invalid={!!errors.name}>
               <Input id="acc-name" aria-invalid={!!errors.name} {...register('name')} />
             </FormField>
-            <FormField label={credLabels.loginLabel} htmlFor="acc-login">
-              <Input
-                id="acc-login"
-                autoComplete="off"
-                placeholder={credLabels.loginPlaceholder || undefined}
-                {...register('apiLogin')}
-              />
-            </FormField>
+            {!tokenOnly ? (
+              <FormField label={credLabels.loginLabel} htmlFor="acc-login">
+                <Input
+                  id="acc-login"
+                  autoComplete="off"
+                  placeholder={credLabels.loginPlaceholder || undefined}
+                  {...register('apiLogin')}
+                />
+              </FormField>
+            ) : null}
             <FormField
               label={isEdit ? `${credLabels.passwordLabel} (необязательно)` : credLabels.passwordLabel}
               htmlFor="acc-password"

@@ -2,15 +2,19 @@ import type { schema } from '@cfdm/db'
 
 import { billmanagerAccountRowForSync } from '../billmanager/context.js'
 import { fourvpsAccountRowForSync } from '../fourvps/context.js'
+import { userApiAccountRowForSync } from '../userapi/context.js'
 import type { BillmanagerSyncAccount } from '../billmanager/context.js'
 import type { FourvpsSyncAccount } from '../fourvps/context.js'
+import type { UserApiSyncAccount } from '../userapi/context.js'
 
 import { billmanagerAdapter } from './billmanager-adapter.js'
 import { fourvpsAdapter } from './fourvps-adapter.js'
+import { userapiAdapter } from './userapi-adapter.js'
 import type { ProviderAdapter } from './types.js'
 
 export { billmanagerAdapter } from './billmanager-adapter.js'
 export { fourvpsAdapter } from './fourvps-adapter.js'
+export { userapiAdapter } from './userapi-adapter.js'
 
 export const manualAdapter: ProviderAdapter = {
   type: 'manual',
@@ -32,6 +36,8 @@ export const manualAdapter: ProviderAdapter = {
 const adapters: Record<string, ProviderAdapter> = {
   billmanager: billmanagerAdapter,
   '4vps': fourvpsAdapter,
+  macloud: userapiAdapter,
+  vdsina: userapiAdapter,
   manual: manualAdapter,
   none: manualAdapter,
 }
@@ -44,7 +50,7 @@ export function getProviderAdapter(apiType: string | null | undefined): Provider
 type AccountRow = typeof schema.providerAccounts.$inferSelect
 type ProviderRow = typeof schema.providers.$inferSelect
 
-export type SyncReadyAccount = BillmanagerSyncAccount | FourvpsSyncAccount
+export type SyncReadyAccount = BillmanagerSyncAccount | FourvpsSyncAccount | UserApiSyncAccount
 
 export function resolveSyncAccount(
   accountRow: AccountRow | null | undefined,
@@ -63,10 +69,16 @@ export function resolveSyncAccount(
     const account = fourvpsAccountRowForSync(accountRow, providerRow)
     return account ? { apiType, account } : null
   }
+  if (apiType === 'macloud' || apiType === 'vdsina') {
+    const account = userApiAccountRowForSync(accountRow, providerRow)
+    return account ? { apiType, account } : null
+  }
   return null
 }
 
 export const SYNC_SETUP_ERRORS: Record<string, string> = {
   billmanager: 'Укажите в настройках хостера тип API BILLmanager и URL; в аккаунте — логин и пароль API',
   '4vps': 'Укажите в настройках хостера тип API 4VPS и URL; в аккаунте — Panel ID и API Key',
+  macloud: 'Укажите тип API Маклауд и URL; в аккаунте — API Token',
+  vdsina: 'Укажите тип API VDSina и URL; в аккаунте — API Token',
 }
