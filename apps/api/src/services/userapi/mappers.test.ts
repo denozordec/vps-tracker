@@ -49,7 +49,55 @@ describe('mapServerToVps', () => {
     expect(vps.notes).toContain('macloud-12345')
     expect(vps.tariffType).toBe('daily')
     expect(vps.dailyRate).toBe(1.55)
-    expect(vps.monthlyRate).toBeNull()
+    expect(vps.monthlyRate).toBe(46.5)
+    expect(vps.currency).toBe('RUB')
+  })
+
+  it('parses string plan cost from index', () => {
+    const planIndex = new Map([
+      [
+        '1',
+        {
+          id: 1,
+          name: 'Plan',
+          cost: '2.50',
+          period: 'day',
+        },
+      ],
+    ])
+    const vps = mapServerToVps(server, 'vdsina', 'prov-1', 'acc-1', planIndex, 'USD')
+    expect(vps.dailyRate).toBe(2.5)
+    expect(vps.currency).toBe('USD')
+  })
+
+  it('falls back to tariff item price when plan index misses', () => {
+    const tariffByPlanId = new Map([
+      [
+        '1',
+        {
+          externalId: '1',
+          datacenterKey: '11',
+          datacenterName: 'Cloud',
+          name: 'Plan',
+          desc: '',
+          vcpu: 1,
+          ramGb: 1,
+          diskGb: 10,
+          diskType: 'NVMe',
+          virtualization: 'KVM',
+          channel: '',
+          location: 'Cloud',
+          country: '',
+          cpuModel: '',
+          orderAvailable: true,
+          price: '3 USD/day',
+        },
+      ],
+    ])
+    const vps = mapServerToVps(server, 'vdsina', 'prov-1', 'acc-1', undefined, 'USD', tariffByPlanId)
+    expect(vps.dailyRate).toBe(3)
+    expect(vps.monthlyRate).toBe(90)
+    expect(vps.currency).toBe('USD')
   })
 
   it('maps monthly plan cost from plan index', () => {

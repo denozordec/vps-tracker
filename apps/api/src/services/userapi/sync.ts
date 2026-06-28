@@ -82,19 +82,31 @@ export async function syncFromUserApi(
     fetchVpsData
       ? fetchBalance(apiBaseUrl, credentials, fallbackCurrency).catch(() => null)
       : null,
-    fetchTariffs ? fetchTariffList(apiBaseUrl, credentials).catch(() => []) : [],
+    fetchTariffs
+      ? fetchTariffList(apiBaseUrl, credentials, fallbackCurrency).catch(() => [])
+      : [],
     fetchVpsData ? fetchOperations(apiBaseUrl, credentials).catch(() => []) : [],
     fetchVpsData
       ? fetchPlanCostIndex(apiBaseUrl, credentials).catch(() => new Map() as UserApiPlanCostIndex)
       : (new Map() as UserApiPlanCostIndex),
   ])
 
+  const tariffByPlanId = new Map(tariffItems.map((t) => [t.externalId, t]))
+
   let vpsCount = 0
   const syncSummary: SyncSummary = { added: [], updated: [], paymentsAdded: 0 }
 
   if (fetchVpsData) {
     for (const server of servers) {
-      const vps = mapServerToVps(server, apiType, providerId, accountId, planIndex)
+      const vps = mapServerToVps(
+        server,
+        apiType,
+        providerId,
+        accountId,
+        planIndex,
+        fallbackCurrency,
+        tariffByPlanId,
+      )
       const id = `vps-${idPrefix}-${accountId}-${vps.externalId}`
       const additionalIps = JSON.stringify(vps.additionalIps || [])
       const dailyRate = vps.dailyRate

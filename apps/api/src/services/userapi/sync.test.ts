@@ -6,13 +6,17 @@ import { providerAccountsRepository } from '@cfdm/db/repositories/provider-accou
 import { syncFromUserApi } from './sync.js'
 import type { UserApiSyncAccount } from './context.js'
 
-vi.mock('./operations.js', () => ({
-  fetchServersWithDetails: vi.fn(),
-  fetchBalance: vi.fn(),
-  fetchTariffList: vi.fn(),
-  fetchPlanCostIndex: vi.fn(),
-  fetchOperations: vi.fn(),
-}))
+vi.mock('./operations.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./operations.js')>()
+  return {
+    ...actual,
+    fetchServersWithDetails: vi.fn(),
+    fetchBalance: vi.fn(),
+    fetchTariffList: vi.fn(),
+    fetchPlanCostIndex: vi.fn(),
+    fetchOperations: vi.fn(),
+  }
+})
 
 import {
   fetchBalance,
@@ -43,6 +47,7 @@ function makeAccount(apiType: 'macloud' | 'vdsina'): UserApiSyncAccount {
     balanceUpdatedAt: null,
     enoughmoneyto: '',
     balanceAlertBelow: null,
+    providerBaseCurrency: null,
   }
 }
 
@@ -84,7 +89,7 @@ describe('syncFromUserApi', () => {
         country: '',
         cpuModel: '',
         orderAvailable: true,
-        price: '1.55 ₽/день',
+        price: '1.55 RUB/day',
       },
     ])
     vi.mocked(fetchPlanCostIndex).mockResolvedValue(
@@ -151,7 +156,7 @@ describe('syncFromUserApi', () => {
   it('syncs vdsina account with vdsina id prefix', async () => {
     getSqlite()
       .prepare(
-        `INSERT INTO providers (id, name, apiType, apiBaseUrl) VALUES ('prov-vdsina', 'VDSina', 'vdsina', 'https://userapi.vdsina.com/v1')`,
+        `INSERT INTO providers (id, name, apiType, apiBaseUrl, baseCurrency) VALUES ('prov-vdsina', 'VDSina', 'vdsina', 'https://userapi.vdsina.com/v1', 'USD')`,
       )
       .run()
     providerAccountsRepository.create({
@@ -161,10 +166,23 @@ describe('syncFromUserApi', () => {
       apiCredentials: 'secret-token',
     })
 
-    const result = await syncFromUserApi(makeAccount('vdsina'))
+    const result = await syncFromUserApi({
+      ...makeAccount('vdsina'),
+      providerBaseCurrency: 'USD',
+    })
 
     expect(result.vpsCount).toBe(1)
-    const vps = getSqlite().prepare('SELECT id FROM vps WHERE id = ?').get('vps-vdsina-acc-vdsina-100')
+    const vps = getSqlite()
+      .prepare('SELECT id, currency, dailyRate, monthlyRate FROM vps WHERE id = ?')
+      .get('vps-vdsina-acc-vdsina-100') as {
+      id: string
+      currency: string
+      dailyRate: number
+      monthlyRate: number
+    }
     expect(vps).toBeTruthy()
+    expect(vps.currency).toBe('USD')
+    expect(vps.dailyRate).toBe(1.55)
+    expect(vps.monthlyRate).toBe(46.5)
   })
 })

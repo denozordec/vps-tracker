@@ -10,21 +10,73 @@ export type ActiveTariffDto = Omit<Row, 'orderAvailable' | 'ramGb' | 'price'> & 
   currency: string | null
 }
 
-/** Парсит строку цены BILLmanager: «100.50 RUB», «€12», «12 USD». */
-export function parseTariffPrice(price: string | null | undefined): {
+/** Результат парсинга строки цены тарифа. */
+export interface ParsedTariffPrice {
+  /** Сумма из строки (суточная для /day, месячная иначе). */
+  amount: number | null
   monthlyRate: number | null
   currency: string | null
-} {
+  period: 'day' | 'month' | null
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  '₽': 'RUB',
+  '€': 'EUR',
+  '$': 'USD',
+  '£': 'GBP',
+}
+
+function isDailyTariffPrice(raw: string): boolean {
+  return /\/\s*(?:day|день)/i.test(raw) || /\b(?:day|день)\b/i.test(raw)
+}
+
+/** Парсит строку цены: BILLmanager «100.50 RUB», UserAPI «1.55 USD/day», «1.55 ₽/день». */
+export function parseTariffPrice(price: string | null | undefined): ParsedTariffPrice {
   const raw = String(price ?? '').trim()
-  if (!raw) return { monthlyRate: null, currency: null }
-  const match = raw.match(/([\d.,]+)\s*([A-Za-z]{3})?/)
-  if (!match) return { monthlyRate: null, currency: null }
-  const monthlyRate = Number.parseFloat(match[1].replace(',', '.'))
-  const currency = match[2]?.toUpperCase() ?? null
-  return {
-    monthlyRate: Number.isFinite(monthlyRate) ? monthlyRate : null,
-    currency,
+  if (!raw) return { amount: null, monthlyRate: null, currency: null, period: null }
+
+  const isDaily = isDailyTariffPrice(raw)
+
+  const isoMatch = raw.match(/([\d.,]+)\s*([A-Za-z]{3})(?:\s*\/\s*(?:day|день))?/i)
+  if (isoMatch) {
+    const amount = Number.parseFloat(isoMatch[1].replace(',', '.'))
+    const currency = isoMatch[2].toUpperCase()
+    const period: 'day' | 'month' = isDaily ? 'day' : 'month'
+    if (!Number.isFinite(amount)) {
+      return { amount: null, monthlyRate: null, currency: null, period: null }
+    }
+    const monthlyRate = period === 'day' ? roundTariffRate(amount * 30) : roundTariffRate(amount)
+    return { amount: roundTariffRate(amount), monthlyRate, currency, period }
   }
+
+  const symbolMatch = raw.match(/([\d.,]+)\s*([₽€$£])/)
+  if (symbolMatch) {
+    const amount = Number.parseFloat(symbolMatch[1].replace(',', '.'))
+    const currency = CURRENCY_SYMBOLS[symbolMatch[2]] ?? null
+    const period: 'day' | 'month' = isDaily ? 'day' : 'month'
+    if (!Number.isFinite(amount)) {
+      return { amount: null, monthlyRate: null, currency: null, period: null }
+    }
+    const monthlyRate = period === 'day' ? roundTariffRate(amount * 30) : roundTariffRate(amount)
+    return { amount: roundTariffRate(amount), monthlyRate, currency, period }
+  }
+
+  const legacyMatch = raw.match(/([\d.,]+)\s*([A-Za-z]{3})?/)
+  if (legacyMatch) {
+    const amount = Number.parseFloat(legacyMatch[1].replace(',', '.'))
+    const currency = legacyMatch[2]?.toUpperCase() ?? null
+    if (!Number.isFinite(amount)) {
+      return { amount: null, monthlyRate: null, currency: null, period: null }
+    }
+    const monthlyRate = roundTariffRate(amount)
+    return { amount: monthlyRate, monthlyRate, currency, period: 'month' }
+  }
+
+  return { amount: null, monthlyRate: null, currency: null, period: null }
+}
+
+function roundTariffRate(n: number): number {
+  return Math.round(n * 100) / 100
 }
 
 function toDto(row: Row | undefined): ActiveTariffDto | undefined {

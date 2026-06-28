@@ -133,6 +133,8 @@ export interface Settings {
 export interface ActiveTariff {
   id: string
   providerAccountId: string
+  providerId?: string
+  externalId?: string
   pricelistId?: string
   name?: string
   vcpu?: number
@@ -145,6 +147,8 @@ export interface ActiveTariff {
   datacenterName?: string
   location?: string
   country?: string
+  orderAvailable?: boolean
+  virtualization?: string
 }
 
 export interface SyncLogRow {

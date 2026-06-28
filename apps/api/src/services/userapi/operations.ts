@@ -24,7 +24,7 @@ export interface UserApiTariffSpec {
 }
 
 export interface UserApiPlanParamCost {
-  cost?: number
+  cost?: number | string
   min?: number
   max?: number
 }
@@ -68,8 +68,8 @@ export interface UserApiServerGroup {
 export interface UserApiServerPlan {
   id: number
   name: string
-  cost: number
-  full_cost?: number
+  cost: number | string
+  full_cost?: number | string
   period?: string
   description?: string
   active?: boolean
@@ -143,6 +143,33 @@ function parseBalanceAmount(raw: string | number | undefined): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/** Парсит cost/full_cost тарифного плана UserAPI (число или строка). */
+export function parsePlanCost(raw: string | number | undefined | null): number | null {
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
+  const n = Number.parseFloat(String(raw).replace(/[^\d.-]/g, ''))
+  return Number.isFinite(n) ? n : null
+}
+
+export function normalizePlanPeriod(period?: string): 'day' | 'month' {
+  const p = (period || 'day').toLowerCase()
+  if (p === 'month' || p === 'monthly') return 'month'
+  return 'day'
+}
+
+/** Формат цены для active_tariffs.price — понятен parseTariffPrice. */
+export function formatUserApiTariffPrice(
+  cost: number,
+  period: string | undefined,
+  currency: string,
+): string {
+  const cur = (currency || 'RUB').trim().toUpperCase()
+  if (normalizePlanPeriod(period) === 'day') {
+    return `${cost} ${cur}/day`
+  }
+  return `${cost} ${cur}`
+}
+
 function inferDiskType(name: string): string {
   const upper = name.toUpperCase()
   if (upper.includes('NVME')) return 'NVMe'
@@ -155,10 +182,11 @@ function mapPlanToTariffItem(
   plan: UserApiServerPlan,
   groupId: string,
   groupName: string,
+  currency: string,
 ): UserApiTariffItem {
   const data = plan.data ?? {}
   const diskGb = data.disk?.value ?? 0
-  const priceSuffix = plan.period === 'day' ? ' ₽/день' : ' ₽'
+  const cost = parsePlanCost(plan.cost ?? plan.full_cost)
   const descParts = [plan.description || '']
   if (plan.has_params) descParts.push('конструктор')
   return {
@@ -177,7 +205,16 @@ function mapPlanToTariffItem(
     country: '',
     cpuModel: '',
     orderAvailable: Boolean(plan.active && plan.enable),
-    price: plan.cost != null ? `${plan.cost}${priceSuffix}` : '',
+    price: cost != null ? formatUserApiTariffPrice(cost, plan.period, currency) : '',
+  }
+}
+
+function normalizePlanInIndex(plan: UserApiServerPlan): UserApiServerPlan {
+  const cost = parsePlanCost(plan.cost ?? plan.full_cost)
+  return {
+    ...plan,
+    cost: cost ?? 0,
+    period: normalizePlanPeriod(plan.period) === 'month' ? 'month' : 'day',
   }
 }
 
@@ -262,13 +299,21 @@ export async function fetchDatacenters(
   return map
 }
 
-export async function fetchServerGroups(
+async function fetchAllServerGroups(
   baseUrl: string,
   credentials: string,
 ): Promise<UserApiServerGroup[]> {
   const { baseUrl: url, token } = parseCredentials(baseUrl, credentials)
   const data = await userApiRequest<UserApiServerGroup[]>(url, token, '/server-group')
-  return Array.isArray(data) ? data.filter((g) => g.active !== false) : []
+  return Array.isArray(data) ? data : []
+}
+
+export async function fetchServerGroups(
+  baseUrl: string,
+  credentials: string,
+): Promise<UserApiServerGroup[]> {
+  const groups = await fetchAllServerGroups(baseUrl, credentials)
+  return groups.filter((g) => g.active !== false)
 }
 
 export async function fetchServerPlans(
@@ -285,13 +330,13 @@ export async function fetchPlanCostIndex(
   baseUrl: string,
   credentials: string,
 ): Promise<UserApiPlanCostIndex> {
-  const groups = await fetchServerGroups(baseUrl, credentials)
+  const groups = await fetchAllServerGroups(baseUrl, credentials)
   const index: UserApiPlanCostIndex = new Map()
 
   for (const group of groups) {
     const plans = await fetchServerPlans(baseUrl, credentials, group.id)
     for (const plan of plans) {
-      if (plan?.id != null) index.set(String(plan.id), plan)
+      if (plan?.id != null) index.set(String(plan.id), normalizePlanInIndex(plan))
     }
   }
 
@@ -301,6 +346,7 @@ export async function fetchPlanCostIndex(
 export async function fetchTariffList(
   baseUrl: string,
   credentials: string,
+  currency = 'RUB',
 ): Promise<UserApiTariffItem[]> {
   const groups = await fetchServerGroups(baseUrl, credentials)
   const items: UserApiTariffItem[] = []
@@ -310,7 +356,7 @@ export async function fetchTariffList(
     const groupKey = String(group.id)
     for (const plan of plans) {
       if (plan.active === false || plan.enable === false) continue
-      items.push(mapPlanToTariffItem(plan, groupKey, group.name || ''))
+      items.push(mapPlanToTariffItem(plan, groupKey, group.name || '', currency))
     }
   }
 

@@ -24,7 +24,6 @@ import { getPaidUntilDate } from '@/lib/paid-until'
 import {
   effectiveVpsTariffCurrency,
   formatCurrency,
-  formatInProviderCurrency,
   tariffTypeLabel,
   vpsStatusLabel,
   paymentTypeLabel,
@@ -215,12 +214,13 @@ function VpsDetailPage() {
                   <InfoRow label="Тип" value={tariffTypeLabel(row.tariffType)} />
                   <InfoRow
                     label="Ставка"
-                    value={formatInProviderCurrency(
-                      row.tariffType === 'daily' ? Number(row.dailyRate || 0) * 30 : Number(row.monthlyRate || 0),
+                    value={formatCurrency(
+                      row.monthlyRate != null
+                        ? Number(row.monthlyRate)
+                        : row.tariffType === 'daily'
+                          ? Number(row.dailyRate || 0) * 30
+                          : Number(row.monthlyRate || 0),
                       effectiveVpsTariffCurrency(row, provider),
-                      provider,
-                      snapshot?.settings ?? [],
-                      null,
                     )}
                   />
                   <InfoRow
