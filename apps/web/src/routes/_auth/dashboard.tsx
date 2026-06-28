@@ -127,7 +127,7 @@ function DashboardPage() {
               icon: ExternalLinkIcon,
               sortable: false,
               cell: (row) => (
-                <Button variant="outline" size="sm" onClick={() => navigate({ to: row.to })}>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: row.to })}>
                   Открыть
                 </Button>
               ),
@@ -195,7 +195,7 @@ function DashboardPage() {
               header: '',
               sortable: false,
               cell: () => (
-                <Button variant="outline" size="sm" onClick={() => navigate({ to: '/accounts' })}>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/accounts' })}>
                   Открыть
                 </Button>
               ),
@@ -240,6 +240,12 @@ function DashboardPage() {
                     value: stats?.minRunwayDays != null ? `${stats.minRunwayDays} дн` : '—',
                     icon: <ClockIcon className="size-4" />,
                     variant: stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? 'warning' : 'default',
+                    badge:
+                      stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? (
+                        <Badge variant="outline" className="text-xs">
+                          &lt; 14 дн
+                        </Badge>
+                      ) : undefined,
                     onClick: () => navigate({ to: '/accounts' }),
                   },
                   {
@@ -247,6 +253,12 @@ function DashboardPage() {
                     value: stats?.expiringWithin7Days ?? 0,
                     icon: <AlertTriangleIcon className="size-4" />,
                     variant: (stats?.expiringWithin7Days ?? 0) > 0 ? 'warning' : 'default',
+                    badge:
+                      (stats?.expiringWithin7Days ?? 0) > 0 ? (
+                        <Badge variant="outline" className="text-xs">
+                          внимание
+                        </Badge>
+                      ) : undefined,
                     onClick: () => navigate({ to: '/vps', search: { health: 'paid-overdue' } }),
                   },
                   {

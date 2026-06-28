@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { SearchIcon, SlidersHorizontalIcon, SaveIcon, Trash2Icon, XIcon } from 'lucide-react'
+import { SlidersHorizontalIcon, SaveIcon, Trash2Icon } from 'lucide-react'
 
-import { Input } from '@cfdm/ui/components/input'
 import { Button } from '@cfdm/ui/components/button'
 import { Checkbox } from '@cfdm/ui/components/checkbox'
 import { Label } from '@cfdm/ui/components/label'
@@ -14,6 +13,8 @@ import {
 import { Slider } from '@cfdm/ui/components/slider'
 import { PlusIcon } from 'lucide-react'
 
+import { ListFiltersBar, type FilterChip } from '@/components/list-filters-bar'
+
 import {
   Filters,
   createFilter,
@@ -25,6 +26,7 @@ import {
 import {
   type VpsFiltersState,
   buildDefaultVpsFilters,
+  hasActiveVpsFilters,
   stateToActiveFilters,
   loadFilterPresets,
   saveFilterPresets,
@@ -43,6 +45,8 @@ interface VpsFiltersToolbarProps {
   countryOptions: { value: string; label: string; code?: string }[]
   cityOptions: { value: string; label: string }[]
   projectNameOptions: string[]
+  shownCount: number
+  totalCount: number
 }
 
 const RU_I18N: FilterI18nConfig = {
@@ -165,6 +169,8 @@ export function VpsFiltersToolbar({
   countryOptions,
   cityOptions,
   projectNameOptions,
+  shownCount,
+  totalCount,
 }: VpsFiltersToolbarProps) {
   const [presets, setPresets] = useState<VpsFilterPreset[]>(() => loadFilterPresets())
 
@@ -308,7 +314,136 @@ export function VpsFiltersToolbar({
     onChange(filtersToState(next, filters))
   }
 
-  const hasActive = reuiFilters.length > 0 || filters.search || filters.groupByProject || filters.tableCompact
+  const chips = useMemo((): FilterChip[] => {
+    const out: FilterChip[] = []
+    const providerById = new Map(providers.map((p) => [p.id, p.name]))
+    const accountById = new Map(providerAccounts.map((a) => [a.id, a.name]))
+
+    if (filters.search) {
+      out.push({
+        id: 'search',
+        label: `Поиск: ${filters.search}`,
+        onRemove: () => onChange({ ...filters, search: '' }),
+      })
+    }
+    if (filters.providerId.length) {
+      const names = filters.providerId.map((id) => providerById.get(id) ?? id).join(', ')
+      out.push({
+        id: 'providerId',
+        label: `Хостер: ${names}`,
+        onRemove: () => onChange({ ...filters, providerId: [] }),
+      })
+    }
+    if (filters.providerAccountId.length) {
+      const names = filters.providerAccountId.map((id) => accountById.get(id) ?? id).join(', ')
+      out.push({
+        id: 'providerAccountId',
+        label: `Аккаунт: ${names}`,
+        onRemove: () => onChange({ ...filters, providerAccountId: [] }),
+      })
+    }
+    if (filters.country.length) {
+      out.push({
+        id: 'country',
+        label: `Страна: ${filters.country.join(', ')}`,
+        onRemove: () => onChange({ ...filters, country: [] }),
+      })
+    }
+    if (filters.city.length) {
+      out.push({
+        id: 'city',
+        label: `Город: ${filters.city.join(', ')}`,
+        onRemove: () => onChange({ ...filters, city: [] }),
+      })
+    }
+    if (filters.datacenter) {
+      out.push({
+        id: 'datacenter',
+        label: `ДЦ: ${filters.datacenter}`,
+        onRemove: () => onChange({ ...filters, datacenter: '' }),
+      })
+    }
+    if (filters.status.length) {
+      out.push({
+        id: 'status',
+        label: `Статус: ${filters.status.map(vpsStatusLabel).join(', ')}`,
+        onRemove: () => onChange({ ...filters, status: [] }),
+      })
+    }
+    if (filters.environment.length) {
+      out.push({
+        id: 'environment',
+        label: `Окружение: ${filters.environment.map(environmentLabel).join(', ')}`,
+        onRemove: () => onChange({ ...filters, environment: [] }),
+      })
+    }
+    if (filters.tariffType.length) {
+      out.push({
+        id: 'tariffType',
+        label: `Тариф: ${filters.tariffType.map(tariffTypeLabel).join(', ')}`,
+        onRemove: () => onChange({ ...filters, tariffType: [] }),
+      })
+    }
+    if (filters.monitoring.length) {
+      out.push({
+        id: 'monitoring',
+        label: `Мониторинг: ${filters.monitoring.join(', ')}`,
+        onRemove: () => onChange({ ...filters, monitoring: [] }),
+      })
+    }
+    if (filters.backup.length) {
+      out.push({
+        id: 'backup',
+        label: `Бэкап: ${filters.backup.join(', ')}`,
+        onRemove: () => onChange({ ...filters, backup: [] }),
+      })
+    }
+    if (filters.project.length) {
+      out.push({
+        id: 'project',
+        label: `Проект: ${filters.project.map((p) => (p === '__none__' ? 'Без проекта' : p)).join(', ')}`,
+        onRemove: () => onChange({ ...filters, project: [] }),
+      })
+    }
+    if (filters.minVcpu != null) {
+      out.push({
+        id: 'minVcpu',
+        label: `vCPU ≥ ${filters.minVcpu}`,
+        onRemove: () => onChange({ ...filters, minVcpu: null }),
+      })
+    }
+    if (filters.minRamGb != null) {
+      out.push({
+        id: 'minRamGb',
+        label: `RAM ≥ ${filters.minRamGb} GB`,
+        onRemove: () => onChange({ ...filters, minRamGb: null }),
+      })
+    }
+    if (filters.minDiskGb != null) {
+      out.push({
+        id: 'minDiskGb',
+        label: `Disk ≥ ${filters.minDiskGb} GB`,
+        onRemove: () => onChange({ ...filters, minDiskGb: null }),
+      })
+    }
+    if (filters.groupByProject) {
+      out.push({
+        id: 'groupByProject',
+        label: 'Группировка по проекту',
+        onRemove: () => onChange({ ...filters, groupByProject: false }),
+      })
+    }
+    if (filters.tableCompact) {
+      out.push({
+        id: 'tableCompact',
+        label: 'Компактная таблица',
+        onRemove: () => onChange({ ...filters, tableCompact: false }),
+      })
+    }
+    return out
+  }, [filters, onChange, providers, providerAccounts])
+
+  const hasActive = hasActiveVpsFilters(filters)
 
   const savePreset = () => {
     const name = window.prompt('Имя пресета фильтров', `Пресет ${presets.length + 1}`)
@@ -331,113 +466,109 @@ export function VpsFiltersToolbar({
   const reset = () => onChange(buildDefaultVpsFilters())
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative w-full">
-        <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Поиск: IP, DNS, проект, назначение, ОС"
-          value={filters.search}
-          onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          className="pl-8"
-          autoComplete="off"
-          name="vps-inventory-search"
-          spellCheck={false}
-        />
-      </div>
+    <ListFiltersBar
+      search={{
+        value: filters.search,
+        onChange: (search) => onChange({ ...filters, search }),
+        placeholder: 'Поиск: IP, DNS, проект, назначение, ОС',
+        name: 'vps-inventory-search',
+      }}
+      controls={
+        <>
+          <Filters
+            filters={reuiFilters as unknown as Filter[]}
+            fields={fields as unknown as FilterFieldConfig[]}
+            onChange={handleFiltersChange}
+            i18n={RU_I18N}
+            size="sm"
+            allowMultiple={false}
+            trigger={
+              <Button variant="outline" size="sm">
+                <PlusIcon data-icon="inline-start" />
+                Фильтр
+              </Button>
+            }
+          />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Filters
-          filters={reuiFilters as unknown as Filter[]}
-          fields={fields as unknown as FilterFieldConfig[]}
-          onChange={handleFiltersChange}
-          i18n={RU_I18N}
-          size="sm"
-          allowMultiple={false}
-          trigger={
-            <Button variant="outline" size="sm">
-              <PlusIcon data-icon="inline-start" />
-              Фильтр
-            </Button>
-          }
-        />
-
-        <Popover>
-        <PopoverTrigger
-          render={
-            <Button variant="ghost" size="sm">
-              <SlidersHorizontalIcon data-icon="inline-start" />
-              Вид
-            </Button>
-          }
-        />
-        <PopoverContent align="end" className="w-64 p-3">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs text-muted-foreground">Отображение</Label>
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={filters.groupByProject}
-                  onCheckedChange={(v) => onChange({ ...filters, groupByProject: Boolean(v) })}
-                />
-                <span className="text-sm">Группировать по проекту</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={filters.tableCompact}
-                  onCheckedChange={(v) => onChange({ ...filters, tableCompact: Boolean(v) })}
-                />
-                <span className="text-sm">Компактная таблица</span>
-              </label>
-            </div>
-
-            <Separator />
-
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Пресеты</Label>
-                <Button variant="ghost" size="sm" onClick={savePreset} className="h-7 px-2">
-                  <SaveIcon className="size-3.5" />
-                  Сохранить
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button variant="ghost" size="sm">
+                  <SlidersHorizontalIcon data-icon="inline-start" />
+                  Вид
                 </Button>
-              </div>
-              {presets.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Нет сохранённых пресетов</p>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {presets.map((p) => (
-                    <div key={p.name} className="flex items-center justify-between gap-2 rounded-md px-2 py-1 hover:bg-accent">
-                      <button
-                        type="button"
-                        onClick={() => applyPreset(p)}
-                        className="flex-1 truncate text-start text-sm"
-                      >
-                        {p.name}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deletePreset(p.name)}
-                        aria-label="Удалить пресет"
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Trash2Icon className="size-3.5" />
-                      </button>
-                    </div>
-                  ))}
+              }
+            />
+            <PopoverContent align="end" className="w-64 p-3">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs text-muted-foreground">Отображение</Label>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={filters.groupByProject}
+                      onCheckedChange={(v) => onChange({ ...filters, groupByProject: Boolean(v) })}
+                    />
+                    <span className="text-sm">Группировать по проекту</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={filters.tableCompact}
+                      onCheckedChange={(v) => onChange({ ...filters, tableCompact: Boolean(v) })}
+                    />
+                    <span className="text-sm">Компактная таблица</span>
+                  </label>
                 </div>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
 
-      {hasActive ? (
-        <Button variant="ghost" size="sm" onClick={reset}>
-          <XIcon data-icon="inline-start" />
-          Сбросить
-        </Button>
-      ) : null}
-      </div>
-    </div>
+                <Separator />
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Пресеты</Label>
+                    <Button variant="ghost" size="sm" onClick={savePreset} className="h-7 px-2">
+                      <SaveIcon className="size-3.5" />
+                      Сохранить
+                    </Button>
+                  </div>
+                  {presets.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Нет сохранённых пресетов</p>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {presets.map((p) => (
+                        <div
+                          key={p.name}
+                          className="flex items-center justify-between gap-2 rounded-md px-2 py-1 hover:bg-accent"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => applyPreset(p)}
+                            className="flex-1 truncate text-start text-sm"
+                          >
+                            {p.name}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deletePreset(p.name)}
+                            aria-label="Удалить пресет"
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Trash2Icon className="size-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </>
+      }
+      chips={chips}
+      shown={shownCount}
+      total={totalCount}
+      showReset={hasActive}
+      onReset={reset}
+    />
   )
 }
 

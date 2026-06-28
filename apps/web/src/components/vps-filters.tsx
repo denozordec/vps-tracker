@@ -219,17 +219,17 @@ export function stateToActiveFilters(state: VpsFiltersState): ActiveFilter[] {
 export function countActiveFilters(filters: VpsFiltersState): number {
   let n = 0
   if (filters.search) n++
-  n += filters.providerId.length
-  n += filters.providerAccountId.length
-  n += filters.country.length
-  n += filters.city.length
+  if (filters.providerId.length) n++
+  if (filters.providerAccountId.length) n++
+  if (filters.country.length) n++
+  if (filters.city.length) n++
   if (filters.datacenter) n++
-  n += filters.status.length
-  n += filters.environment.length
-  n += filters.tariffType.length
-  n += filters.monitoring.length
-  n += filters.backup.length
-  n += filters.project.length
+  if (filters.status.length) n++
+  if (filters.environment.length) n++
+  if (filters.tariffType.length) n++
+  if (filters.monitoring.length) n++
+  if (filters.backup.length) n++
+  if (filters.project.length) n++
   if (filters.minVcpu != null) n++
   if (filters.minRamGb != null) n++
   if (filters.minDiskGb != null) n++

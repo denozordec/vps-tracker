@@ -10,6 +10,9 @@ import {
   ArrowLeftRightIcon,
   CoinsIcon,
   StickyNoteIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ScaleIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -190,11 +193,23 @@ function BalancePage() {
           <div className="flex flex-col gap-4">
             <SectionCards
               items={[
-                { label: 'Всего приходов', value: formatCurrency(totalCredit, baseCurrency) },
-                { label: 'Всего списаний', value: formatCurrency(totalDebit, baseCurrency) },
                 {
-                  label: 'Чистый баланс (ledger)',
+                  label: 'Всего приходов',
+                  value: formatCurrency(totalCredit, baseCurrency),
+                  icon: <ArrowDownIcon className="size-4" />,
+                  hint: baseCurrency,
+                },
+                {
+                  label: 'Всего списаний',
+                  value: formatCurrency(totalDebit, baseCurrency),
+                  icon: <ArrowUpIcon className="size-4" />,
+                  hint: baseCurrency,
+                },
+                {
+                  label: 'Чистый баланс',
                   value: formatCurrency(totalCredit - totalDebit, baseCurrency),
+                  icon: <ScaleIcon className="size-4" />,
+                  hint: `${rows.length} записей`,
                 },
               ]}
             />

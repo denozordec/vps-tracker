@@ -461,6 +461,8 @@ function VpsPage() {
                   projectNameOptions={projectNameOptions}
                   countryOptions={filterCountryOptions}
                   cityOptions={filterCityOptions}
+                  shownCount={filteredVps.length}
+                  totalCount={snap.vps.length}
                 />
                 <EmptyState
                   title="Ничего не найдено"
@@ -495,6 +497,8 @@ function VpsPage() {
               projectNameOptions={projectNameOptions}
               countryOptions={filterCountryOptions}
               cityOptions={filterCityOptions}
+              shownCount={filteredVps.length}
+              totalCount={snap.vps.length}
             />
             {tableSections.map((section) => (
               <DataGridCard
@@ -505,6 +509,7 @@ function VpsPage() {
                 rowId={(v) => v.id}
                 emptyTitle="VPS не найдены"
                 pinLastColumn
+                dense={filters.tableCompact}
                 enableRowSelection
                 onRowSelectionChange={setSelectedIds}
                 virtualization={section.items.length > 200}

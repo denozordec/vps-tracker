@@ -53,6 +53,8 @@ import {
 import {
   applyAccountFilters,
   buildDefaultAccountFilters,
+  hasActiveAccountFilters,
+  matchesAccountFilterPreset,
   type AccountFiltersState,
 } from '@/components/account-filters'
 import { AccountFiltersToolbar } from '@/components/account-filters-toolbar'
@@ -213,31 +215,41 @@ function AccountsPage() {
     if (!snapshot) return []
     const accounts = snapshot.providerAccounts
     const atRisk = buildAtRiskAccounts(accounts, snapshot.providers, snapshot.syncLog ?? [])
+    const lowBalanceCount = countLowBalanceAccounts(accounts, healthCtx)
+    const defaultFilters = buildDefaultAccountFilters()
     return [
       {
         label: 'Всего аккаунтов',
         value: accounts.length,
-        onClick: () => setFilters(buildDefaultAccountFilters()),
+        icon: <UserRoundIcon className="size-4" />,
+        active: !health && !hasActiveAccountFilters(filters),
+        onClick: () => setFilters(defaultFilters),
       },
       {
         label: 'Готовы к синку',
         value: syncableCount,
-        onClick: () => setFilters({ ...buildDefaultAccountFilters(), syncableOnly: true }),
+        icon: <RefreshCwIcon className="size-4" />,
+        active: matchesAccountFilterPreset(filters, { syncableOnly: true }),
+        onClick: () => setFilters({ ...defaultFilters, syncableOnly: true }),
       },
       {
         label: 'С проблемами',
         value: countAccountsWithIssues(accounts, healthCtx),
+        icon: <ActivityIcon className="size-4" />,
         variant: atRisk.length ? ('warning' as const) : ('default' as const),
-        onClick: () => setFilters({ ...buildDefaultAccountFilters(), issuesOnly: true }),
+        active: matchesAccountFilterPreset(filters, { issuesOnly: true }),
+        onClick: () => setFilters({ ...defaultFilters, issuesOnly: true }),
       },
       {
         label: 'Низкий баланс',
-        value: countLowBalanceAccounts(accounts, healthCtx),
-        variant: countLowBalanceAccounts(accounts, healthCtx) ? ('destructive' as const) : ('default' as const),
-        onClick: () => setFilters({ ...buildDefaultAccountFilters(), lowBalanceOnly: true }),
+        value: lowBalanceCount,
+        icon: <WalletIcon className="size-4" />,
+        variant: lowBalanceCount ? ('destructive' as const) : ('default' as const),
+        active: matchesAccountFilterPreset(filters, { lowBalanceOnly: true }),
+        onClick: () => setFilters({ ...defaultFilters, lowBalanceOnly: true }),
       },
     ]
-  }, [snapshot, syncableCount, healthCtx])
+  }, [snapshot, syncableCount, healthCtx, filters, health])
 
   const columns: DataTableColumn<ProviderAccount>[] = [
     {
@@ -418,6 +430,8 @@ function AccountsPage() {
               filters={filters}
               onChange={setFilters}
               providers={snapshot.providers}
+              shownCount={filteredAccounts.length}
+              totalCount={snapshot.providerAccounts.length}
             />
           ) : null}
           {health ? <HealthModeBanner health={health} exitTo="/accounts" /> : null}
@@ -426,7 +440,19 @@ function AccountsPage() {
             data={filteredAccounts}
             rowId={(a) => a.id}
             pinLastColumn
-            emptyTitle={health || filters.search ? 'Нет аккаунтов с этими фильтрами' : 'Нет записей'}
+            emptyTitle={health || hasActiveAccountFilters(filters) ? 'Нет аккаунтов с этими фильтрами' : 'Нет записей'}
+            emptyDescription={
+              health || hasActiveAccountFilters(filters)
+                ? 'Измените фильтры или сбросьте их'
+                : undefined
+            }
+            emptyAction={
+              health || hasActiveAccountFilters(filters) ? (
+                <Button variant="outline" onClick={() => setFilters(buildDefaultAccountFilters())}>
+                  Сбросить фильтры
+                </Button>
+              ) : undefined
+            }
           />
         </div>
       )}

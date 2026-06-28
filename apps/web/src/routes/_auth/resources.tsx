@@ -75,9 +75,24 @@ function ResourcesPage() {
           <>
             <SectionCards
               items={[
-                { label: 'vCPU', value: totals.vcpu, icon: <CpuIcon className="size-4" /> },
-                { label: 'RAM (GB)', value: totals.ram, icon: <MemoryStickIcon className="size-4" /> },
-                { label: 'Disk (GB)', value: totals.disk, icon: <HardDriveIcon className="size-4" /> },
+                {
+                  label: 'vCPU',
+                  value: totals.vcpu,
+                  icon: <CpuIcon className="size-4" />,
+                  hint: `${active.length} VPS`,
+                },
+                {
+                  label: 'RAM',
+                  value: totals.ram,
+                  icon: <MemoryStickIcon className="size-4" />,
+                  hint: 'GB',
+                },
+                {
+                  label: 'Disk',
+                  value: totals.disk,
+                  icon: <HardDriveIcon className="size-4" />,
+                  hint: 'GB',
+                },
               ]}
             />
 

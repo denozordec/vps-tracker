@@ -1,9 +1,11 @@
-import { SearchIcon, XIcon } from 'lucide-react'
+import { useMemo } from 'react'
 
-import { Input } from '@cfdm/ui/components/input'
-import { Button } from '@cfdm/ui/components/button'
-import { Checkbox } from '@cfdm/ui/components/checkbox'
 import { SelectField } from '@/components/select-field'
+import {
+  ListFiltersBar,
+  FilterToggleChip,
+  type FilterChip,
+} from '@/components/list-filters-bar'
 import {
   type AccountFiltersState,
   buildDefaultAccountFilters,
@@ -16,80 +18,105 @@ interface AccountFiltersToolbarProps {
   filters: AccountFiltersState
   onChange: (next: AccountFiltersState) => void
   providers: Provider[]
+  shownCount: number
+  totalCount: number
 }
 
-export function AccountFiltersToolbar({ filters, onChange, providers }: AccountFiltersToolbarProps) {
-  const active = hasActiveAccountFilters(filters)
+export function AccountFiltersToolbar({
+  filters,
+  onChange,
+  providers,
+  shownCount,
+  totalCount,
+}: AccountFiltersToolbarProps) {
+  const chips = useMemo((): FilterChip[] => {
+    const out: FilterChip[] = []
+    if (filters.search.trim()) {
+      out.push({
+        id: 'search',
+        label: `Поиск: ${filters.search.trim()}`,
+        onRemove: () => onChange({ ...filters, search: '' }),
+      })
+    }
+    if (filters.providerIds[0]) {
+      const provider = providers.find((p) => p.id === filters.providerIds[0])
+      out.push({
+        id: 'provider',
+        label: `Хостер: ${provider?.name ?? filters.providerIds[0]}`,
+        onRemove: () => onChange({ ...filters, providerIds: [] }),
+      })
+    }
+    if (filters.billingMode) {
+      out.push({
+        id: 'billing',
+        label: `Биллинг: ${billingModeLabel(filters.billingMode)}`,
+        onRemove: () => onChange({ ...filters, billingMode: '' }),
+      })
+    }
+    return out
+  }, [filters, onChange, providers])
+
+  const toggle = (key: 'syncableOnly' | 'issuesOnly' | 'lowBalanceOnly') => {
+    onChange({ ...filters, [key]: !filters[key] })
+  }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Поиск по названию или логину"
-            value={filters.search}
-            onChange={(e) => onChange({ ...filters, search: e.target.value })}
+    <ListFiltersBar
+      search={{
+        value: filters.search,
+        onChange: (search) => onChange({ ...filters, search }),
+        placeholder: 'Поиск по названию или логину',
+      }}
+      controls={
+        <>
+          <SelectField
+            triggerClassName="w-full sm:w-48"
+            placeholder="Все хостеры"
+            value={filters.providerIds[0] ?? null}
+            onValueChange={(v) => onChange({ ...filters, providerIds: v ? [v] : [] })}
+            options={providers.map((p) => ({ value: p.id, label: p.name }))}
           />
-        </div>
-        <SelectField
-          triggerClassName="w-full sm:w-48"
-          placeholder="Все хостеры"
-          value={filters.providerIds[0] ?? null}
-          onValueChange={(v) => onChange({ ...filters, providerIds: v ? [v] : [] })}
-          options={providers.map((p) => ({ value: p.id, label: p.name }))}
-        />
-        <SelectField
-          triggerClassName="w-full sm:w-40"
-          placeholder="Любой биллинг"
-          value={filters.billingMode || null}
-          onValueChange={(v) =>
-            onChange({
-              ...filters,
-              billingMode: (v === 'daily' || v === 'monthly' ? v : '') as AccountFiltersState['billingMode'],
-            })
-          }
-          options={[
-            { value: 'monthly', label: billingModeLabel('monthly') },
-            { value: 'daily', label: billingModeLabel('daily') },
-          ]}
-        />
-        {active ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onChange(buildDefaultAccountFilters())}
-          >
-            <XIcon data-icon="inline-start" />
-            Сбросить
-          </Button>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={filters.syncableOnly}
-            onCheckedChange={(v) => onChange({ ...filters, syncableOnly: v === true })}
+          <SelectField
+            triggerClassName="w-full sm:w-40"
+            placeholder="Любой биллинг"
+            value={filters.billingMode || null}
+            onValueChange={(v) =>
+              onChange({
+                ...filters,
+                billingMode: (v === 'daily' || v === 'monthly' ? v : '') as AccountFiltersState['billingMode'],
+              })
+            }
+            options={[
+              { value: 'monthly', label: billingModeLabel('monthly') },
+              { value: 'daily', label: billingModeLabel('daily') },
+            ]}
           />
-          <span>Готовы к синку</span>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={filters.issuesOnly}
-            onCheckedChange={(v) => onChange({ ...filters, issuesOnly: v === true })}
+        </>
+      }
+      toggles={
+        <>
+          <FilterToggleChip
+            label="Готовы к синку"
+            active={filters.syncableOnly}
+            onClick={() => toggle('syncableOnly')}
           />
-          <span>С проблемами</span>
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={filters.lowBalanceOnly}
-            onCheckedChange={(v) => onChange({ ...filters, lowBalanceOnly: v === true })}
+          <FilterToggleChip
+            label="С проблемами"
+            active={filters.issuesOnly}
+            onClick={() => toggle('issuesOnly')}
           />
-          <span>Низкий баланс</span>
-        </label>
-      </div>
-    </div>
+          <FilterToggleChip
+            label="Низкий баланс"
+            active={filters.lowBalanceOnly}
+            onClick={() => toggle('lowBalanceOnly')}
+          />
+        </>
+      }
+      chips={chips}
+      shown={shownCount}
+      total={totalCount}
+      showReset={hasActiveAccountFilters(filters)}
+      onReset={() => onChange(buildDefaultAccountFilters())}
+    />
   )
 }

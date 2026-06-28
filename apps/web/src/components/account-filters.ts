@@ -36,6 +36,21 @@ export function hasActiveAccountFilters(filters: AccountFiltersState): boolean {
   )
 }
 
+export function matchesAccountFilterPreset(
+  filters: AccountFiltersState,
+  preset: Partial<AccountFiltersState>,
+): boolean {
+  const expected = { ...buildDefaultAccountFilters(), ...preset }
+  return (
+    filters.search === expected.search &&
+    filters.providerIds.join(',') === expected.providerIds.join(',') &&
+    filters.billingMode === expected.billingMode &&
+    filters.syncableOnly === expected.syncableOnly &&
+    filters.issuesOnly === expected.issuesOnly &&
+    filters.lowBalanceOnly === expected.lowBalanceOnly
+  )
+}
+
 export function applyAccountFilters(
   accounts: ProviderAccount[],
   filters: AccountFiltersState,

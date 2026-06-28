@@ -111,6 +111,7 @@ function DataGridCardBody<TData extends object>({
         emptyMessage={emptyTitle}
         tableLayout={{
           dense,
+          stripped: true,
           rowBorder: true,
           headerSticky: true,
           headerBackground: true,
@@ -122,6 +123,9 @@ function DataGridCardBody<TData extends object>({
           columnsMovable: false,
           rowsDraggable: false,
           rowsPinnable: false,
+        }}
+        tableClassNames={{
+          header: 'text-xs font-medium text-muted-foreground',
         }}
       >
         {virtualization ? (
@@ -156,7 +160,7 @@ export function DataGridCard<TData extends object>({
   pagination,
   pageSize = 10,
   footerContent,
-  dense = false,
+  dense = true,
   pinLastColumn = false,
   initialSorting,
   virtualization = false,

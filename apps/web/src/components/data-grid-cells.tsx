@@ -8,9 +8,11 @@ export function dataGridCellStack(
   className?: string,
 ) {
   return (
-    <div className={cn('flex flex-col', className)}>
-      <span className="font-medium">{primary}</span>
-      {secondary ? <span className="text-xs text-muted-foreground">{secondary}</span> : null}
+    <div className={cn('flex min-w-0 flex-col leading-tight', className)}>
+      <span className="truncate font-medium">{primary}</span>
+      {secondary ? (
+        <span className="max-w-[14rem] truncate text-xs text-muted-foreground">{secondary}</span>
+      ) : null}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { DownloadIcon } from 'lucide-react'
+import { DownloadIcon, TrendingUpIcon, CreditCardIcon, ServerIcon } from 'lucide-react'
 
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { Button } from '@cfdm/ui/components/button'
@@ -75,11 +75,22 @@ function ReportsPage() {
             <SectionCards
               items={[
                 {
-                  label: 'Расход/мес (в валюте VPS)',
+                  label: 'Расход/мес',
                   value: formatCurrency(monthly, snap.vps[0]?.currency ?? 'RUB'),
+                  icon: <TrendingUpIcon className="size-4" />,
+                  hint: 'в валюте VPS',
                 },
-                { label: 'Платежей всего', value: snap.payments.length },
-                { label: 'Активных VPS', value: snap.vps.filter((v) => v.status === 'active').length },
+                {
+                  label: 'Платежей',
+                  value: snap.payments.length,
+                  icon: <CreditCardIcon className="size-4" />,
+                },
+                {
+                  label: 'Активных VPS',
+                  value: snap.vps.filter((v) => v.status === 'active').length,
+                  icon: <ServerIcon className="size-4" />,
+                  hint: `из ${snap.vps.length}`,
+                },
               ]}
             />
             <ChartsGrid>

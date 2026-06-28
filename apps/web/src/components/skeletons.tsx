@@ -6,8 +6,9 @@ export function SectionCardsSkeleton({ count = 4 }: { count?: number }) {
   return (
     <SectionCards
       items={Array.from({ length: count }, (_, i) => ({
-        label: <Skeleton className="h-4 w-24" key={`label-${i}`} />,
-        value: <Skeleton className="h-7 w-20" key={`value-${i}`} />,
+        icon: <Skeleton className="size-4 rounded-sm" key={`icon-${i}`} />,
+        label: <Skeleton className="h-3 w-20" key={`label-${i}`} />,
+        value: <Skeleton className="h-5 w-16" key={`value-${i}`} />,
       }))}
     />
   )

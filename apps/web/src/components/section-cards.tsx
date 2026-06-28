@@ -7,7 +7,9 @@ export interface SectionCardItem {
   value: string | number | ReactElement
   hint?: ReactNode
   icon?: ReactNode
+  badge?: ReactNode
   variant?: 'default' | 'warning' | 'destructive'
+  active?: boolean
   onClick?: () => void
 }
 
@@ -23,28 +25,44 @@ function sectionGridClass(count: number): string {
   if (count === 3) return 'sm:grid-cols-2 lg:grid-cols-3'
   if (count === 4) return 'sm:grid-cols-2 lg:grid-cols-4'
   if (count === 5) return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
-  return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+  return 'sm:grid-cols-2 lg:grid-cols-3'
 }
 
 export function SectionCards({ items, className }: { items: SectionCardItem[]; className?: string }) {
   return (
-    <div className={cn('grid gap-4', sectionGridClass(items.length), className)}>
+    <div className={cn('grid gap-3', sectionGridClass(items.length), className)}>
       {items.map((item, idx) => {
         const clickable = Boolean(item.onClick)
         const content = (
-          <CardContent className="flex flex-col gap-1 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{item.label}</span>
-              {item.icon ? <span className="text-muted-foreground">{item.icon}</span> : null}
+          <CardContent className="flex items-start gap-2.5 px-3 py-2.5">
+            {item.icon ? (
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
+                {item.icon}
+              </span>
+            ) : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-xs text-muted-foreground">{item.label}</span>
+                {item.badge ? <span className="shrink-0">{item.badge}</span> : null}
+              </div>
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <span className="text-lg font-semibold tabular-nums">{item.value}</span>
+                {item.hint ? (
+                  <span className="truncate text-xs text-muted-foreground">· {item.hint}</span>
+                ) : null}
+              </div>
             </div>
-            <span className="text-2xl font-semibold tabular-nums">{item.value}</span>
-            {item.hint ? <span className="text-xs text-muted-foreground">{item.hint}</span> : null}
           </CardContent>
         )
         return (
           <Card
             key={typeof item.label === 'string' ? item.label : idx}
-            className={cn('gap-0', VARIANT_CLASS[item.variant ?? 'default'], clickable && 'cursor-pointer transition-colors hover:bg-muted/40')}
+            className={cn(
+              'gap-0',
+              VARIANT_CLASS[item.variant ?? 'default'],
+              item.active && 'border-primary ring-1 ring-primary/30',
+              clickable && 'cursor-pointer transition-colors hover:bg-muted/40',
+            )}
             onClick={item.onClick}
             role={clickable ? 'button' : undefined}
             tabIndex={clickable ? 0 : undefined}
