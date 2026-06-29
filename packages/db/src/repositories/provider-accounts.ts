@@ -145,7 +145,7 @@ export const providerAccountsRepository = {
         providerId: input.providerId ?? existing.providerId,
         name: input.name ?? existing.name,
         panelUrl: input.panelUrl ?? existing.panelUrl,
-        currency: input.currency ?? existing.currency,
+        currency: input.currency !== undefined ? input.currency : existing.currency,
         billingMode: input.billingMode ?? existing.billingMode,
         notes: input.notes ?? existing.notes,
         apiType: '',

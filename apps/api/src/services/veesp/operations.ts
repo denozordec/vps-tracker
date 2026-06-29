@@ -305,6 +305,35 @@ export async function fetchServiceIps(
   }
 }
 
+export async function fetchVmIps(
+  baseUrl: string,
+  credentials: string,
+  serviceId: string | number,
+  vmId: string | number,
+): Promise<VeespIpItem[]> {
+  const client = clientFor(baseUrl, credentials)
+  try {
+    const json = await client.request<unknown>(`/service/${serviceId}/vms/${vmId}/ips`)
+    return unwrapList<VeespIpItem>(json, 'ips')
+  } catch {
+    return []
+  }
+}
+
+function mergeIpLists(...lists: VeespIpItem[][]): VeespIpItem[] {
+  const seen = new Set<string>()
+  const out: VeespIpItem[] = []
+  for (const list of lists) {
+    for (const item of list) {
+      const ip = String(item.ip ?? item.address ?? item.ipaddress ?? '').trim()
+      if (!ip || seen.has(ip)) continue
+      seen.add(ip)
+      out.push(item)
+    }
+  }
+  return out
+}
+
 export async function fetchServiceInfo(
   baseUrl: string,
   credentials: string,
@@ -478,19 +507,25 @@ export async function fetchVpsRecords(
         const vmDetails = await Promise.all(
           vms.map(async (vm) => {
             const vmId = vm.id ?? vm.vmid
-            if (vmId == null) return vm as VeespVmDetail
-            const detail = await fetchVmDetail(baseUrl, credentials, serviceId, vmId)
-            return { ...vm, ...detail } as VeespVmDetail
+            if (vmId == null) return { vm: vm as VeespVmDetail, vmIps: [] as VeespIpItem[] }
+            const [detail, vmIps] = await Promise.all([
+              fetchVmDetail(baseUrl, credentials, serviceId, vmId),
+              fetchVmIps(baseUrl, credentials, serviceId, vmId),
+            ])
+            return {
+              vm: { ...vm, ...detail } as VeespVmDetail,
+              vmIps,
+            }
           }),
         )
 
-        return vmDetails.map((vm) => ({
+        return vmDetails.map(({ vm, vmIps }) => ({
           serviceId,
           vmId: String(vm.id ?? vm.vmid ?? vmExternalId(serviceId, vm)),
           service,
           serviceDetail,
           vm,
-          ips,
+          ips: mergeIpLists(ips, vmIps),
           info,
         }))
       }),

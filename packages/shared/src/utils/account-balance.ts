@@ -32,10 +32,14 @@ export function effectiveAccountBalanceCurrency(
 }
 
 export function syncFallbackCurrency(
-  account: { currency?: string | null; providerBaseCurrency?: string | null },
+  account: { currency?: string | null; providerBaseCurrency?: string | null; balanceCurrency?: string | null },
+  options?: { balanceCurrency?: string | null },
 ): string {
-  return resolveProviderCurrency(
-    { baseCurrency: account.providerBaseCurrency },
-    account.currency,
-  )
+  const accountCur = (account.currency ?? '').trim()
+  if (accountCur) return accountCur
+  const freshBalanceCur = (options?.balanceCurrency ?? '').trim()
+  if (freshBalanceCur) return freshBalanceCur
+  const storedBalanceCur = (account.balanceCurrency ?? '').trim()
+  if (storedBalanceCur) return storedBalanceCur
+  return resolveProviderCurrency({ baseCurrency: account.providerBaseCurrency }, null)
 }

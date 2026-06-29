@@ -157,4 +157,83 @@ describe('syncFromVeesp', () => {
       .get('vps-veesp-acc-veesp-100-200') as { currency: string }
     expect(vps.currency).toBe('USD')
   })
+
+  it('updates specs and currency on existing VPS during re-sync', async () => {
+    getSqlite().exec(`
+      INSERT INTO vps (
+        id, ip, ipv6, additionalIps, dns, providerId, providerAccountId,
+        country, city, datacenter, os, vcpu, ramGb, diskGb, diskType, virtualization,
+        bandwidthTb, sshPort, rootUser, purpose, environment, project, projectId,
+        monitoringEnabled, backupEnabled, status, tariffType, currency, dailyRate,
+        monthlyRate, createdAt, paidUntil, notes, userOverrides
+      ) VALUES (
+        'vps-veesp-acc-veesp-100-200', '', '', '[]', 'rkn0', 'prov-veesp', 'acc-veesp',
+        '', '', 'Proxmox', '', 0, 0, 0, 'NVMe', 'KVM',
+        0, 22, 'root', '', '', '', NULL,
+        0, 0, 'active', 'monthly', 'EUR', NULL,
+        500, '2026-01-01', '2027-01-01', 'rkn0 [veesp-100]', '[]'
+      )
+    `)
+
+    vi.mocked(fetchVpsRecords).mockResolvedValue([
+      {
+        serviceId: '100',
+        vmId: '200',
+        service: {
+          id: '100',
+          domain: 'rkn0',
+          total: '500.00',
+          status: 'Active',
+          billingcycle: 'Monthly',
+          next_due: '2027-01-01',
+          category: 'Proxmox',
+          category_url: 'virtual-private-servers',
+          name: 'VPS',
+        },
+        serviceDetail: {
+          id: '100',
+          total: '500.00',
+          billingcycle: 'Monthly',
+          next_due: '2027-01-01',
+          status: 'Active',
+          domain: 'rkn0',
+          date_created: '2026-01-01',
+        },
+        vm: {
+          id: '200',
+          label: 'rkn0',
+          hostname: 'rkn0',
+          cpus: '2',
+          memory: 2048,
+          disk: 40,
+          ip: ['198.51.100.5'],
+          template_label: 'Debian 12',
+          status: 'active',
+        },
+        ips: [{ ip: '198.51.100.5', main: true }],
+        info: null,
+      },
+    ])
+
+    await syncFromVeesp({
+      ...makeAccount(),
+      currency: 'RUB',
+      providerBaseCurrency: 'EUR',
+    })
+
+    const vps = getSqlite()
+      .prepare('SELECT ip, vcpu, ramGb, diskGb, currency FROM vps WHERE id = ?')
+      .get('vps-veesp-acc-veesp-100-200') as {
+        ip: string
+        vcpu: number
+        ramGb: number
+        diskGb: number
+        currency: string
+      }
+    expect(vps.ip).toBe('198.51.100.5')
+    expect(vps.vcpu).toBe(2)
+    expect(vps.ramGb).toBe(2)
+    expect(vps.diskGb).toBe(40)
+    expect(vps.currency).toBe('RUB')
+  })
 })

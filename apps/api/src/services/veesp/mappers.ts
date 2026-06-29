@@ -67,14 +67,21 @@ function isIpv4(value: string): boolean {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(value)
 }
 
+function isIpv6(value: string): boolean {
+  return value.includes(':')
+}
+
 function normalizeIpField(raw: string | string[] | undefined | null): string {
   if (raw == null) return ''
   if (Array.isArray(raw)) {
+    let fallback = ''
     for (const item of raw) {
       const ip = String(item).trim()
+      if (!ip) continue
       if (isIpv4(ip)) return ip
+      if (!fallback && isIpv6(ip)) fallback = ip
     }
-    return String(raw[0] ?? '').trim()
+    return fallback
   }
   return String(raw).trim()
 }

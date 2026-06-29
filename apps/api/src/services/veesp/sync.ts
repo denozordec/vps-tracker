@@ -52,6 +52,8 @@ const SYNC_UPDATE_FIELDS = [
   'paidUntil',
 ] as const
 
+const SYNC_SPEC_FIELDS = ['vcpu', 'ramGb', 'diskGb'] as const
+
 function normVal(v: unknown): string {
   if (v == null || v === '') return ''
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : ''
@@ -72,16 +74,19 @@ export async function syncFromVeesp(
 
   const fetchVpsData = !skipVpsPayments
   const fetchTariffs = !skipTariffs
-  const fallbackCurrency = syncFallbackCurrency(account)
 
   const [records, balanceInfo, tariffItems, invoices] = await Promise.all([
     fetchVpsData ? fetchVpsRecords(apiBaseUrl, credentials) : [],
     fetchVpsData
-      ? fetchBalance(apiBaseUrl, credentials, fallbackCurrency).catch(() => null)
+      ? fetchBalance(apiBaseUrl, credentials, syncFallbackCurrency(account)).catch(() => null)
       : null,
-    fetchTariffs ? fetchTariffList(apiBaseUrl, credentials, fallbackCurrency).catch(() => []) : [],
+    fetchTariffs ? fetchTariffList(apiBaseUrl, credentials, syncFallbackCurrency(account)).catch(() => []) : [],
     fetchVpsData ? fetchInvoices(apiBaseUrl, credentials).catch(() => []) : [],
   ])
+
+  const fallbackCurrency = syncFallbackCurrency(account, {
+    balanceCurrency: balanceInfo?.currency,
+  })
 
   let vpsCount = 0
   const syncSummary: SyncSummary = { added: [], updated: [], paymentsAdded: 0 }
@@ -105,6 +110,7 @@ export async function syncFromVeesp(
             or(
               ...(vps.ip ? [eq(schema.vps.ip, vps.ip)] : []),
               like(schema.vps.notes, `%veesp-${vps.externalId}%`),
+              like(schema.vps.notes, `%veesp-${record.serviceId}%`),
             ),
           ),
         )
@@ -126,6 +132,9 @@ export async function syncFromVeesp(
           city: vps.city,
           datacenter: vps.datacenter,
           os: vps.os,
+          vcpu: vps.vcpu,
+          ramGb: vps.ramGb,
+          diskGb: vps.diskGb,
           status: vps.status,
           tariffType: vps.tariffType,
           currency: vps.currency,
@@ -139,7 +148,18 @@ export async function syncFromVeesp(
             merged[f] = existing[f as keyof typeof existing] as never
           }
         }
-        const compareFields = ['ip', 'ipv6', 'dns', ...SYNC_UPDATE_FIELDS] as const
+        for (const f of SYNC_SPEC_FIELDS) {
+          if (userOverrides.includes(f)) {
+            merged[f] = existing[f as keyof typeof existing] as never
+          }
+        }
+        const compareFields = [
+          'ip',
+          'ipv6',
+          'dns',
+          ...SYNC_SPEC_FIELDS,
+          ...SYNC_UPDATE_FIELDS,
+        ] as const
         const changedFields = compareFields.filter(
           (f) => normVal(merged[f as keyof typeof merged]) !== normVal(existing[f as keyof typeof existing]),
         )
@@ -157,6 +177,9 @@ export async function syncFromVeesp(
             city: merged.city,
             datacenter: merged.datacenter,
             os: merged.os,
+            vcpu: merged.vcpu,
+            ramGb: merged.ramGb,
+            diskGb: merged.diskGb,
             status: merged.status,
             tariffType: merged.tariffType,
             currency: merged.currency,
