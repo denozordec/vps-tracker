@@ -53,6 +53,59 @@ describe('mapServerToVps', () => {
     expect(vps.currency).toBe('RUB')
   })
 
+  it('resolves plan by server-group scoped index key', () => {
+    const planIndex = new Map([
+      [
+        '11:1',
+        {
+          id: 1,
+          name: 'Wrong group plan',
+          cost: 0,
+          full_cost: 9.99,
+          period: 'day',
+          'server-group': 11,
+        },
+      ],
+      [
+        '5:1',
+        {
+          id: 1,
+          name: '2 RAM / 1 CPU / 40 NVMe',
+          cost: 2.5,
+          period: 'day',
+          'server-group': 5,
+        },
+      ],
+    ])
+    const vps = mapServerToVps(
+      { ...server, 'server-group': { id: 5, name: 'VDS' } },
+      'vdsina',
+      'prov-1',
+      'acc-1',
+      planIndex,
+      'USD',
+    )
+    expect(vps.dailyRate).toBe(2.5)
+  })
+
+  it('uses full_cost when discounted cost is zero', () => {
+    const planIndex = new Map([
+      [
+        '1',
+        {
+          id: 1,
+          name: '2 RAM / 1 CPU / 40 NVMe',
+          cost: 0,
+          full_cost: 1.55,
+          period: 'day',
+        },
+      ],
+    ])
+    const vps = mapServerToVps(server, 'macloud', 'prov-1', 'acc-1', planIndex)
+    expect(vps.dailyRate).toBe(1.55)
+    expect(vps.monthlyRate).toBe(46.5)
+  })
+
   it('parses string plan cost from index', () => {
     const planIndex = new Map([
       [

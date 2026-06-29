@@ -47,6 +47,7 @@ export interface UserApiServerListItem {
   status_text?: string
   ip?: { id?: number; ip?: string; type?: string } | null
   'server-plan'?: { id?: number; name?: string }
+  'server-group'?: { id?: number; name?: string }
   template?: { id?: number; name?: string }
   datacenter?: UserApiDatacenter | null
 }
@@ -77,6 +78,7 @@ export interface UserApiServerPlan {
   has_params?: boolean
   params?: UserApiPlanParams | null
   data?: UserApiTariffSpec | null
+  'server-group'?: number
 }
 
 export type UserApiPlanCostIndex = Map<string, UserApiServerPlan>
@@ -151,6 +153,52 @@ export function parsePlanCost(raw: string | number | undefined | null): number |
   return Number.isFinite(n) ? n : null
 }
 
+/** Ключ индекса тарифов: группа + plan id (ID плана уникален в рамках группы). */
+export function planIndexKey(groupId: number | string, planId: number | string): string {
+  return `${groupId}:${planId}`
+}
+
+/**
+ * Эффективная цена плана: cost со скидкой, при 0 — full_cost.
+ * UserAPI может вернуть cost=0 при 100% скидке, а реальную ставку — в full_cost.
+ */
+export function effectivePlanCost(plan: UserApiServerPlan): number | null {
+  const discounted = parsePlanCost(plan.cost)
+  const full = parsePlanCost(plan.full_cost)
+  if (discounted != null && discounted > 0) return discounted
+  if (full != null && full > 0) return full
+  return discounted ?? full
+}
+
+export function findPlanInIndex(
+  planIndex: UserApiPlanCostIndex,
+  server: UserApiServerDetail,
+): UserApiServerPlan | undefined {
+  const planId = server['server-plan']?.id
+  if (planId == null) return undefined
+
+  const planKey = String(planId)
+  const groupId = server['server-group']?.id
+
+  if (groupId != null) {
+    const scoped = planIndex.get(planIndexKey(groupId, planKey))
+    if (scoped) return scoped
+  }
+
+  const direct = planIndex.get(planKey)
+  if (direct) return direct
+
+  const planName = server['server-plan']?.name?.trim().toLowerCase()
+  if (!planName) return undefined
+
+  for (const [key, plan] of planIndex) {
+    if (groupId != null && key.includes(':') && !key.startsWith(`${groupId}:`)) continue
+    if (plan.name?.trim().toLowerCase() === planName) return plan
+  }
+
+  return undefined
+}
+
 export function normalizePlanPeriod(period?: string): 'day' | 'month' {
   const p = (period || 'day').toLowerCase()
   if (p === 'month' || p === 'monthly') return 'month'
@@ -186,7 +234,7 @@ function mapPlanToTariffItem(
 ): UserApiTariffItem {
   const data = plan.data ?? {}
   const diskGb = data.disk?.value ?? 0
-  const cost = parsePlanCost(plan.cost ?? plan.full_cost)
+  const cost = effectivePlanCost(plan)
   const descParts = [plan.description || '']
   if (plan.has_params) descParts.push('конструктор')
   return {
@@ -209,12 +257,30 @@ function mapPlanToTariffItem(
   }
 }
 
-function normalizePlanInIndex(plan: UserApiServerPlan): UserApiServerPlan {
-  const cost = parsePlanCost(plan.cost ?? plan.full_cost)
+function normalizePlanInIndex(plan: UserApiServerPlan, groupId: number): UserApiServerPlan {
+  const cost = effectivePlanCost(plan)
   return {
     ...plan,
-    cost: cost ?? 0,
+    'server-group': plan['server-group'] ?? groupId,
+    cost: cost ?? plan.cost,
     period: normalizePlanPeriod(plan.period) === 'month' ? 'month' : 'day',
+  }
+}
+
+/** Дополняет карту тарифов планами из индекса (в т.ч. неактивными / снятыми с заказа). */
+export function augmentTariffMapFromPlanIndex(
+  planIndex: UserApiPlanCostIndex,
+  currency: string,
+  target: Map<string, UserApiTariffItem>,
+): void {
+  for (const [key, plan] of planIndex) {
+    if (!key.includes(':')) continue
+    const planId = key.split(':')[1]
+    if (!planId || target.has(planId)) continue
+    const cost = effectivePlanCost(plan)
+    if (cost == null || cost <= 0) continue
+    const groupId = key.split(':')[0] ?? ''
+    target.set(planId, mapPlanToTariffItem(plan, groupId, '', currency))
   }
 }
 
@@ -336,7 +402,11 @@ export async function fetchPlanCostIndex(
   for (const group of groups) {
     const plans = await fetchServerPlans(baseUrl, credentials, group.id)
     for (const plan of plans) {
-      if (plan?.id != null) index.set(String(plan.id), normalizePlanInIndex(plan))
+      if (plan?.id == null) continue
+      const normalized = normalizePlanInIndex(plan, group.id)
+      const groupKey = String(plan['server-group'] ?? group.id)
+      index.set(planIndexKey(groupKey, plan.id), normalized)
+      index.set(String(plan.id), normalized)
     }
   }
 

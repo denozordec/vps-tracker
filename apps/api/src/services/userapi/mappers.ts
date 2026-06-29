@@ -12,7 +12,7 @@ import type {
   UserApiServerPlan,
   UserApiTariffItem,
 } from './operations.js'
-import { normalizePlanPeriod, parsePlanCost } from './operations.js'
+import { normalizePlanPeriod, effectivePlanCost, findPlanInIndex, parsePlanCost } from './operations.js'
 
 const STATUS_MAP: Record<string, string> = {
   active: 'active',
@@ -112,8 +112,8 @@ function resolvePlanRates(
   const planKey = String(planId)
 
   if (planIndex) {
-    const plan = planIndex.get(planKey)
-    const baseCost = plan ? parsePlanCost(plan.cost ?? plan.full_cost) : null
+    const plan = findPlanInIndex(planIndex, server)
+    const baseCost = plan ? effectivePlanCost(plan) : null
     if (plan && baseCost != null) {
       const cost = baseCost + calculateConstructorExtraCost(server, plan)
       return ratesFromCost(cost, normalizePlanPeriod(plan.period))

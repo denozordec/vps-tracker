@@ -14,6 +14,7 @@ import {
   fetchPlanCostIndex,
   fetchServersWithDetails,
   fetchTariffList,
+  augmentTariffMapFromPlanIndex,
   type UserApiBalanceResult,
   type UserApiPlanCostIndex,
 } from './operations.js'
@@ -92,6 +93,7 @@ export async function syncFromUserApi(
   ])
 
   const tariffByPlanId = new Map(tariffItems.map((t) => [t.externalId, t]))
+  augmentTariffMapFromPlanIndex(planIndex, fallbackCurrency, tariffByPlanId)
 
   let vpsCount = 0
   const syncSummary: SyncSummary = { added: [], updated: [], paymentsAdded: 0 }
