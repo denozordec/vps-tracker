@@ -157,6 +157,28 @@ function parseAmount(raw: string | number | undefined | null): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/**
+ * Парсит ответ GET /balance Veesp/HostBill User API.
+ * acc_credit — предоплаченные средства на счёте; acc_balance — сумма неоплаченных инвойсов.
+ * @see https://secure.veesp.com/userapi — Billing → Account balance
+ */
+export function parseVeespBalanceResponse(
+  json: Record<string, unknown>,
+  fallbackCurrency = 'EUR',
+): VeespBalanceResult {
+  const details =
+    (json.details as Record<string, unknown> | undefined) ??
+    (json.balance as Record<string, unknown> | undefined) ??
+    json
+  const currency = String(details.currency ?? fallbackCurrency).trim() || fallbackCurrency
+  const credit = parseAmount(details.acc_credit as string | number | undefined)
+  const direct = parseAmount(
+    (details.credit ?? details.balance) as string | number | undefined,
+  )
+  const balance = credit || direct
+  return { balance, currency, enoughmoneyto: '' }
+}
+
 function normalizeSlug(value: string | undefined | null): string {
   return String(value ?? '')
     .trim()
@@ -388,13 +410,7 @@ export async function fetchBalance(
 ): Promise<VeespBalanceResult> {
   const client = clientFor(baseUrl, credentials)
   const json = await client.request<Record<string, unknown>>('/balance')
-  const details =
-    (json.details as Record<string, unknown> | undefined) ??
-    (json.balance as Record<string, unknown> | undefined) ??
-    json
-  const currency = String(details.currency ?? fallbackCurrency).trim() || fallbackCurrency
-  const balance = parseAmount(details.acc_balance as string | number | undefined)
-  return { balance, currency, enoughmoneyto: '' }
+  return parseVeespBalanceResponse(json, fallbackCurrency)
 }
 
 export async function fetchInvoices(baseUrl: string, credentials: string): Promise<VeespInvoice[]> {

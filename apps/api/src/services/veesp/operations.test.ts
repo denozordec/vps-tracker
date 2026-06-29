@@ -1,7 +1,34 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseVeespCollection } from './operations.js'
+import { parseVeespBalanceResponse, parseVeespCollection } from './operations.js'
 import type { VeespIpItem, VeespVmListItem } from './operations.js'
+
+describe('parseVeespBalanceResponse', () => {
+  it('uses acc_credit as available prepaid balance', () => {
+    const result = parseVeespBalanceResponse({
+      success: true,
+      details: { currency: 'EUR', acc_balance: '0.00', acc_credit: '42.50' },
+    })
+    expect(result.balance).toBe(42.5)
+    expect(result.currency).toBe('EUR')
+  })
+
+  it('does not treat unpaid invoice total (acc_balance) as account balance', () => {
+    const result = parseVeespBalanceResponse({
+      success: true,
+      details: { currency: 'USD', acc_balance: '123456.55', acc_credit: '0.00' },
+    })
+    expect(result.balance).toBe(0)
+  })
+
+  it('falls back to credit field when acc_credit is absent', () => {
+    const result = parseVeespBalanceResponse({
+      details: { currency: 'RUB', credit: '15.25' },
+    })
+    expect(result.balance).toBe(15.25)
+    expect(result.currency).toBe('RUB')
+  })
+})
 
 describe('parseVeespCollection', () => {
   it('parses vms object-map from Veesp API', () => {

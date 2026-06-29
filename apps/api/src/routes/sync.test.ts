@@ -260,7 +260,7 @@ describe('sync routes — veesp', () => {
           return {
             ok: true,
             json: async () => ({
-              details: { currency: 'EUR', acc_balance: '100.00', acc_credit: '0.00' },
+              details: { currency: 'EUR', acc_balance: '0.00', acc_credit: '100.00' },
             }),
           }
         }
