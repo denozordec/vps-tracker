@@ -22,18 +22,24 @@ export class ApiError extends Error {
 
 async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
+  const headers = new Headers(options.headers)
+  if (options.body != null && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers,
   })
   if (!res.ok) {
     let message = res.statusText || 'API error'
     try {
       const data = (await res.json()) as {
         error?: string | { message?: string; code?: string }
+        message?: string
       }
       if (typeof data?.error === 'string') message = data.error
       else if (data?.error?.message) message = data.error.message
+      else if (typeof data?.message === 'string') message = data.message
     } catch {
       /* ignore */
     }
