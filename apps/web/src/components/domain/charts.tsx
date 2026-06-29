@@ -12,13 +12,24 @@ import {
 import {
   ChartContainer,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
   type ChartConfig,
 } from '@cfdm/ui/components/chart'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import type { ReactNode } from 'react'
+import { useMemo } from 'react'
 
 import type { Vps, Provider, Payment, Settings, RatesData } from '@/types/entities'
-import { convertCurrency, convertVpsMonthlyBurnToBase, formatCurrency, monthKey, toIsoCurrency } from '@/lib/format'
+import {
+  canonicalPaymentType,
+  convertCurrency,
+  convertVpsMonthlyBurnToBase,
+  formatCurrency,
+  monthKey,
+  paymentTypeLabel,
+  toIsoCurrency,
+} from '@/lib/format'
 import { providerByIdMap } from '@/lib/billmanager'
 import { EmptyState } from '@/components/empty-state'
 
@@ -92,10 +103,6 @@ export function MonthlyExpenseChart({
 
 const PIE_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
 
-const PAYMENTS_CONFIG: ChartConfig = {
-  amount: { label: 'Платежи', color: 'var(--chart-2)' },
-}
-
 export function PaymentsPieChart({
   payments,
   settings,
@@ -108,12 +115,30 @@ export function PaymentsPieChart({
   className?: string
 }) {
   const baseCurrency = (settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
-  const byType = new Map<string, number>()
-  for (const p of payments) {
-    const converted = convertCurrency(Number(p.amount), toIsoCurrency(p.currency), baseCurrency, ratesData)
-    byType.set(p.type, (byType.get(p.type) ?? 0) + converted)
-  }
-  const data = Array.from(byType.entries()).map(([type, amount]) => ({ type, amount: Math.round(amount) }))
+
+  const { data, chartConfig } = useMemo(() => {
+    const byType = new Map<string, number>()
+    for (const p of payments) {
+      const type = canonicalPaymentType(p.type)
+      const converted = convertCurrency(Number(p.amount), toIsoCurrency(p.currency), baseCurrency, ratesData)
+      byType.set(type, (byType.get(type) ?? 0) + converted)
+    }
+    const entries = Array.from(byType.entries())
+      .map(([type, amount]) => ({ type, amount: Math.round(amount) }))
+      .filter((row) => row.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+
+    const config: ChartConfig = {
+      amount: { label: 'Платежи', color: 'var(--chart-2)' },
+    }
+    entries.forEach((row, i) => {
+      config[row.type] = {
+        label: paymentTypeLabel(row.type),
+        color: PIE_COLORS[i % PIE_COLORS.length],
+      }
+    })
+    return { data: entries, chartConfig: config }
+  }, [payments, baseCurrency, ratesData])
 
   return (
     <Card className={className}>
@@ -125,12 +150,20 @@ export function PaymentsPieChart({
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных о платежах" />
         ) : (
-        <ChartContainer config={PAYMENTS_CONFIG} className="mx-auto h-72 w-full">
+        <ChartContainer config={chartConfig} className="mx-auto h-72 w-full">
           <PieChart>
-            <RechartsTooltip content={<ChartTooltipContent nameKey="type" formatter={(v) => formatCurrency(Number(v), baseCurrency)} />} />
+            <RechartsTooltip
+              content={
+                <ChartTooltipContent
+                  nameKey="type"
+                  formatter={(v) => formatCurrency(Number(v), baseCurrency)}
+                />
+              }
+            />
+            <ChartLegend content={<ChartLegendContent nameKey="type" />} />
             <Pie data={data} dataKey="amount" nameKey="type" innerRadius={50} outerRadius={90} strokeWidth={2}>
-              {data.map((_, i) => (
-                <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              {data.map((row, i) => (
+                <Cell key={row.type} fill={PIE_COLORS[i % PIE_COLORS.length]} />
               ))}
             </Pie>
           </PieChart>

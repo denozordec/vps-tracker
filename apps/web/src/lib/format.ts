@@ -72,12 +72,23 @@ export function getCountryFlagEmojiByCode(code?: string): string {
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   direct_vps_payment: 'Прямой платеж за VPS',
   provider_balance_topup: 'Пополнение баланса хостера',
+  topup: 'Пополнение баланса хостера',
   daily_debit: 'Ежедневное списание',
   monthly_debit: 'Ежемесячное списание',
 }
 
+/** Синонимы типов из разных API → единый ключ для отчётов и агрегации. */
+const PAYMENT_TYPE_CANONICAL: Record<string, string> = {
+  topup: 'provider_balance_topup',
+}
+
+export function canonicalPaymentType(type: string): string {
+  const key = String(type ?? '').trim()
+  return PAYMENT_TYPE_CANONICAL[key] ?? key
+}
+
 export function paymentTypeLabel(type: string): string {
-  return PAYMENT_TYPE_LABELS[type] ?? type
+  return PAYMENT_TYPE_LABELS[type] ?? PAYMENT_TYPE_LABELS[canonicalPaymentType(type)] ?? type
 }
 
 const VPS_STATUS_LABELS: Record<string, string> = {
