@@ -21,11 +21,17 @@ export const projectsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/api/projects', async (req, reply) => {
-    const name = normalizeProjectNameInput((req.body as { name?: unknown })?.name)
+    const body = req.body as { name?: unknown; color?: string | null; notes?: string | null }
+    const name = normalizeProjectNameInput(body.name)
     if (!name) {
       return reply.code(400).send({ error: { code: 'VALIDATION', message: 'name is required' } })
     }
-    return reply.code(201).send(resolveOrCreateProject(name))
+    const created = projectsRepository.createOrResolve({
+      name,
+      color: body.color,
+      notes: body.notes,
+    })
+    return reply.code(201).send(created)
   })
 
   app.put<{ Params: { id: string } }>('/api/projects/:id', async (req, reply) => {
@@ -46,10 +52,21 @@ export const projectsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.delete<{ Params: { id: string } }>('/api/projects/:id', async (req, reply) => {
-    const ok = projectsRepository.delete(req.params.id)
-    if (!ok) {
+    const existing = projectsRepository.get(req.params.id)
+    if (!existing) {
       return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
     }
+    const dependencies = projectsRepository.getDependencyCounts(req.params.id)
+    if (dependencies.vps > 0) {
+      return reply.code(409).send({
+        error: {
+          code: 'CONFLICT',
+          message: `Нельзя удалить: к проекту привязано ${dependencies.vps} VPS`,
+          dependencies,
+        },
+      })
+    }
+    projectsRepository.delete(req.params.id)
     return reply.code(204).send()
   })
 }

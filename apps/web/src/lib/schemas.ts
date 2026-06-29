@@ -114,13 +114,10 @@ export const settingsSchema = z.object({
     ),
 })
 
-export const projectSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'Укажите название проекта').max(120),
-  color: z.string().optional().default(''),
-})
-
-export type ProjectFormValues = z.infer<typeof projectSchema>
+export {
+  projectFormSchema as projectSchema,
+  type ProjectFormValues,
+} from '@cfdm/shared/contracts/project'
 
 export type ProviderFormValues = z.infer<typeof providerSchema>
 export type ProviderAccountFormValues = z.infer<typeof providerAccountSchema>

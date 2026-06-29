@@ -3,10 +3,11 @@ import { Controller } from 'react-hook-form'
 import { FormSheetRhf } from '@/components/form-sheet-rhf'
 import { FormField } from '@/components/form-field'
 import { Input } from '@cfdm/ui/components/input'
+import { Textarea } from '@cfdm/ui/components/textarea'
 import { ColorPicker } from '@/components/reui/color-picker'
 import { projectSchema, type ProjectFormValues } from '@/lib/schemas'
 
-const EMPTY: ProjectFormValues = { name: '', color: '' }
+const EMPTY: ProjectFormValues = { name: '', color: '', notes: '' }
 
 interface ProjectEditSheetProps {
   open: boolean
@@ -18,7 +19,7 @@ interface ProjectEditSheetProps {
 
 export function projectFormDefaults(edit?: Partial<ProjectFormValues> | null): ProjectFormValues {
   if (!edit) return { ...EMPTY }
-  return { ...EMPTY, ...edit, color: edit.color ?? '' }
+  return { ...EMPTY, ...edit, color: edit.color ?? '', notes: edit.notes ?? '' }
 }
 
 export function ProjectEditSheet({
@@ -71,6 +72,19 @@ export function ProjectEditSheet({
                     aria-invalid={!!errors.color}
                   />
                 )}
+              />
+            </FormField>
+            <FormField
+              label="Заметки"
+              htmlFor="project-notes"
+              error={errors.notes?.message}
+              invalid={!!errors.notes}
+            >
+              <Textarea
+                id="project-notes"
+                rows={3}
+                aria-invalid={!!errors.notes}
+                {...register('notes')}
               />
             </FormField>
           </>

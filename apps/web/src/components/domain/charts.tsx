@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 
-import type { Vps, Provider, Payment, Settings, RatesData } from '@/types/entities'
+import type { Vps, Provider, Payment, Settings, RatesData, ServerProject } from '@/types/entities'
 import {
   canonicalPaymentType,
   convertCurrency,
@@ -31,6 +31,7 @@ import {
   toIsoCurrency,
 } from '@/lib/format'
 import { providerByIdMap } from '@/lib/billmanager'
+import { aggregateBurnByProject } from '@/lib/project-analytics'
 import { EmptyState } from '@/components/empty-state'
 
 function ChartEmpty({ message }: { message: string }) {
@@ -48,6 +49,8 @@ export function MonthlyExpenseChart({
   settings,
   ratesData,
   className,
+  title = 'Расходы по хостерам (мес)',
+  description,
 }: {
   vps: Vps[]
   providers: Provider[]
@@ -55,6 +58,8 @@ export function MonthlyExpenseChart({
   settings: Settings[]
   ratesData: RatesData | null
   className?: string
+  title?: string
+  description?: string
 }) {
   const baseCurrency = (settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
   const providerById = providerByIdMap(providers)
@@ -79,8 +84,8 @@ export function MonthlyExpenseChart({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Расходы по хостерам (мес)</CardTitle>
-        <CardDescription>Топ-10 по monthly rate, в {baseCurrency}</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description ?? `Топ-10 по monthly rate, в ${baseCurrency}`}</CardDescription>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
@@ -227,4 +232,78 @@ export function MonthlyTrendChart({
 
 export function ChartsGrid({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 lg:grid-cols-2">{children}</div>
+}
+
+export function ProjectExpenseChart({
+  vps,
+  projects,
+  providers,
+  settings,
+  ratesData,
+  className,
+}: {
+  vps: Vps[]
+  projects: ServerProject[]
+  providers: Provider[]
+  settings: Settings[]
+  ratesData: RatesData | null
+  className?: string
+}) {
+  const baseCurrency = (settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
+  const data = useMemo(
+    () =>
+      aggregateBurnByProject(vps, projects, {
+        providers,
+        settings,
+        ratesData,
+      }),
+    [vps, projects, providers, settings, ratesData],
+  )
+
+  const chartConfig: ChartConfig = useMemo(() => {
+    const config: ChartConfig = { expense: { label: 'Расход', color: 'var(--chart-1)' } }
+    data.forEach((row, i) => {
+      config[row.key] = {
+        label: row.name,
+        color: row.color ?? `var(--chart-${(i % 5) + 1})`,
+      }
+    })
+    return config
+  }, [data])
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>Расходы по проектам (мес)</CardTitle>
+        <CardDescription>Активные VPS, в {baseCurrency}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.length === 0 ? (
+          <ChartEmpty message="Нет данных для графика" />
+        ) : (
+          <ChartContainer config={chartConfig} className="h-72 w-full">
+            <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis tickLine={false} axisLine={false} width={48} />
+              <RechartsTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent formatter={(v) => formatCurrency(Number(v), baseCurrency)} />
+                }
+              />
+              <Bar dataKey="expense" radius={4}>
+                {data.map((row) => (
+                  <Cell
+                    key={row.key}
+                    fill={row.color ?? chartConfig[row.key]?.color ?? 'var(--chart-1)'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        )}
+      </CardContent>
+    </Card>
+  )
 }

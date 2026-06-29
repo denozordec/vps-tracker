@@ -44,6 +44,14 @@ const TABLE_MIGRATIONS: string[] = [
     lastSentAt TEXT,
     lastStatus TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS server_projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT,
+    sortOrder INTEGER DEFAULT 0,
+    notes TEXT,
+    createdAt TEXT
+  )`,
 ]
 
 let migrated = false

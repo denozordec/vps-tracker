@@ -169,10 +169,10 @@ export const api = {
 
   fetchProjects: () => fetchApi<{ id: string; name: string }[]>('/api/projects'),
 
-  createProject: (name: string) =>
-    fetchApi<{ id: string; name: string }>('/api/projects', {
+  createProject: (payload: { name: string; color?: string | null; notes?: string | null }) =>
+    fetchApi<import('@/types/entities').ServerProject>('/api/projects', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(payload),
     }),
 
   updateProject: (id: string, patch: { name?: string; color?: string | null; notes?: string | null }) =>

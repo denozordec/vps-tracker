@@ -71,6 +71,7 @@ export interface Vps {
   purpose?: string
   environment?: 'prod' | 'dev' | 'staging'
   project?: string
+  projectId?: string
   monitoringEnabled?: boolean
   backupEnabled?: boolean
   status: VpsStatus
@@ -189,6 +190,15 @@ export interface NotificationLogRow {
   createdAt: string
 }
 
+export interface ServerProject {
+  id: string
+  name: string
+  color?: string | null
+  sortOrder?: number
+  notes?: string | null
+  createdAt?: string
+}
+
 export interface DataSnapshot {
   vps: Vps[]
   providers: Provider[]
@@ -198,6 +208,6 @@ export interface DataSnapshot {
   settings: Settings[]
   activeTariffs: ActiveTariff[]
   tariffSyncOptions?: unknown[]
-  serverProjects?: unknown[]
+  serverProjects?: ServerProject[]
   syncLog: SyncLogRow[]
 }

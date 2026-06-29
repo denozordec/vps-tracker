@@ -180,6 +180,15 @@ CREATE TABLE IF NOT EXISTS notification_state (
   lastSentAt TEXT,
   lastStatus TEXT
 );
+
+CREATE TABLE IF NOT EXISTS server_projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color TEXT,
+  sortOrder INTEGER DEFAULT 0,
+  notes TEXT,
+  createdAt TEXT
+);
 `
 
 export function resetTestDb(): void {
@@ -197,4 +206,11 @@ export function seedTestProvider(id = 'prov-1'): void {
       `INSERT INTO providers (id, name, apiType, apiBaseUrl) VALUES (?, 'Test Host', 'billmanager', 'https://bm.test')`,
     )
     .run(id)
+}
+
+export function seedTestProviderAccount(id = 'acc-1', providerId = 'prov-1'): void {
+  const sqlite = getSqlite()
+  sqlite
+    .prepare(`INSERT INTO provider_accounts (id, providerId, name) VALUES (?, ?, 'Test Account')`)
+    .run(id, providerId)
 }

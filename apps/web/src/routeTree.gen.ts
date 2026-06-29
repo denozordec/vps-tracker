@@ -26,6 +26,7 @@ import { Route as AuthBalanceRouteImport } from './routes/_auth/balance'
 import { Route as AuthAuditRouteImport } from './routes/_auth/audit'
 import { Route as AuthAccountsRouteImport } from './routes/_auth/accounts'
 import { Route as AuthVpsVpsIdRouteImport } from './routes/_auth/vps.$vpsId'
+import { Route as AuthProjectsProjectIdRouteImport } from './routes/_auth/projects.$projectId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -111,6 +112,11 @@ const AuthVpsVpsIdRoute = AuthVpsVpsIdRouteImport.update({
   path: '/$vpsId',
   getParentRoute: () => AuthVpsRoute,
 } as any)
+const AuthProjectsProjectIdRoute = AuthProjectsProjectIdRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
+  getParentRoute: () => AuthProjectsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -119,7 +125,7 @@ export interface FileRoutesByFullPath {
   '/balance': typeof AuthBalanceRoute
   '/dashboard': typeof AuthDashboardRoute
   '/payments': typeof AuthPaymentsRoute
-  '/projects': typeof AuthProjectsRoute
+  '/projects': typeof AuthProjectsRouteWithChildren
   '/providers': typeof AuthProvidersRoute
   '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/vps': typeof AuthVpsRouteWithChildren
+  '/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/vps/$vpsId': typeof AuthVpsVpsIdRoute
 }
 export interface FileRoutesByTo {
@@ -137,7 +144,7 @@ export interface FileRoutesByTo {
   '/balance': typeof AuthBalanceRoute
   '/dashboard': typeof AuthDashboardRoute
   '/payments': typeof AuthPaymentsRoute
-  '/projects': typeof AuthProjectsRoute
+  '/projects': typeof AuthProjectsRouteWithChildren
   '/providers': typeof AuthProvidersRoute
   '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/vps': typeof AuthVpsRouteWithChildren
+  '/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/vps/$vpsId': typeof AuthVpsVpsIdRoute
 }
 export interface FileRoutesById {
@@ -157,7 +165,7 @@ export interface FileRoutesById {
   '/_auth/balance': typeof AuthBalanceRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/payments': typeof AuthPaymentsRoute
-  '/_auth/projects': typeof AuthProjectsRoute
+  '/_auth/projects': typeof AuthProjectsRouteWithChildren
   '/_auth/providers': typeof AuthProvidersRoute
   '/_auth/renewals': typeof AuthRenewalsRoute
   '/_auth/reports': typeof AuthReportsRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/_auth/sync-journal': typeof AuthSyncJournalRoute
   '/_auth/tariffs': typeof AuthTariffsRoute
   '/_auth/vps': typeof AuthVpsRouteWithChildren
+  '/_auth/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/_auth/vps/$vpsId': typeof AuthVpsVpsIdRoute
 }
 export interface FileRouteTypes {
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/sync-journal'
     | '/tariffs'
     | '/vps'
+    | '/projects/$projectId'
     | '/vps/$vpsId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/sync-journal'
     | '/tariffs'
     | '/vps'
+    | '/projects/$projectId'
     | '/vps/$vpsId'
   id:
     | '__root__'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/_auth/sync-journal'
     | '/_auth/tariffs'
     | '/_auth/vps'
+    | '/_auth/projects/$projectId'
     | '/_auth/vps/$vpsId'
   fileRoutesById: FileRoutesById
 }
@@ -352,8 +364,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthVpsVpsIdRouteImport
       parentRoute: typeof AuthVpsRoute
     }
+    '/_auth/projects/$projectId': {
+      id: '/_auth/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthProjectsProjectIdRouteImport
+      parentRoute: typeof AuthProjectsRoute
+    }
   }
 }
+
+interface AuthProjectsRouteChildren {
+  AuthProjectsProjectIdRoute: typeof AuthProjectsProjectIdRoute
+}
+
+const AuthProjectsRouteChildren: AuthProjectsRouteChildren = {
+  AuthProjectsProjectIdRoute: AuthProjectsProjectIdRoute,
+}
+
+const AuthProjectsRouteWithChildren = AuthProjectsRoute._addFileChildren(
+  AuthProjectsRouteChildren,
+)
 
 interface AuthVpsRouteChildren {
   AuthVpsVpsIdRoute: typeof AuthVpsVpsIdRoute
@@ -372,7 +403,7 @@ interface AuthRouteChildren {
   AuthBalanceRoute: typeof AuthBalanceRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthPaymentsRoute: typeof AuthPaymentsRoute
-  AuthProjectsRoute: typeof AuthProjectsRoute
+  AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
   AuthProvidersRoute: typeof AuthProvidersRoute
   AuthRenewalsRoute: typeof AuthRenewalsRoute
   AuthReportsRoute: typeof AuthReportsRoute
@@ -389,7 +420,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthBalanceRoute: AuthBalanceRoute,
   AuthDashboardRoute: AuthDashboardRoute,
   AuthPaymentsRoute: AuthPaymentsRoute,
-  AuthProjectsRoute: AuthProjectsRoute,
+  AuthProjectsRoute: AuthProjectsRouteWithChildren,
   AuthProvidersRoute: AuthProvidersRoute,
   AuthRenewalsRoute: AuthRenewalsRoute,
   AuthReportsRoute: AuthReportsRoute,

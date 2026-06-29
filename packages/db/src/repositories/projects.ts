@@ -70,6 +70,15 @@ export function getProjectNameById(id: string): string {
   return row?.name ?? ''
 }
 
+function countVpsByProjectId(projectId: string): number {
+  const row = getDb()
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.vps)
+    .where(eq(schema.vps.projectId, projectId))
+    .get()
+  return Number(row?.count ?? 0)
+}
+
 export const projectsRepository = {
   list(): (typeof schema.serverProjects.$inferSelect)[] {
     return getDb()
@@ -77,6 +86,16 @@ export const projectsRepository = {
       .from(schema.serverProjects)
       .orderBy(asc(schema.serverProjects.name))
       .all()
+  },
+  get(id: string): (typeof schema.serverProjects.$inferSelect) | undefined {
+    return getDb()
+      .select()
+      .from(schema.serverProjects)
+      .where(eq(schema.serverProjects.id, id))
+      .get()
+  },
+  getDependencyCounts(id: string): { vps: number } {
+    return { vps: countVpsByProjectId(id) }
   },
   create(input: { name: string; color?: string | null; notes?: string | null }) {
     const id = `proj-${randomUUID()}`
@@ -92,28 +111,47 @@ export const projectsRepository = {
         createdAt: now,
       })
       .run()
-    return this.list().find((p) => p.id === id)!
+    return this.get(id)!
+  },
+  createOrResolve(input: { name: string; color?: string | null; notes?: string | null }) {
+    const existing = findProjectByNameCaseInsensitive(input.name)
+    if (existing) {
+      const hasMeta = input.color !== undefined || input.notes !== undefined
+      if (!hasMeta) return existing
+      return (
+        this.update(existing.id, {
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        }) ?? existing
+      )
+    }
+    return this.create(input)
   },
   update(
     id: string,
     input: Partial<{ name: string; color: string | null; notes: string | null }>,
   ) {
-    const existing = getDb()
-      .select()
-      .from(schema.serverProjects)
-      .where(eq(schema.serverProjects.id, id))
-      .get()
+    const existing = this.get(id)
     if (!existing) return undefined
-    getDb()
-      .update(schema.serverProjects)
-      .set({
-        name: input.name ?? existing.name,
-        color: input.color ?? existing.color,
-        notes: input.notes ?? existing.notes,
-      })
-      .where(eq(schema.serverProjects.id, id))
-      .run()
-    return getDb().select().from(schema.serverProjects).where(eq(schema.serverProjects.id, id)).get()
+    const nextName = input.name ?? existing.name
+    const db = getDb()
+    db.transaction(() => {
+      db.update(schema.serverProjects)
+        .set({
+          name: nextName,
+          color: input.color !== undefined ? input.color : existing.color,
+          notes: input.notes !== undefined ? input.notes : existing.notes,
+        })
+        .where(eq(schema.serverProjects.id, id))
+        .run()
+      if (nextName !== existing.name) {
+        db.update(schema.vps)
+          .set({ project: nextName })
+          .where(eq(schema.vps.projectId, id))
+          .run()
+      }
+    })
+    return this.get(id)
   },
   delete(id: string): boolean {
     const r = getDb().delete(schema.serverProjects).where(eq(schema.serverProjects.id, id)).run()
