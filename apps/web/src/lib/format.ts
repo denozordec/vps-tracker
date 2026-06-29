@@ -305,6 +305,11 @@ export function formatInProviderCurrency(
   appSettings: Settings[] | Settings | null,
   ratesData: RatesData | null,
 ): string {
+  const settings: Partial<Settings> = Array.isArray(appSettings)
+    ? (appSettings[0] ?? {})
+    : (appSettings ?? {})
+  const autoConvert = settings.autoConvert !== false
+  if (!autoConvert) return formatCurrency(amount, currency)
   const converted = convertWithProviderRate(amount, currency, provider, appSettings, ratesData)
   return formatCurrency(converted.value, converted.currency)
 }

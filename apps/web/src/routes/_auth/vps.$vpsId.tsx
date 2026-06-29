@@ -10,7 +10,7 @@ import {
   StickyNoteIcon,
 } from 'lucide-react'
 
-import { snapshotQueryOptions } from '@/queries/snapshot'
+import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
@@ -24,6 +24,8 @@ import { getPaidUntilDate } from '@/lib/paid-until'
 import {
   effectiveVpsTariffCurrency,
   formatCurrency,
+  formatInProviderCurrency,
+  normalizeRatesPayload,
   tariffTypeLabel,
   vpsStatusLabel,
   paymentTypeLabel,
@@ -56,6 +58,9 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 function VpsDetailPage() {
   const { vpsId } = Route.useParams()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
+  const settings = snapshot?.settings[0]
+  const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
+  const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
 
   const vps = snapshot?.vps.find((v) => v.id === vpsId)
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
@@ -215,9 +220,12 @@ function VpsDetailPage() {
                   <InfoRow label="Тип" value={tariffTypeLabel(row.tariffType)} />
                   <InfoRow
                     label="Ставка"
-                    value={formatCurrency(
+                    value={formatInProviderCurrency(
                       vpsTariffRateAmount(row),
                       effectiveVpsTariffCurrency(row, provider),
+                      provider,
+                      snapshot?.settings ?? null,
+                      ratesData,
                     )}
                   />
                   <InfoRow
