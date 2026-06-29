@@ -6,7 +6,7 @@ import { SelectField } from '@/components/select-field'
 import type { ZodType } from 'zod'
 import { providerSchema, type ProviderFormValues } from '@/lib/schemas'
 import type { ApiType } from '@/types/entities'
-import { isUserApiType, USER_API_DEFAULT_BASE_URL, VEESP_DEFAULT_BASE_URL } from '@cfdm/shared/contracts/provider'
+import { isUserApiType, RUVDS_DEFAULT_BASE_URL, USER_API_DEFAULT_BASE_URL, VEESP_DEFAULT_BASE_URL } from '@cfdm/shared/contracts/provider'
 
 const EMPTY: ProviderFormValues = {
   name: '',
@@ -60,6 +60,8 @@ export function ProviderEditSheet({
             ? 'Базовый URL API, например https://4vps.su/api'
             : apiType === 'veesp'
               ? 'Базовый URL Veesp API, например https://secure.veesp.com/api'
+            : apiType === 'ruvds'
+              ? 'Базовый URL RuVDS API v2, например https://api.ruvds.com'
             : isUserApiType(apiType)
               ? `Базовый URL UserAPI, например ${USER_API_DEFAULT_BASE_URL[apiType]}`
               : 'Один URL на хостера для BILLmanager'
@@ -68,6 +70,8 @@ export function ProviderEditSheet({
             ? 'https://4vps.su/api'
             : apiType === 'veesp'
               ? VEESP_DEFAULT_BASE_URL
+            : apiType === 'ruvds'
+              ? RUVDS_DEFAULT_BASE_URL
             : isUserApiType(apiType)
               ? USER_API_DEFAULT_BASE_URL[apiType]
               : undefined
@@ -91,6 +95,7 @@ export function ProviderEditSheet({
                   { value: 'macloud', label: 'Маклауд' },
                   { value: 'vdsina', label: 'VDSina' },
                   { value: 'veesp', label: 'Veesp' },
+                  { value: 'ruvds', label: 'RuVDS' },
                   { value: 'none', label: 'Нет' },
                 ]}
               />

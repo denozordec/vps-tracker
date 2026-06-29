@@ -14,7 +14,7 @@ import { providerAccountSchema, type ProviderAccountFormValues } from '@/lib/sch
 import type { BillingMode, Provider } from '@/types/entities'
 import { billingModeLabel } from '@/lib/format'
 import { api, ApiError } from '@/lib/api-client'
-import { accountCredentialLabels, isUserApiType } from '@/lib/provider-sync'
+import { accountCredentialLabels, isTokenApiType } from '@/lib/provider-sync'
 
 const EMPTY: ProviderAccountFormValues = {
   providerId: '',
@@ -85,8 +85,10 @@ export function ProviderAccountEditSheet({
       onOpenChange={onOpenChange}
       title={isEdit ? 'Редактировать аккаунт' : 'Новый аккаунт'}
       description={
-        isUserApiType(initialProvider?.apiType)
-          ? 'API Token хранится на сервере и используется для синка с UserAPI'
+        isTokenApiType(initialProvider?.apiType)
+          ? initialProvider?.apiType === 'ruvds'
+            ? 'API-токен RuVDS хранится на сервере (создаётся в настройках ЛК RuVDS)'
+            : 'API Token хранится на сервере и используется для синка с UserAPI'
           : initialProvider?.apiType === '4vps'
             ? 'Panel ID и API Key хранятся на сервере и используются для синка с 4VPS'
             : initialProvider?.apiType === 'veesp'
@@ -105,10 +107,12 @@ export function ProviderAccountEditSheet({
         const apiBaseUrl = (provider?.apiBaseUrl ?? '').trim()
         const apiLogin = watch('apiLogin')?.trim() ?? ''
         const apiPassword = watch('apiPassword')?.trim() ?? ''
-        const apiCredentials = buildApiCredentials(apiLogin, apiPassword)
-        const canTest = Boolean(apiBaseUrl && apiCredentials)
         const credLabels = accountCredentialLabels(provider?.apiType)
-        const tokenOnly = isUserApiType(provider?.apiType)
+        const tokenOnly = isTokenApiType(provider?.apiType)
+        const apiCredentials = tokenOnly
+          ? apiPassword
+          : buildApiCredentials(apiLogin, apiPassword)
+        const canTest = Boolean(apiBaseUrl && (tokenOnly ? apiPassword : apiCredentials))
 
         return (
           <>

@@ -4,21 +4,25 @@ import { billmanagerAccountRowForSync } from '../billmanager/context.js'
 import { fourvpsAccountRowForSync } from '../fourvps/context.js'
 import { userApiAccountRowForSync } from '../userapi/context.js'
 import { veespAccountRowForSync } from '../veesp/context.js'
+import { ruvdsAccountRowForSync } from '../ruvds/context.js'
 import type { BillmanagerSyncAccount } from '../billmanager/context.js'
 import type { FourvpsSyncAccount } from '../fourvps/context.js'
 import type { UserApiSyncAccount } from '../userapi/context.js'
 import type { VeespSyncAccount } from '../veesp/context.js'
+import type { RuvdsSyncAccount } from '../ruvds/context.js'
 
 import { billmanagerAdapter } from './billmanager-adapter.js'
 import { fourvpsAdapter } from './fourvps-adapter.js'
 import { userapiAdapter } from './userapi-adapter.js'
 import { veespAdapter } from './veesp-adapter.js'
+import { ruvdsAdapter } from './ruvds-adapter.js'
 import type { ProviderAdapter } from './types.js'
 
 export { billmanagerAdapter } from './billmanager-adapter.js'
 export { fourvpsAdapter } from './fourvps-adapter.js'
 export { userapiAdapter } from './userapi-adapter.js'
 export { veespAdapter } from './veesp-adapter.js'
+export { ruvdsAdapter } from './ruvds-adapter.js'
 
 export const manualAdapter: ProviderAdapter = {
   type: 'manual',
@@ -43,6 +47,7 @@ const adapters: Record<string, ProviderAdapter> = {
   macloud: userapiAdapter,
   vdsina: userapiAdapter,
   veesp: veespAdapter,
+  ruvds: ruvdsAdapter,
   manual: manualAdapter,
   none: manualAdapter,
 }
@@ -60,6 +65,7 @@ export type SyncReadyAccount =
   | FourvpsSyncAccount
   | UserApiSyncAccount
   | VeespSyncAccount
+  | RuvdsSyncAccount
 
 export function resolveSyncAccount(
   accountRow: AccountRow | null | undefined,
@@ -86,6 +92,10 @@ export function resolveSyncAccount(
     const account = veespAccountRowForSync(accountRow, providerRow)
     return account ? { apiType, account } : null
   }
+  if (apiType === 'ruvds') {
+    const account = ruvdsAccountRowForSync(accountRow, providerRow)
+    return account ? { apiType, account } : null
+  }
   return null
 }
 
@@ -95,4 +105,5 @@ export const SYNC_SETUP_ERRORS: Record<string, string> = {
   macloud: 'Укажите тип API Маклауд и URL; в аккаунте — API Token',
   vdsina: 'Укажите тип API VDSina и URL; в аккаунте — API Token',
   veesp: 'Укажите тип API Veesp и URL; в аккаунте — email и пароль client area',
+  ruvds: 'Укажите тип API RuVDS и URL; в аккаунте — API-токен из настроек ЛК',
 }

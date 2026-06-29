@@ -39,6 +39,17 @@ vi.mock('../services/veesp/sync.js', () => ({
   }),
 }))
 
+vi.mock('../services/ruvds/sync.js', () => ({
+  syncFromRuvds: vi.fn().mockResolvedValue({
+    vpsCount: 3,
+    paymentsCount: 2,
+    tariffsCount: 2,
+    newTariffs: [],
+    balance: { balance: 2000, currency: 'RUB', enoughmoneyto: '' },
+    syncSummary: { added: [], updated: [], paymentsAdded: 2 },
+  }),
+}))
+
 describe('sync routes — 4vps', () => {
   let app: Awaited<ReturnType<typeof buildApp>>
 
@@ -270,6 +281,66 @@ describe('sync routes — veesp', () => {
         apiBaseUrl: 'https://secure.veesp.com/api',
         apiCredentials: 'user@example.com:secret',
         apiType: 'veesp',
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    expect((res.json() as { ok?: boolean }).ok).toBe(true)
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('sync routes — ruvds', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    resetTestDb()
+    seedTestProvider('prov-ruvds')
+    providersRepository.update('prov-ruvds', {
+      apiType: 'ruvds',
+      apiBaseUrl: 'https://api.ruvds.com',
+    })
+    providerAccountsRepository.create({
+      id: 'acc-ruvds',
+      providerId: 'prov-ruvds',
+      name: 'RuVDS',
+      apiCredentials: 'apiv2.test-token',
+    })
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    closeDb()
+  })
+
+  it('POST /api/sync/:accountId syncs ruvds account', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sync/acc-ruvds',
+      payload: {},
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as { ok?: boolean; synced?: { vpsCount?: number } }
+    expect(body.ok).toBe(true)
+    expect(body.synced?.vpsCount).toBe(3)
+  })
+
+  it('POST /api/sync/test-connection uses apiType ruvds', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ amount: 100, currency: 1, type: 'default' }),
+      }),
+    )
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sync/test-connection',
+      payload: {
+        apiBaseUrl: 'https://api.ruvds.com',
+        apiCredentials: 'apiv2.test-token',
+        apiType: 'ruvds',
       },
     })
     expect(res.statusCode).toBe(200)

@@ -39,6 +39,11 @@ export function parseUserApiToken(credentials: string | null | undefined): strin
   return String(credentials ?? '').trim()
 }
 
+/** Bearer token для RuVDS API v2. */
+export function parseRuvdsToken(credentials: string | null | undefined): string {
+  return String(credentials ?? '').trim()
+}
+
 /** Собрать 4VPS-креды: panelId + API key. */
 export function buildFourVpsCredentials(panelId: string, apiKey: string): string {
   const pid = panelId.trim()
