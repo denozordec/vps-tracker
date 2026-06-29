@@ -80,6 +80,66 @@ describe('mapVpsRecordToVps', () => {
     expect(vps.externalId).toBe('32723')
     expect(vps.notes).toContain('veesp-32723')
   })
+
+  it('maps Proxmox VM with cpus, memory in MB and ip array', () => {
+    const vps = mapVpsRecordToVps(
+      {
+        ...baseRecord,
+        vmId: '17228',
+        vm: {
+          id: '17228',
+          label: 'rkn0',
+          hostname: 'rkn0',
+          cpus: '2',
+          memory: 2048,
+          disk: 40,
+          ip: ['198.51.100.5'],
+          template_label: 'Debian 12',
+          status: 'active',
+        },
+        ips: [],
+        info: null,
+      },
+      'prov-1',
+      'acc-1',
+      'EUR',
+    )
+    expect(vps.externalId).toBe('32723-17228')
+    expect(vps.ip).toBe('198.51.100.5')
+    expect(vps.dns).toBe('rkn0')
+    expect(vps.vcpu).toBe(2)
+    expect(vps.ramGb).toBe(2)
+    expect(vps.diskGb).toBe(40)
+    expect(vps.os).toBe('Debian 12')
+  })
+
+  it('falls back to info and ips when vm is absent', () => {
+    const vps = mapVpsRecordToVps(
+      {
+        ...baseRecord,
+        vmId: null,
+        vm: null,
+        ips: [{ ipaddress: '198.51.100.9', main: true }],
+        info: {
+          hostname: 'rkn0',
+          cpus: 1,
+          memory: 1024,
+          hdd: 20,
+          template_label: 'Ubuntu 22',
+          ip: '198.51.100.9',
+        },
+      },
+      'prov-1',
+      'acc-1',
+      'EUR',
+    )
+    expect(vps.ip).toBe('198.51.100.9')
+    expect(vps.dns).toBe('rkn0')
+    expect(vps.vcpu).toBe(1)
+    expect(vps.ramGb).toBe(1)
+    expect(vps.diskGb).toBe(20)
+    expect(vps.os).toBe('Ubuntu 22')
+  })
 })
 
 describe('mapInvoiceToPayment', () => {

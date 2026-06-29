@@ -63,21 +63,57 @@ function ratesFromTotal(
   return { tariffType: 'monthly', dailyRate: null, monthlyRate: roundRate(total) }
 }
 
-function pickPrimaryIp(ips: VeespVpsRecord['ips'], vm: VeespVpsRecord['vm'], domain?: string): string {
-  const vmIp = String(vm?.ip ?? vm?.ipv4 ?? '').trim()
+function isIpv4(value: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(value)
+}
+
+function normalizeIpField(raw: string | string[] | undefined | null): string {
+  if (raw == null) return ''
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const ip = String(item).trim()
+      if (isIpv4(ip)) return ip
+    }
+    return String(raw[0] ?? '').trim()
+  }
+  return String(raw).trim()
+}
+
+function ipFromItem(item: { ip?: string; address?: string; ipaddress?: string }): string {
+  return String(item.ip ?? item.address ?? item.ipaddress ?? '').trim()
+}
+
+function parseMemoryGb(raw: string | number | undefined | null): number {
+  const n = parseNumber(raw)
+  if (n <= 0) return 0
+  // Veesp VM/info API returns memory in MB (512, 1024, 2048…)
+  if (n >= 256) return Math.round((n / 1024) * 10) / 10
+  return n
+}
+
+function pickPrimaryIp(
+  ips: VeespVpsRecord['ips'],
+  vm: VeespVpsRecord['vm'],
+  info: VeespVpsRecord['info'],
+  domain?: string,
+): string {
+  const vmIp = normalizeIpField(vm?.ip ?? vm?.ipv4)
   if (vmIp) return vmIp
 
+  const infoIp = normalizeIpField(info?.ip)
+  if (infoIp) return infoIp
+
   for (const item of ips) {
-    const ip = String(item.ip ?? item.address ?? '').trim()
+    const ip = ipFromItem(item)
     if (!ip) continue
     if (item.main === true || item.main === 1 || String(item.main) === '1') return ip
   }
   for (const item of ips) {
-    const ip = String(item.ip ?? item.address ?? '').trim()
+    const ip = ipFromItem(item)
     if (ip) return ip
   }
   const d = String(domain ?? '').trim()
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(d)) return d
+  if (isIpv4(d)) return d
   return ''
 }
 
@@ -157,13 +193,23 @@ export function mapVpsRecordToVps(
   const total = parseNumber(detail.total ?? service.total)
   const rates = ratesFromTotal(total, detail.billingcycle ?? service.billingcycle)
   const hostname = String(
-    vm?.hostname ?? vm?.name ?? info?.hostname ?? detail.domain ?? service.domain ?? detail.name ?? service.name ?? '',
+    vm?.hostname ??
+      vm?.name ??
+      vm?.label ??
+      info?.hostname ??
+      detail.domain ??
+      service.domain ??
+      detail.name ??
+      service.name ??
+      '',
   ).trim()
-  const ip = pickPrimaryIp(ips, vm, detail.domain ?? service.domain)
-  const os = String(vm?.os ?? vm?.template ?? info?.os ?? info?.template ?? '').trim()
-  const vcpu = parseNumber(vm?.cpu ?? vm?.cores ?? info?.cpu)
-  const ramGb = parseNumber(vm?.ram ?? vm?.memory ?? info?.ram ?? info?.memory)
-  const diskGb = parseNumber(vm?.disk ?? info?.disk)
+  const ip = pickPrimaryIp(ips, vm, info, detail.domain ?? service.domain)
+  const os = String(
+    vm?.os ?? vm?.template ?? vm?.template_label ?? info?.os ?? info?.template ?? info?.template_label ?? '',
+  ).trim()
+  const vcpu = parseNumber(vm?.cpu ?? vm?.cores ?? vm?.cpus ?? info?.cpu ?? info?.cpus)
+  const ramGb = parseMemoryGb(vm?.ram ?? vm?.memory ?? info?.ram ?? info?.ramGb ?? info?.memory)
+  const diskGb = parseNumber(vm?.disk ?? info?.disk ?? info?.hdd)
   const status = mapStatus(
     pickServiceStatus(service.status, detail.status),
     vm?.status ?? vm?.state,

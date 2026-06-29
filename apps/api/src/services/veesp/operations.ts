@@ -41,13 +41,16 @@ export interface VeespVmListItem {
   id?: string | number
   vmid?: string | number
   name?: string
+  label?: string
   hostname?: string
   status?: string
   state?: string
-  ip?: string
-  ipv4?: string
+  ip?: string | string[]
+  ipv4?: string | string[]
   template?: string
+  template_label?: string
   os?: string
+  cpus?: string | number
 }
 
 export interface VeespVmDetail extends VeespVmListItem {
@@ -61,6 +64,7 @@ export interface VeespVmDetail extends VeespVmListItem {
 export interface VeespIpItem {
   ip?: string
   address?: string
+  ipaddress?: string
   type?: string
   main?: boolean | number | string
 }
@@ -68,11 +72,16 @@ export interface VeespIpItem {
 export interface VeespServiceInfo {
   os?: string
   template?: string
+  template_label?: string
   cpu?: number | string
+  cpus?: number | string
   ram?: number | string
+  ramGb?: number | string
   memory?: number | string
   disk?: number | string
+  hdd?: number | string
   hostname?: string
+  ip?: string | string[]
 }
 
 export interface VeespInvoice {
@@ -176,14 +185,44 @@ export function isVpsService(service: VeespServiceListItem, vpsCategoryIds?: Set
   return false
 }
 
+function unwrapKeyedList<T extends Record<string, unknown>>(raw: unknown): T[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
+  const out: T[] = []
+  for (const [key, item] of Object.entries(raw as Record<string, unknown>)) {
+    if (item == null) continue
+    if (typeof item === 'string') {
+      out.push({ ip: item, id: key } as unknown as T)
+      continue
+    }
+    if (typeof item !== 'object') continue
+    const row = item as Record<string, unknown>
+    out.push({ ...row, id: row.id ?? key } as T)
+  }
+  return out
+}
+
 function unwrapList<T>(json: unknown, key: string): T[] {
-  if (Array.isArray(json)) return json as T[]
+  if (Array.isArray(json)) {
+    return json.map((item) => {
+      if (typeof item === 'string') return { ip: item } as T
+      return item as T
+    })
+  }
   if (json && typeof json === 'object') {
     const obj = json as Record<string, unknown>
     const list = obj[key]
-    if (Array.isArray(list)) return list as T[]
+    if (Array.isArray(list)) {
+      return list.map((item) => {
+        if (typeof item === 'string') return { ip: item } as T
+        return item as T
+      })
+    }
+    if (list && typeof list === 'object') {
+      return unwrapKeyedList<T>(list)
+    }
     const vms = obj.vms
     if (Array.isArray(vms)) return vms as T[]
+    if (vms && typeof vms === 'object') return unwrapKeyedList<T>(vms)
   }
   return []
 }
@@ -240,7 +279,13 @@ export async function fetchVmDetail(
   const client = clientFor(baseUrl, credentials)
   try {
     const json = await client.request<unknown>(`/service/${serviceId}/vms/${vmId}`)
-    return unwrapObject<VeespVmDetail>(json, 'vm') ?? unwrapObject<VeespVmDetail>(json, 'vms') ?? (json as VeespVmDetail)
+    if (!json || typeof json !== 'object') return null
+    const obj = json as Record<string, unknown>
+    const nested = unwrapObject<VeespVmDetail>(json, 'vm') ?? unwrapObject<VeespVmDetail>(json, 'vms')
+    if (nested) return { ...nested, id: nested.id ?? vmId }
+    const keyed = unwrapKeyedList<VeespVmDetail>(obj.vms ?? obj.vm ?? obj)
+    const match = keyed.find((row) => String(row.id ?? row.vmid) === String(vmId))
+    return match ?? (keyed[0] ? { ...keyed[0], id: keyed[0].id ?? vmId } : null)
   } catch {
     return null
   }
@@ -454,6 +499,11 @@ export async function fetchVpsRecords(
   }
 
   return records
+}
+
+/** Парсинг коллекций Veesp API (object-map и массивы) — для тестов и отладки */
+export function parseVeespCollection<T>(json: unknown, key: string): T[] {
+  return unwrapList<T>(json, key)
 }
 
 export async function testConnection(

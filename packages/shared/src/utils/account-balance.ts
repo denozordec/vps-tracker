@@ -19,7 +19,7 @@ export function accountBalanceCurrency(account: {
   return account.balance_currency ?? account.balanceCurrency ?? account.currency ?? 'RUB'
 }
 
-/** Валюта баланса с учётом baseCurrency хостера (как effectiveVpsTariffCurrency для тарифов). */
+/** Валюта баланса: валюта аккаунта → baseCurrency хостера → balance_currency/currency. */
 export function effectiveAccountBalanceCurrency(
   account: {
     balance_currency?: string
@@ -28,9 +28,7 @@ export function effectiveAccountBalanceCurrency(
   },
   provider?: { baseCurrency?: string | null } | null,
 ): string {
-  const provRaw = (provider?.baseCurrency ?? '').trim()
-  if (provRaw) return provRaw
-  return accountBalanceCurrency(account)
+  return resolveProviderCurrency(provider, account.currency ?? accountBalanceCurrency(account))
 }
 
 export function syncFallbackCurrency(

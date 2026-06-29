@@ -175,10 +175,10 @@ export function toIsoCurrency(currency?: string | null): string {
 }
 
 export function effectiveVpsTariffCurrency(vps: Vps, provider?: Provider | null): string {
-  const provRaw = (provider?.baseCurrency || '').trim()
-  if (provRaw) return toIsoCurrency(provRaw)
   const ownRaw = (vps?.currency || '').trim()
   if (ownRaw) return toIsoCurrency(ownRaw)
+  const provRaw = (provider?.baseCurrency || '').trim()
+  if (provRaw) return toIsoCurrency(provRaw)
   return 'RUB'
 }
 

@@ -36,6 +36,7 @@ export const providerAccountSchema = z.object({
   apiLogin: z.string().optional().default(''),
   apiPassword: z.string().optional().default(''),
   billingMode: billingModeSchema.default('monthly'),
+  currency: z.string().optional().default(''),
   balanceAlertBelow: z.union([z.coerce.number().min(0), z.literal('')]).optional(),
   notes: z.string().optional().default(''),
 })

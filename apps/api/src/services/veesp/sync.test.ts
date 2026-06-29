@@ -143,4 +143,18 @@ describe('syncFromVeesp', () => {
     expect(vps.notes).toContain('veesp-100-200')
     expect(vps.monthlyRate).toBe(5)
   })
+
+  it('uses account currency over provider baseCurrency', async () => {
+    const result = await syncFromVeesp({
+      ...makeAccount(),
+      currency: 'USD',
+      providerBaseCurrency: 'EUR',
+    })
+
+    expect(result.vpsCount).toBe(1)
+    const vps = getSqlite()
+      .prepare('SELECT currency FROM vps WHERE id = ?')
+      .get('vps-veesp-acc-veesp-100-200') as { currency: string }
+    expect(vps.currency).toBe('USD')
+  })
 })

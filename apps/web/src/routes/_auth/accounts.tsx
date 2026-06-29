@@ -164,6 +164,7 @@ function AccountsPage() {
         apiLogin: a.apiLogin ?? a.login ?? '',
         apiPassword: '',
         billingMode: a.billingMode ?? 'monthly',
+        currency: a.currency ?? '',
         balanceAlertBelow: ext.balanceAlertBelow != null ? ext.balanceAlertBelow : '',
         notes: a.notes ?? '',
       }),

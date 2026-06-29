@@ -22,6 +22,7 @@ const EMPTY: ProviderAccountFormValues = {
   apiLogin: '',
   apiPassword: '',
   billingMode: 'monthly',
+  currency: '',
   balanceAlertBelow: '',
   notes: '',
 }
@@ -182,6 +183,21 @@ export function ProviderAccountEditSheet({
                 ]}
               />
             </FormField>
+            {provider?.apiType === 'veesp' ? (
+              <FormField
+                label="Валюта аккаунта"
+                htmlFor="acc-cur"
+                error={errors.currency?.message}
+                description="USD, EUR и т.д. — у каждого аккаунта Veesp может быть своя валюта. Если пусто — берётся валюта хостера."
+              >
+                <Input
+                  id="acc-cur"
+                  placeholder="EUR"
+                  aria-invalid={!!errors.currency}
+                  {...register('currency')}
+                />
+              </FormField>
+            ) : null}
             <FormField label="Порог низкого баланса" htmlFor="acc-alert" description="Уведомление на дашборде, если баланс API ниже">
               <Input
                 id="acc-alert"
