@@ -9,7 +9,8 @@ import { SectionCards } from '@/components/section-cards'
 import { ChartsGrid, MonthlyExpenseChart, PaymentsPieChart, MonthlyTrendChart } from '@/components/domain/charts'
 import { exportVpsCsv } from '@/lib/export-csv'
 
-import { normalizeRatesPayload, formatCurrency } from '@/lib/format'
+import { convertVpsMonthlyBurnToBase, formatCurrency, normalizeRatesPayload } from '@/lib/format'
+import { providerByIdMap } from '@/lib/billmanager'
 
 export const Route = createFileRoute('/_auth/reports')({
   loader: ({ context: { queryClient } }) =>
@@ -63,22 +64,22 @@ function ReportsPage() {
       }
     >
       {(snap) => {
-        const monthly = snap.vps
-          .filter((v) => v.status === 'active')
-          .reduce((acc, v) => {
-            const burn =
-              v.tariffType === 'daily' ? Number(v.dailyRate || 0) * 30 : Number(v.monthlyRate || 0)
-            return acc + burn
-          }, 0)
+        const providerById = providerByIdMap(snap.providers)
+        const baseCurrency = (snap.settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
+        const monthly = snap.vps.reduce(
+          (acc, v) =>
+            acc + convertVpsMonthlyBurnToBase(v, providerById.get(v.providerId), snap.settings, ratesData),
+          0,
+        )
         return (
           <>
             <SectionCards
               items={[
                 {
                   label: 'Расход/мес',
-                  value: formatCurrency(monthly, snap.vps[0]?.currency ?? 'RUB'),
+                  value: formatCurrency(monthly, baseCurrency),
                   icon: <TrendingUpIcon className="size-4" />,
-                  hint: 'в валюте VPS',
+                  hint: `в ${baseCurrency}`,
                 },
                 {
                   label: 'Платежей',

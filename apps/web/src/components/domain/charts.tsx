@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm
 import type { ReactNode } from 'react'
 
 import type { Vps, Provider, Payment, Settings, RatesData } from '@/types/entities'
-import { convertCurrency, formatCurrency, monthKey, toIsoCurrency } from '@/lib/format'
+import { convertCurrency, convertVpsMonthlyBurnToBase, formatCurrency, monthKey, toIsoCurrency } from '@/lib/format'
 import { providerByIdMap } from '@/lib/billmanager'
 import { EmptyState } from '@/components/empty-state'
 
@@ -51,13 +51,8 @@ export function MonthlyExpenseChart({
 
   const monthlyByAccount = new Map<string, number>()
   for (const v of vps) {
-    if (v.status !== 'active') continue
     const provider = providerById.get(v.providerId)
-    const monthly = Number(v.monthlyRate || 0)
-    const daily = Number(v.dailyRate || 0)
-    const burn = v.tariffType === 'daily' ? daily * 30 : monthly
-    const fromCurrency = toIsoCurrency(provider?.baseCurrency || v.currency || baseCurrency)
-    const converted = convertCurrency(burn, fromCurrency, baseCurrency, ratesData)
+    const converted = convertVpsMonthlyBurnToBase(v, provider, settings, ratesData)
     monthlyByAccount.set(v.providerAccountId, (monthlyByAccount.get(v.providerAccountId) ?? 0) + converted)
   }
 

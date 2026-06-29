@@ -314,6 +314,25 @@ export function formatInProviderCurrency(
   return formatCurrency(converted.value, converted.currency)
 }
 
+/** Месячный burn-rate VPS, сконвертированный в базовую валюту приложения. */
+export function convertVpsMonthlyBurnToBase(
+  vps: Pick<Vps, 'status' | 'tariffType' | 'dailyRate' | 'monthlyRate' | 'currency' | 'providerId'>,
+  provider: Provider | null | undefined,
+  appSettings: Settings[] | Settings | null | undefined,
+  ratesData: RatesData | null,
+): number {
+  if (vps.status !== 'active') return 0
+  const settings: Partial<Settings> = Array.isArray(appSettings)
+    ? (appSettings[0] ?? {})
+    : (appSettings ?? {})
+  const autoConvert = settings.autoConvert !== false
+  const burn = vpsTariffMonthlyBurn(vps)
+  if (!Number.isFinite(burn) || burn <= 0) return 0
+  if (!autoConvert) return burn
+  const fromCurrency = effectiveVpsTariffCurrency(vps as Vps, provider)
+  return convertWithProviderRate(burn, fromCurrency, provider, appSettings ?? null, ratesData).value
+}
+
 export function monthKey(dateString: string): string {
   const date = new Date(dateString)
   if (Number.isNaN(date.getTime())) return ''
