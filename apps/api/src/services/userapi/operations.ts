@@ -72,6 +72,7 @@ export interface UserApiServerPlan {
   cost: number | string
   full_cost?: number | string
   period?: string
+  period_name?: string
   description?: string
   active?: boolean
   enable?: boolean
@@ -199,20 +200,39 @@ export function findPlanInIndex(
   return undefined
 }
 
-export function normalizePlanPeriod(period?: string): 'day' | 'month' {
-  const p = (period || 'day').toLowerCase()
-  if (p === 'month' || p === 'monthly') return 'month'
+/** Распознаёт период из полей UserAPI (period, period_name). */
+export function normalizePlanPeriod(period?: string, periodName?: string): 'day' | 'month' | null {
+  const sources = [period, periodName].filter((s) => Boolean(String(s ?? '').trim()))
+  for (const raw of sources) {
+    const p = String(raw).toLowerCase().trim()
+    if (['month', 'monthly', 'mo', 'месяц', 'мес'].some((k) => p === k || p.includes(k))) return 'month'
+    if (['day', 'daily', 'день', 'дн', 'сут', 'сутки'].some((k) => p === k || p.includes(k))) return 'day'
+  }
+  return null
+}
+
+/** Период тарифа: поля плана → billingMode аккаунта → дефолт по apiType (macloud — месяц). */
+export function inferPlanPeriod(
+  plan: UserApiServerPlan | undefined,
+  apiType?: string,
+  billingMode?: string | null,
+): 'day' | 'month' {
+  const fromPlan = plan ? normalizePlanPeriod(plan.period, plan.period_name) : null
+  if (fromPlan) return fromPlan
+  if (billingMode === 'monthly') return 'month'
+  if (billingMode === 'daily') return 'day'
+  if (apiType === 'macloud') return 'month'
   return 'day'
 }
 
 /** Формат цены для active_tariffs.price — понятен parseTariffPrice. */
 export function formatUserApiTariffPrice(
   cost: number,
-  period: string | undefined,
+  period: 'day' | 'month',
   currency: string,
 ): string {
   const cur = (currency || 'RUB').trim().toUpperCase()
-  if (normalizePlanPeriod(period) === 'day') {
+  if (period === 'day') {
     return `${cost} ${cur}/day`
   }
   return `${cost} ${cur}`
@@ -253,17 +273,18 @@ function mapPlanToTariffItem(
     country: '',
     cpuModel: '',
     orderAvailable: Boolean(plan.active && plan.enable),
-    price: cost != null ? formatUserApiTariffPrice(cost, plan.period, currency) : '',
+    price: cost != null ? formatUserApiTariffPrice(cost, inferPlanPeriod(plan), currency) : '',
   }
 }
 
 function normalizePlanInIndex(plan: UserApiServerPlan, groupId: number): UserApiServerPlan {
   const cost = effectivePlanCost(plan)
+  const period = inferPlanPeriod(plan)
   return {
     ...plan,
     'server-group': plan['server-group'] ?? groupId,
     cost: cost ?? plan.cost,
-    period: normalizePlanPeriod(plan.period) === 'month' ? 'month' : 'day',
+    period,
   }
 }
 

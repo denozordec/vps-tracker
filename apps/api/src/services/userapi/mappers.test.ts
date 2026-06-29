@@ -106,6 +106,37 @@ describe('mapServerToVps', () => {
     expect(vps.monthlyRate).toBe(46.5)
   })
 
+  it('maps macloud monthly plan when period fields are missing', () => {
+    const planIndex = new Map([
+      [
+        '3:7',
+        {
+          id: 7,
+          name: '1 RAM / 1 CPU / 10 NVMe',
+          cost: 150,
+          period: '',
+          'server-group': 3,
+        },
+      ],
+    ])
+    const vps = mapServerToVps(
+      {
+        ...server,
+        'server-plan': { id: 7, name: '1 RAM / 1 CPU / 10 NVMe' },
+        'server-group': { id: 3, name: 'VDS' },
+        data: { cpu: { value: 1 }, ram: { value: 1 }, disk: { value: 10 } },
+      },
+      'macloud',
+      'prov-1',
+      'acc-1',
+      planIndex,
+      'RUB',
+    )
+    expect(vps.tariffType).toBe('monthly')
+    expect(vps.monthlyRate).toBe(150)
+    expect(vps.dailyRate).toBeNull()
+  })
+
   it('parses string plan cost from index', () => {
     const planIndex = new Map([
       [

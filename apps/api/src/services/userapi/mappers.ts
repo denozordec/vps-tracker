@@ -12,7 +12,7 @@ import type {
   UserApiServerPlan,
   UserApiTariffItem,
 } from './operations.js'
-import { normalizePlanPeriod, effectivePlanCost, findPlanInIndex, parsePlanCost } from './operations.js'
+import { inferPlanPeriod, effectivePlanCost, findPlanInIndex, parsePlanCost } from './operations.js'
 
 const STATUS_MAP: Record<string, string> = {
   active: 'active',
@@ -101,12 +101,15 @@ function resolveRatesFromTariffItem(
 
 function resolvePlanRates(
   server: UserApiServerDetail,
+  apiType: UserApiType,
+  billingMode: string | null | undefined,
   planIndex?: UserApiPlanCostIndex,
   tariffByPlanId?: Map<string, UserApiTariffItem>,
 ): { tariffType: string; dailyRate: number | null; monthlyRate: number | null } {
   const planId = server['server-plan']?.id
+  const defaultType = inferPlanPeriod(undefined, apiType, billingMode) === 'month' ? 'monthly' : 'daily'
   if (planId == null) {
-    return { tariffType: 'daily', dailyRate: null, monthlyRate: null }
+    return { tariffType: defaultType, dailyRate: null, monthlyRate: null }
   }
 
   const planKey = String(planId)
@@ -116,7 +119,7 @@ function resolvePlanRates(
     const baseCost = plan ? effectivePlanCost(plan) : null
     if (plan && baseCost != null) {
       const cost = baseCost + calculateConstructorExtraCost(server, plan)
-      return ratesFromCost(cost, normalizePlanPeriod(plan.period))
+      return ratesFromCost(cost, inferPlanPeriod(plan, apiType, billingMode))
     }
   }
 
@@ -126,7 +129,7 @@ function resolvePlanRates(
     if (fromTariff) return fromTariff
   }
 
-  return { tariffType: 'daily', dailyRate: null, monthlyRate: null }
+  return { tariffType: defaultType, dailyRate: null, monthlyRate: null }
 }
 
 export interface MappedVps {
@@ -183,6 +186,7 @@ export function mapServerToVps(
   planIndex?: UserApiPlanCostIndex,
   currency = 'RUB',
   tariffByPlanId?: Map<string, UserApiTariffItem>,
+  billingMode?: string | null,
 ): MappedVps {
   const { ip, ipv6 } = extractIp(server)
   const data = server.data ?? {}
@@ -199,7 +203,13 @@ export function mapServerToVps(
       : traffGb > 0
         ? Math.round((traffGb / 1024) * 100) / 100
         : 0
-  const { tariffType, dailyRate, monthlyRate } = resolvePlanRates(server, planIndex, tariffByPlanId)
+  const { tariffType, dailyRate, monthlyRate } = resolvePlanRates(
+    server,
+    apiType,
+    billingMode,
+    planIndex,
+    tariffByPlanId,
+  )
   const resolvedCurrency = (currency || 'RUB').trim().toUpperCase() || 'RUB'
 
   return {

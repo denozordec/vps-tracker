@@ -120,6 +120,38 @@ export function tariffTypeLabel(type: string): string {
   return TARIFF_TYPE_LABELS[type] ?? type
 }
 
+function tariffRateNumber(value: number | string | null | undefined): number | null {
+  if (value === '' || value == null) return null
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+/** Сумма тарифа в валюте провайдера: суточная или месячная — по tariffType. */
+export function vpsTariffRateAmount(vps: {
+  tariffType?: string | null
+  dailyRate?: number | string | null
+  monthlyRate?: number | string | null
+}): number {
+  const daily = tariffRateNumber(vps.dailyRate)
+  const monthly = tariffRateNumber(vps.monthlyRate)
+  if (vps.tariffType === 'daily') {
+    return daily ?? 0
+  }
+  return monthly ?? 0
+}
+
+/** Месячный burn-rate для сортировки и отчётов. */
+export function vpsTariffMonthlyBurn(vps: {
+  tariffType?: string | null
+  dailyRate?: number | string | null
+  monthlyRate?: number | string | null
+}): number {
+  const daily = tariffRateNumber(vps.dailyRate) ?? 0
+  const monthly = tariffRateNumber(vps.monthlyRate) ?? 0
+  if (vps.tariffType === 'daily') return daily * 30
+  return monthly
+}
+
 const ENVIRONMENT_LABELS: Record<string, string> = {
   prod: 'Production', dev: 'Development', staging: 'Staging',
 }

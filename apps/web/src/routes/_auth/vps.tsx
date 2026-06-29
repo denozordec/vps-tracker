@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import type { VpsFormValues } from '@/lib/schemas'
-import { normalizeRatesPayload, effectiveVpsTariffCurrency, formatCurrency, vpsStatusLabel, tariffTypeLabel } from '@/lib/format'
+import { normalizeRatesPayload, effectiveVpsTariffCurrency, formatCurrency, vpsStatusLabel, tariffTypeLabel, vpsTariffRateAmount, vpsTariffMonthlyBurn } from '@/lib/format'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
@@ -408,21 +408,11 @@ function VpsPage() {
       key: 'tariff',
       header: 'Тариф',
       icon: CreditCardIcon,
-      sortValue: (v) =>
-        v.monthlyRate != null
-          ? Number(v.monthlyRate)
-          : v.tariffType === 'daily'
-            ? Number(v.dailyRate || 0) * 30
-            : 0,
+      sortValue: (v) => vpsTariffMonthlyBurn(v),
       cell: (v) => {
         const provider = providerById.get(v.providerId)
         const currency = effectiveVpsTariffCurrency(v, provider)
-        const amount =
-          v.monthlyRate != null
-            ? Number(v.monthlyRate)
-            : v.tariffType === 'daily'
-              ? Number(v.dailyRate || 0) * 30
-              : Number(v.monthlyRate || 0)
+        const amount = vpsTariffRateAmount(v)
         return dataGridCellStack(formatCurrency(amount, currency), tariffTypeLabel(v.tariffType))
       },
     },

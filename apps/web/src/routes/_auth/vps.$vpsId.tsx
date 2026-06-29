@@ -27,6 +27,7 @@ import {
   tariffTypeLabel,
   vpsStatusLabel,
   paymentTypeLabel,
+  vpsTariffRateAmount,
 } from '@/lib/format'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
 import { VPS_SYNC_OVERRIDE_FIELDS, parseUserOverrides } from '@/lib/vps-sync-fields'
@@ -215,11 +216,7 @@ function VpsDetailPage() {
                   <InfoRow
                     label="Ставка"
                     value={formatCurrency(
-                      row.monthlyRate != null
-                        ? Number(row.monthlyRate)
-                        : row.tariffType === 'daily'
-                          ? Number(row.dailyRate || 0) * 30
-                          : Number(row.monthlyRate || 0),
+                      vpsTariffRateAmount(row),
                       effectiveVpsTariffCurrency(row, provider),
                     )}
                   />

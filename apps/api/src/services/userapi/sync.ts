@@ -108,6 +108,7 @@ export async function syncFromUserApi(
         planIndex,
         fallbackCurrency,
         tariffByPlanId,
+        account.billingMode,
       )
       const id = `vps-${idPrefix}-${accountId}-${vps.externalId}`
       const additionalIps = JSON.stringify(vps.additionalIps || [])
