@@ -69,6 +69,13 @@ export function accountCredentialLabels(apiType?: string | null): {
       loginPlaceholder: '1',
     }
   }
+  if (String(apiType).toLowerCase() === 'veesp') {
+    return {
+      loginLabel: 'Email',
+      passwordLabel: 'Пароль',
+      loginPlaceholder: 'user@example.com',
+    }
+  }
   if (isUserApiType(apiType)) {
     return {
       loginLabel: '',

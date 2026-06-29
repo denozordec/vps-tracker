@@ -34,7 +34,7 @@ function getSyncableAccounts(): SyncableAccountEntry[] {
     .all<AccountRow>(sql`
       SELECT pa.* FROM provider_accounts pa
       INNER JOIN providers p ON p.id = pa.providerId
-      WHERE lower(trim(COALESCE(p.apiType, ''))) IN ('billmanager', '4vps', 'macloud', 'vdsina')
+      WHERE lower(trim(COALESCE(p.apiType, ''))) IN ('billmanager', '4vps', 'macloud', 'vdsina', 'veesp')
         AND length(trim(COALESCE(p.apiBaseUrl, ''))) > 0
         AND pa.apiCredentials IS NOT NULL AND length(trim(pa.apiCredentials)) > 0
     `)

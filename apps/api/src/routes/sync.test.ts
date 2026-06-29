@@ -28,6 +28,17 @@ vi.mock('../services/userapi/sync.js', () => ({
   }),
 }))
 
+vi.mock('../services/veesp/sync.js', () => ({
+  syncFromVeesp: vi.fn().mockResolvedValue({
+    vpsCount: 2,
+    paymentsCount: 1,
+    tariffsCount: 1,
+    newTariffs: [],
+    balance: { balance: 123.45, currency: 'EUR', enoughmoneyto: '' },
+    syncSummary: { added: [], updated: [], paymentsAdded: 1 },
+  }),
+}))
+
 describe('sync routes — 4vps', () => {
   let app: Awaited<ReturnType<typeof buildApp>>
 
@@ -187,5 +198,82 @@ describe('sync routes — vdsina', () => {
     const body = res.json() as { ok?: boolean; synced?: { vpsCount?: number } }
     expect(body.ok).toBe(true)
     expect(body.synced?.vpsCount).toBe(1)
+  })
+})
+
+describe('sync routes — veesp', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    resetTestDb()
+    seedTestProvider('prov-veesp')
+    providersRepository.update('prov-veesp', {
+      apiType: 'veesp',
+      apiBaseUrl: 'https://secure.veesp.com/api',
+    })
+    providerAccountsRepository.create({
+      id: 'acc-veesp',
+      providerId: 'prov-veesp',
+      name: 'Veesp',
+      apiCredentials: 'user@example.com:secret',
+    })
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    closeDb()
+  })
+
+  it('POST /api/sync/:accountId syncs veesp account', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sync/acc-veesp',
+      payload: {},
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as { ok?: boolean; synced?: { vpsCount?: number } }
+    expect(body.ok).toBe(true)
+    expect(body.synced?.vpsCount).toBe(2)
+  })
+
+  it('POST /api/sync/test-connection uses apiType veesp', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        const path = String(url)
+        if (path.includes('/login')) {
+          return { ok: true, json: async () => ({ token: 'jwt' }) }
+        }
+        if (path.includes('/balance')) {
+          return {
+            ok: true,
+            json: async () => ({
+              details: { currency: 'EUR', acc_balance: '100.00', acc_credit: '0.00' },
+            }),
+          }
+        }
+        if (path.includes('/category')) {
+          return { ok: true, json: async () => ({ categories: [] }) }
+        }
+        if (path.includes('/service')) {
+          return { ok: true, json: async () => ({ services: [] }) }
+        }
+        return { ok: true, json: async () => ({}) }
+      }),
+    )
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sync/test-connection',
+      payload: {
+        apiBaseUrl: 'https://secure.veesp.com/api',
+        apiCredentials: 'user@example.com:secret',
+        apiType: 'veesp',
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    expect((res.json() as { ok?: boolean }).ok).toBe(true)
+    vi.unstubAllGlobals()
   })
 })

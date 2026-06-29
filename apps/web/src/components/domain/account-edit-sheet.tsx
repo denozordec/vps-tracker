@@ -88,6 +88,8 @@ export function ProviderAccountEditSheet({
           ? 'API Token хранится на сервере и используется для синка с UserAPI'
           : initialProvider?.apiType === '4vps'
             ? 'Panel ID и API Key хранятся на сервере и используются для синка с 4VPS'
+            : initialProvider?.apiType === 'veesp'
+              ? 'Email и пароль client area Veesp хранятся на сервере и используются для синка'
             : 'API-креды хранятся на сервере и используются для синка с BILLmanager'
       }
       schema={providerAccountSchema as unknown as ZodType<ProviderAccountFormValues>}

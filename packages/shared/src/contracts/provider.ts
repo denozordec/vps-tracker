@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
-export const API_TYPES = ['billmanager', '4vps', 'macloud', 'vdsina', 'none'] as const
+export const API_TYPES = ['billmanager', '4vps', 'macloud', 'vdsina', 'veesp', 'none'] as const
 export type ApiType = (typeof API_TYPES)[number]
 export const apiTypeSchema = z.enum(API_TYPES).optional().default('none')
 
-export const SYNC_API_TYPES = ['billmanager', '4vps', 'macloud', 'vdsina'] as const
+export const SYNC_API_TYPES = ['billmanager', '4vps', 'macloud', 'vdsina', 'veesp'] as const
 export type SyncApiType = (typeof SYNC_API_TYPES)[number]
 
 export const USER_API_TYPES = ['macloud', 'vdsina'] as const
@@ -14,6 +14,8 @@ export const USER_API_DEFAULT_BASE_URL: Record<UserApiType, string> = {
   macloud: 'https://userapi.macloud.ru/v1',
   vdsina: 'https://userapi.vdsina.com/v1',
 }
+
+export const VEESP_DEFAULT_BASE_URL = 'https://secure.veesp.com/api'
 
 export function isUserApiType(apiType?: string | null): apiType is UserApiType {
   const key = String(apiType || '').toLowerCase()

@@ -3,18 +3,22 @@ import type { schema } from '@cfdm/db'
 import { billmanagerAccountRowForSync } from '../billmanager/context.js'
 import { fourvpsAccountRowForSync } from '../fourvps/context.js'
 import { userApiAccountRowForSync } from '../userapi/context.js'
+import { veespAccountRowForSync } from '../veesp/context.js'
 import type { BillmanagerSyncAccount } from '../billmanager/context.js'
 import type { FourvpsSyncAccount } from '../fourvps/context.js'
 import type { UserApiSyncAccount } from '../userapi/context.js'
+import type { VeespSyncAccount } from '../veesp/context.js'
 
 import { billmanagerAdapter } from './billmanager-adapter.js'
 import { fourvpsAdapter } from './fourvps-adapter.js'
 import { userapiAdapter } from './userapi-adapter.js'
+import { veespAdapter } from './veesp-adapter.js'
 import type { ProviderAdapter } from './types.js'
 
 export { billmanagerAdapter } from './billmanager-adapter.js'
 export { fourvpsAdapter } from './fourvps-adapter.js'
 export { userapiAdapter } from './userapi-adapter.js'
+export { veespAdapter } from './veesp-adapter.js'
 
 export const manualAdapter: ProviderAdapter = {
   type: 'manual',
@@ -38,6 +42,7 @@ const adapters: Record<string, ProviderAdapter> = {
   '4vps': fourvpsAdapter,
   macloud: userapiAdapter,
   vdsina: userapiAdapter,
+  veesp: veespAdapter,
   manual: manualAdapter,
   none: manualAdapter,
 }
@@ -50,7 +55,11 @@ export function getProviderAdapter(apiType: string | null | undefined): Provider
 type AccountRow = typeof schema.providerAccounts.$inferSelect
 type ProviderRow = typeof schema.providers.$inferSelect
 
-export type SyncReadyAccount = BillmanagerSyncAccount | FourvpsSyncAccount | UserApiSyncAccount
+export type SyncReadyAccount =
+  | BillmanagerSyncAccount
+  | FourvpsSyncAccount
+  | UserApiSyncAccount
+  | VeespSyncAccount
 
 export function resolveSyncAccount(
   accountRow: AccountRow | null | undefined,
@@ -73,6 +82,10 @@ export function resolveSyncAccount(
     const account = userApiAccountRowForSync(accountRow, providerRow)
     return account ? { apiType, account } : null
   }
+  if (apiType === 'veesp') {
+    const account = veespAccountRowForSync(accountRow, providerRow)
+    return account ? { apiType, account } : null
+  }
   return null
 }
 
@@ -81,4 +94,5 @@ export const SYNC_SETUP_ERRORS: Record<string, string> = {
   '4vps': 'Укажите в настройках хостера тип API 4VPS и URL; в аккаунте — Panel ID и API Key',
   macloud: 'Укажите тип API Маклауд и URL; в аккаунте — API Token',
   vdsina: 'Укажите тип API VDSina и URL; в аккаунте — API Token',
+  veesp: 'Укажите тип API Veesp и URL; в аккаунте — email и пароль client area',
 }
