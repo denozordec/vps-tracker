@@ -23,6 +23,8 @@ import { migrateRoutes } from './routes/migrate.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { auditRoutes } from './routes/audit.js'
 import { notificationsRoutes } from './routes/notifications.js'
+import { integrationsCfdmRoutes } from './routes/integrations-cfdm.js'
+import { appSwitcherRoutes } from './routes/app-switcher.js'
 import { startScheduler } from './services/scheduler.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -58,6 +60,8 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(dashboardRoutes)
   await app.register(auditRoutes)
   await app.register(notificationsRoutes)
+  await app.register(integrationsCfdmRoutes)
+  await app.register(appSwitcherRoutes)
 
   const staticDir = opts.staticDir ?? join(__dirname, '..', '..', 'web', 'dist')
   if (existsSync(staticDir)) {

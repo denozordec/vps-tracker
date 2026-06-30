@@ -5,6 +5,7 @@ import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { resolveSyncAccount, getProviderAdapter, type SyncReadyAccount } from './providers/index.js'
 import { runAccountSync } from './providers/sync-job.js'
 import { runVpsUptimeChecks } from './uptime-check.js'
+import { notifyCfdmVpsEvent } from './cfdm-notify.js'
 import { publishMany, publishNotification } from './notifications/engine.js'
 import {
   buildLowBalanceNotification,
@@ -154,6 +155,12 @@ export async function runScheduledUptimeChecks(): Promise<void> {
         newlyUp.map((h) => ({ id: h.id, label: h.label })),
       ),
     ])
+    if (newlyDown.length > 0) {
+      void notifyCfdmVpsEvent(
+        'vps_down',
+        newlyDown.map((h) => h.id),
+      )
+    }
   } catch (err) {
     console.warn('Uptime check error:', err instanceof Error ? err.message : err)
   }

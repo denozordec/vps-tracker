@@ -9,6 +9,12 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE settings ADD COLUMN webhookEnabled INTEGER`,
   `ALTER TABLE settings ADD COLUMN notifyIntervalMinutes INTEGER`,
   `ALTER TABLE settings ADD COLUMN uptimeCheckIntervalMinutes INTEGER`,
+  `ALTER TABLE settings ADD COLUMN appSwitcherJson TEXT`,
+  `ALTER TABLE settings ADD COLUMN integrationToken TEXT`,
+  `ALTER TABLE settings ADD COLUMN integrationEnabled INTEGER`,
+  `ALTER TABLE settings ADD COLUMN integrationLastSyncAt TEXT`,
+  `ALTER TABLE settings ADD COLUMN cfdmApiUrl TEXT`,
+  `ALTER TABLE vps_domains ADD COLUMN targetIps TEXT`,
 ]
 
 const TABLE_MIGRATIONS: string[] = [
@@ -51,6 +57,21 @@ const TABLE_MIGRATIONS: string[] = [
     sortOrder INTEGER DEFAULT 0,
     notes TEXT,
     createdAt TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS vps_domains (
+    id TEXT PRIMARY KEY,
+    vpsId TEXT REFERENCES vps(id) ON DELETE SET NULL,
+    fqdn TEXT NOT NULL,
+    zoneName TEXT NOT NULL,
+    hostname TEXT NOT NULL,
+    serviceName TEXT NOT NULL,
+    serviceSlug TEXT NOT NULL,
+    cfdmServiceId INTEGER NOT NULL,
+    cfdmBindingId INTEGER NOT NULL UNIQUE,
+    source TEXT NOT NULL DEFAULT 'cfdm',
+    matchStatus TEXT NOT NULL DEFAULT 'unmatched',
+    targetIps TEXT,
+    syncedAt TEXT NOT NULL
   )`,
 ]
 

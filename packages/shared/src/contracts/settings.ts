@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { customFieldsSchema } from './custom-fields.js'
+import { appSwitcherConfigSchema } from './app-switcher.js'
 
 export const settingsSchema = z.object({
   id: z.string().optional(),
@@ -23,6 +24,9 @@ export const settingsSchema = z.object({
   webhookUrl: z.string().url('Невалидный URL').or(z.literal('')).optional(),
   webhookEnabled: z.boolean().optional(),
   customFields: customFieldsSchema.optional(),
+  appSwitcher: appSwitcherConfigSchema.optional(),
+  integrationToken: z.string().optional(),
+  integrationEnabled: z.boolean().optional(),
 })
 
 export type Settings = z.infer<typeof settingsSchema>

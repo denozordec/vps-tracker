@@ -31,6 +31,7 @@ import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
 import { HealthModeBanner } from '@/components/health-mode-banner'
 import { ProjectColorDot } from '@/components/project-color-dot'
 import { VpsBulkToolbar } from '@/components/domain/vps-bulk-toolbar'
+import { VpsDomainsCell, UnmatchedDomainsBanner } from '@/components/integrations/vps-domains-cell'
 
 import type { Vps } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
@@ -347,6 +348,19 @@ function VpsPage() {
       ),
     },
     {
+      key: 'domains',
+      header: 'Домены',
+      icon: GlobeIcon,
+      sortValue: (v) =>
+        (snapshot?.vpsDomains ?? [])
+          .filter((d) => d.vpsId === v.id)
+          .map((d) => d.fqdn)
+          .join(', '),
+      cell: (v) => (
+        <VpsDomainsCell domains={(snapshot?.vpsDomains ?? []).filter((d) => d.vpsId === v.id)} />
+      ),
+    },
+    {
       key: 'account',
       header: 'Аккаунт',
       icon: UserRoundIcon,
@@ -512,6 +526,10 @@ function VpsPage() {
           </Button>
         }
       />
+
+      {snapshot?.vpsDomains?.length ? (
+        <UnmatchedDomainsBanner domains={snapshot.vpsDomains} />
+      ) : null}
 
       <QueryState
         data={snapshot}

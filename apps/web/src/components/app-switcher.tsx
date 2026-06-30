@@ -16,13 +16,13 @@ import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
 import {
   APP_SWITCHER_ICONS,
   CURRENT_APP_ID,
-  getAppSwitcherConfig,
   getCurrentApp,
 } from '@/lib/app-switcher-config'
+import { useAppSwitcherConfig } from '@/hooks/use-app-switcher'
 
 export function AppSwitcher() {
   const { isMobile } = useSidebar()
-  const config = getAppSwitcherConfig()
+  const { config, isLoading } = useAppSwitcherConfig()
   const current = getCurrentApp(config)
   const CurrentIcon = APP_SWITCHER_ICONS[current.icon]
 
@@ -58,7 +58,7 @@ export function AppSwitcher() {
             sideOffset={4}
           >
             <div className="px-2 py-1.5 text-xs text-muted-foreground">
-              {config.menuLabel}
+              {isLoading ? 'Загрузка…' : config.menuLabel}
             </div>
             {config.apps.map((app) => {
               const Icon = APP_SWITCHER_ICONS[app.icon]

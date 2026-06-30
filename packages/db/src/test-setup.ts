@@ -160,7 +160,29 @@ CREATE TABLE IF NOT EXISTS settings (
   webhookUrl TEXT,
   webhookEnabled INTEGER,
   notifyIntervalMinutes INTEGER,
-  uptimeCheckIntervalMinutes INTEGER
+  uptimeCheckIntervalMinutes INTEGER,
+  appSwitcherJson TEXT,
+  integrationToken TEXT,
+  integrationEnabled INTEGER,
+  integrationLastSyncAt TEXT,
+  cfdmApiUrl TEXT
+);
+
+CREATE TABLE IF NOT EXISTS vps_domains (
+  id TEXT PRIMARY KEY,
+  vpsId TEXT,
+  fqdn TEXT NOT NULL,
+  zoneName TEXT NOT NULL,
+  hostname TEXT NOT NULL,
+  serviceName TEXT NOT NULL,
+  serviceSlug TEXT NOT NULL,
+  cfdmServiceId INTEGER NOT NULL,
+  cfdmBindingId INTEGER NOT NULL UNIQUE,
+  source TEXT NOT NULL DEFAULT 'cfdm',
+  matchStatus TEXT NOT NULL DEFAULT 'unmatched',
+  targetIps TEXT,
+  syncedAt TEXT NOT NULL,
+  FOREIGN KEY (vpsId) REFERENCES vps(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS notification_log (

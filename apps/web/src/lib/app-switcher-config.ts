@@ -79,6 +79,13 @@ export function getAppSwitcherConfig(): AppSwitcherConfig {
   return parseAppSwitcherConfig(import.meta.env.VITE_APP_SWITCHER)
 }
 
+export function getAppUrl(
+  appId: string,
+  config: AppSwitcherConfig = getAppSwitcherConfig(),
+): string | undefined {
+  return config.apps.find((app) => app.id === appId)?.url
+}
+
 export function getCurrentApp(
   config: AppSwitcherConfig = getAppSwitcherConfig(),
 ): AppSwitcherEntry {

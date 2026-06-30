@@ -41,6 +41,7 @@ import {
   formatCustomFieldValue,
 } from '@/lib/custom-fields'
 import type { Payment, Vps } from '@/types/entities'
+import { VpsDomainsCell } from '@/components/integrations/vps-domains-cell'
 
 export const Route = createFileRoute('/_auth/vps/$vpsId')({
   loader: ({ context: { queryClient } }) =>
@@ -82,6 +83,11 @@ function VpsDetailPage() {
 
   const relatedPayments = useMemo(
     () => (snapshot?.payments ?? []).filter((p) => p.vpsId === vpsId),
+    [snapshot, vpsId],
+  )
+
+  const vpsDomains = useMemo(
+    () => (snapshot?.vpsDomains ?? []).filter((d) => d.vpsId === vpsId),
     [snapshot, vpsId],
   )
 
@@ -200,6 +206,16 @@ function VpsDetailPage() {
                     <InfoRow label="Хостер" value={provider?.name || '—'} />
                   </CardContent>
                 </Card>
+                {vpsDomains.length > 0 ? (
+                  <Card className="md:col-span-2">
+                    <CardHeader>
+                      <CardTitle className="text-base">Домены (CFDM)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <VpsDomainsCell domains={vpsDomains} />
+                    </CardContent>
+                  </Card>
+                ) : null}
               </div>
               {customFieldRows.length > 0 ? (
                 <Card>

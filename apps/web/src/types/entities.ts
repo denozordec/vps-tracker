@@ -129,6 +129,27 @@ export interface Settings {
   telegramMessageThreadId?: string
   telegramBotTokenSet?: boolean
   customFields?: CustomFieldDef[]
+  appSwitcher?: import('@cfdm/shared/contracts/app-switcher').AppSwitcherConfig
+  integrationEnabled?: boolean
+  integrationTokenSet?: boolean
+  integrationLastSyncAt?: string
+  cfdmApiUrl?: string
+}
+
+export interface VpsDomain {
+  id: string
+  vpsId: string | null
+  fqdn: string
+  zoneName: string
+  hostname: string
+  serviceName: string
+  serviceSlug: string
+  cfdmServiceId: number
+  cfdmBindingId: number
+  source: string
+  matchStatus: 'matched' | 'unmatched' | 'orphaned'
+  targetIps?: string | null
+  syncedAt: string
 }
 
 export interface ActiveTariff {
@@ -210,4 +231,5 @@ export interface DataSnapshot {
   tariffSyncOptions?: unknown[]
   serverProjects?: ServerProject[]
   syncLog: SyncLogRow[]
+  vpsDomains?: VpsDomain[]
 }

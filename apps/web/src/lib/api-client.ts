@@ -73,6 +73,7 @@ function uid(): string {
 
 export const api = {
   fetchData: () => fetchApi<DataSnapshot>('/api/data'),
+  get: <T>(path: string) => fetchApi<T>(`/api/${path.replace(/^\//, '')}`),
   fetchCollection: <T>(name: CollectionName) => fetchApi<T[]>(COLLECTION_PATHS[name]),
 
   create: <T extends { id?: string }>(name: CollectionName, record: T) =>

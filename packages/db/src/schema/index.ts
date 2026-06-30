@@ -128,6 +128,27 @@ export const settings = sqliteTable('settings', {
   webhookEnabled: integer('webhookEnabled'),
   notifyIntervalMinutes: integer('notifyIntervalMinutes'),
   uptimeCheckIntervalMinutes: integer('uptimeCheckIntervalMinutes'),
+  appSwitcherJson: text('appSwitcherJson'),
+  integrationToken: text('integrationToken'),
+  integrationEnabled: integer('integrationEnabled'),
+  integrationLastSyncAt: text('integrationLastSyncAt'),
+  cfdmApiUrl: text('cfdmApiUrl'),
+})
+
+export const vpsDomains = sqliteTable('vps_domains', {
+  id: text('id').primaryKey(),
+  vpsId: text('vpsId').references(() => vps.id, { onDelete: 'set null' }),
+  fqdn: text('fqdn').notNull(),
+  zoneName: text('zoneName').notNull(),
+  hostname: text('hostname').notNull(),
+  serviceName: text('serviceName').notNull(),
+  serviceSlug: text('serviceSlug').notNull(),
+  cfdmServiceId: integer('cfdmServiceId').notNull(),
+  cfdmBindingId: integer('cfdmBindingId').notNull(),
+  source: text('source').notNull().default('cfdm'),
+  matchStatus: text('matchStatus').notNull().default('unmatched'),
+  targetIps: text('targetIps'),
+  syncedAt: text('syncedAt').notNull(),
 })
 
 export const notificationLog = sqliteTable('notification_log', {

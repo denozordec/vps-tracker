@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { vpsRepository } from '@cfdm/db/repositories/vps'
+import { vpsDomainsRepository } from '@cfdm/db/repositories/vps-domains'
 import { vpsSchema } from '@cfdm/shared/contracts/vps'
 import { auditCreate, auditDelete, auditUpdate } from '../services/audit.js'
 
@@ -27,6 +28,7 @@ export const vpsRoutes: FastifyPluginAsync = async (app) => {
     if (!updated) {
       return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
     }
+    vpsDomainsRepository.rematchAll()
     auditUpdate('vps', req.params.id, parsed.data as Record<string, unknown>)
     return updated
   })
@@ -62,5 +64,9 @@ export const vpsRoutes: FastifyPluginAsync = async (app) => {
       return vpsRepository.bulkProject(ids, value)
     }
     return reply.code(400).send({ error: { code: 'VALIDATION', message: 'action must be status, delete, or project' } })
+  })
+
+  app.get<{ Params: { id: string } }>('/api/vps/:id/domains', async (req) => {
+    return vpsDomainsRepository.listByVpsId(req.params.id)
   })
 }

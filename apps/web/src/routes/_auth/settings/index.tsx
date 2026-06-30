@@ -8,8 +8,6 @@ import { useMemo, useCallback } from 'react'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
-import { PageShell } from '@/components/page-shell'
-import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
 import { SectionCardsSkeleton } from '@/components/skeletons'
 import { EmptyState } from '@/components/empty-state'
@@ -35,7 +33,7 @@ import { settingsSchema, type SettingsFormValues } from '@/lib/schemas'
 import { CustomFieldsEditor } from '@/components/domain/custom-fields-editor'
 import type { NotificationLogRow, Settings } from '@/types/entities'
 
-export const Route = createFileRoute('/_auth/settings')({
+export const Route = createFileRoute('/_auth/settings/')({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(snapshotQueryOptions()),
   component: SettingsPage,
@@ -316,12 +314,8 @@ function SettingsPage() {
   )
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Настройки"
-        description="Базовая валюта, курсы, синк, Telegram"
-        actions={backupActions}
-      />
+    <>
+      <div className="flex flex-wrap gap-2">{backupActions}</div>
       <QueryState
         data={snapshot}
         isLoading={isLoading}
@@ -604,6 +598,6 @@ function SettingsPage() {
           </form>
         )}
       </QueryState>
-    </PageShell>
+    </>
   )
 }

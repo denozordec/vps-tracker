@@ -1,10 +1,52 @@
 import { asc, eq } from 'drizzle-orm'
+import {
+  appSwitcherConfigSchema,
+  type AppSwitcherConfig,
+} from '@cfdm/shared/contracts/app-switcher'
 import { getDb, schema } from '../index.js'
 
 type Row = typeof schema.settings.$inferSelect
 
-export type SettingsDto = Omit<Row, 'telegramBotToken' | 'autoConvert' | 'syncEnabled' | 'notifyPaymentExpiryEnabled' | 'notifyNewTariffsEnabled' | 'notifyLowBalanceEnabled' | 'notifySyncDigestEnabled' | 'notifyVpsDownEnabled' | 'webhookEnabled' | 'customFields'> & {
+const DEFAULT_APP_SWITCHER: AppSwitcherConfig = {
+  menuLabel: 'Приложения',
+  apps: [
+    {
+      id: 'vps-tracker',
+      name: 'VPS Tracker',
+      subtitle: 'Учёт виртуальных серверов',
+      url: 'http://192.168.100.67:3001',
+      icon: 'server',
+      shortcut: '⌘1',
+    },
+    {
+      id: 'cfdm',
+      name: 'CF Domain Manager',
+      subtitle: 'Управление доменами',
+      url: 'http://192.168.100.67:6363',
+      icon: 'cloud',
+      shortcut: '⌘2',
+    },
+  ],
+}
+
+export type SettingsDto = Omit<
+  Row,
+  | 'telegramBotToken'
+  | 'integrationToken'
+  | 'autoConvert'
+  | 'syncEnabled'
+  | 'notifyPaymentExpiryEnabled'
+  | 'notifyNewTariffsEnabled'
+  | 'notifyLowBalanceEnabled'
+  | 'notifySyncDigestEnabled'
+  | 'notifyVpsDownEnabled'
+  | 'webhookEnabled'
+  | 'integrationEnabled'
+  | 'customFields'
+  | 'appSwitcherJson'
+> & {
   telegramBotTokenSet: boolean
+  integrationTokenSet: boolean
   autoConvert: boolean
   syncEnabled: boolean
   notifyPaymentExpiryEnabled: boolean
@@ -13,9 +55,20 @@ export type SettingsDto = Omit<Row, 'telegramBotToken' | 'autoConvert' | 'syncEn
   notifySyncDigestEnabled: boolean
   notifyVpsDownEnabled: boolean
   webhookEnabled: boolean
+  integrationEnabled: boolean
   notifyIntervalMinutes: number
   uptimeCheckIntervalMinutes: number
   customFields: unknown[]
+  appSwitcher: AppSwitcherConfig
+}
+
+function parseAppSwitcher(raw: string | null | undefined): AppSwitcherConfig {
+  if (!raw?.trim()) return DEFAULT_APP_SWITCHER
+  try {
+    return appSwitcherConfigSchema.parse(JSON.parse(raw))
+  } catch {
+    return DEFAULT_APP_SWITCHER
+  }
 }
 
 function toDto(row: Row | undefined): SettingsDto | undefined {
@@ -28,10 +81,11 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
       customFields = []
     }
   }
-  const { telegramBotToken, ...rest } = row
+  const { telegramBotToken, integrationToken, appSwitcherJson, ...rest } = row
   return {
     ...rest,
     telegramBotTokenSet: Boolean(telegramBotToken?.trim()),
+    integrationTokenSet: Boolean(integrationToken?.trim()),
     autoConvert: Boolean(row.autoConvert),
     syncEnabled: Boolean(row.syncEnabled),
     notifyPaymentExpiryEnabled: Boolean(row.notifyPaymentExpiryEnabled),
@@ -40,9 +94,11 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
     notifySyncDigestEnabled: Boolean(row.notifySyncDigestEnabled),
     notifyVpsDownEnabled: Boolean(row.notifyVpsDownEnabled),
     webhookEnabled: Boolean(row.webhookEnabled),
+    integrationEnabled: Boolean(row.integrationEnabled),
     notifyIntervalMinutes: Number(row.notifyIntervalMinutes) || 60,
     uptimeCheckIntervalMinutes: Number(row.uptimeCheckIntervalMinutes) || 5,
     customFields: Array.isArray(customFields) ? customFields : [],
+    appSwitcher: parseAppSwitcher(appSwitcherJson),
   }
 }
 
@@ -74,6 +130,11 @@ interface SettingsInput {
   notifyIntervalMinutes?: number
   uptimeCheckIntervalMinutes?: number
   customFields?: unknown
+  appSwitcher?: AppSwitcherConfig
+  integrationToken?: string
+  integrationEnabled?: boolean
+  integrationLastSyncAt?: string
+  cfdmApiUrl?: string
 }
 
 function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
@@ -156,6 +217,27 @@ function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
         ? Math.max(1, Number(r.uptimeCheckIntervalMinutes) || 5)
         : existing?.uptimeCheckIntervalMinutes ?? 5,
     customFields: serializeCustomFields(r.customFields ?? existing?.customFields),
+    appSwitcherJson:
+      r.appSwitcher !== undefined
+        ? JSON.stringify(r.appSwitcher)
+        : existing?.appSwitcherJson ?? JSON.stringify(DEFAULT_APP_SWITCHER),
+    integrationToken:
+      r.integrationToken !== undefined && String(r.integrationToken || '').trim() !== ''
+        ? r.integrationToken
+        : existing?.integrationToken ?? '',
+    integrationEnabled:
+      r.integrationEnabled !== undefined
+        ? r.integrationEnabled
+          ? 1
+          : 0
+        : existing?.integrationEnabled
+          ? 1
+          : 0,
+    integrationLastSyncAt:
+      r.integrationLastSyncAt !== undefined
+        ? r.integrationLastSyncAt || ''
+        : existing?.integrationLastSyncAt ?? '',
+    cfdmApiUrl: r.cfdmApiUrl !== undefined ? r.cfdmApiUrl || '' : existing?.cfdmApiUrl ?? '',
   }
 }
 
@@ -169,6 +251,24 @@ export const settingsRepository = {
   },
   getRow(id: string): Row | undefined {
     return getDb().select().from(schema.settings).where(eq(schema.settings.id, id)).get()
+  },
+  getIntegrationToken(id = 'settings-main'): string {
+    return this.getRow(id)?.integrationToken?.trim() ?? ''
+  },
+  getAppSwitcher(id = 'settings-main'): AppSwitcherConfig {
+    const row = this.getRow(id)
+    return parseAppSwitcher(row?.appSwitcherJson)
+  },
+  touchIntegrationSync(id = 'settings-main'): void {
+    const db = getDb()
+    const at = new Date().toISOString()
+    const existing = this.getRow(id)
+    if (existing) {
+      db.update(schema.settings)
+        .set({ integrationLastSyncAt: at })
+        .where(eq(schema.settings.id, id))
+        .run()
+    }
   },
   upsert(id: string, input: SettingsInput): SettingsDto {
     const db = getDb()
