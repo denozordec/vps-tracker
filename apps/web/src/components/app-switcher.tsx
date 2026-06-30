@@ -59,10 +59,10 @@ export function AppSwitcher() {
             align="start"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {config.menuLabel}
-            </DropdownMenuLabel>
             <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {config.menuLabel}
+              </DropdownMenuLabel>
               {config.apps.map((app) => {
                 const Icon = APP_SWITCHER_ICONS[app.icon]
                 const isCurrent = app.id === CURRENT_APP_ID
@@ -78,7 +78,11 @@ export function AppSwitcher() {
                 }
 
                 return (
-                  <DropdownMenuItem key={app.id} render={<a href={app.url} />}>
+                  <DropdownMenuItem
+                    key={app.id}
+                    nativeButton={false}
+                    render={<a href={app.url} />}
+                  >
                     <Icon />
                     {app.name}
                     {app.shortcut ? (
