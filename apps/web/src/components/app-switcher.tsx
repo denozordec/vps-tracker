@@ -1,9 +1,7 @@
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@cfdm/ui/components/dropdown-menu'
@@ -59,39 +57,37 @@ export function AppSwitcher() {
             align="start"
             sideOffset={4}
           >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                {config.menuLabel}
-              </DropdownMenuLabel>
-              {config.apps.map((app) => {
-                const Icon = APP_SWITCHER_ICONS[app.icon]
-                const isCurrent = app.id === CURRENT_APP_ID
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              {config.menuLabel}
+            </div>
+            {config.apps.map((app) => {
+              const Icon = APP_SWITCHER_ICONS[app.icon]
+              const isCurrent = app.id === CURRENT_APP_ID
 
-                if (isCurrent) {
-                  return (
-                    <DropdownMenuItem key={app.id} disabled>
-                      <Icon />
-                      {app.name}
-                      <CheckIcon className="ml-auto size-4" />
-                    </DropdownMenuItem>
-                  )
-                }
-
+              if (isCurrent) {
                 return (
-                  <DropdownMenuItem
-                    key={app.id}
-                    nativeButton={false}
-                    render={<a href={app.url} />}
-                  >
+                  <DropdownMenuItem key={app.id} disabled>
                     <Icon />
                     {app.name}
-                    {app.shortcut ? (
-                      <DropdownMenuShortcut>{app.shortcut}</DropdownMenuShortcut>
-                    ) : null}
+                    <CheckIcon className="ml-auto size-4" />
                   </DropdownMenuItem>
                 )
-              })}
-            </DropdownMenuGroup>
+              }
+
+              return (
+                <DropdownMenuItem
+                  key={app.id}
+                  nativeButton={false}
+                  render={<a href={app.url} />}
+                >
+                  <Icon />
+                  {app.name}
+                  {app.shortcut ? (
+                    <DropdownMenuShortcut>{app.shortcut}</DropdownMenuShortcut>
+                  ) : null}
+                </DropdownMenuItem>
+              )
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
