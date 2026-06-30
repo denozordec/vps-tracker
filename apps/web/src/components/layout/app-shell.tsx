@@ -45,6 +45,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 
 import { ModeToggle } from '@/components/mode-toggle'
+import { AppSwitcher } from '@/components/app-switcher'
 import { GlobalSearch, GlobalSearchTrigger, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
 import { formatRelativeSyncTime } from '@/lib/sync-format'
@@ -147,22 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" render={<Link to="/dashboard" />}>
-                <div
-                  className="flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground"
-                  aria-hidden
-                >
-                  <Server className="size-4" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">VPS Tracker</span>
-                  <span className="text-xs text-muted-foreground">Учёт виртуальных серверов</span>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <AppSwitcher />
         </SidebarHeader>
         <SidebarContent>
           {navGroups.map((group) => (
