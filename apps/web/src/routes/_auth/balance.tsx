@@ -238,7 +238,7 @@ function BalancePage() {
               rowId={(r) => r.id}
               pinLastColumn
               footerContent={
-                <div className="flex justify-end gap-6 px-3 py-2 text-sm tabular-nums">
+                <div className="flex flex-wrap justify-end gap-6 px-3 py-2 text-sm tabular-nums">
                   <span>
                     Приходы: <b className="text-foreground">{formatCurrency(totalCredit, baseCurrency)}</b>
                   </span>

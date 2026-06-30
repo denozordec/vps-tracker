@@ -58,7 +58,7 @@ type InventoryIssue = { key: string; title: string; count: number; to: string; h
 function DashboardPage() {
   const navigate = useNavigate()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
-  const { data: stats } = useQuery(dashboardStatsQueryOptions())
+  const { data: stats, isLoading: statsLoading } = useQuery(dashboardStatsQueryOptions())
   const settings = snapshot?.settings?.[0]
   const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
   const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
@@ -204,6 +204,9 @@ function DashboardPage() {
 
           return (
             <div className="flex flex-col gap-4 md:gap-6">
+              {statsLoading ? (
+                <SectionCardsSkeleton count={6} />
+              ) : (
               <SectionCards
                 items={[
                   {
@@ -269,6 +272,7 @@ function DashboardPage() {
                   },
                 ]}
               />
+              )}
 
               {issues.length > 0 ? (
                 <Alert variant="destructive">

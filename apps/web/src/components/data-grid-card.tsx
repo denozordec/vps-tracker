@@ -34,6 +34,9 @@ const PAGINATION_LABELS = {
   info: '{from}–{to} из {count}',
   previousPageLabel: 'Предыдущая страница',
   nextPageLabel: 'Следующая страница',
+  pageLabel: 'Страница {page}',
+  previousPagesLabel: 'Предыдущие страницы',
+  nextPagesLabel: 'Следующие страницы',
 } as const
 
 function resolveHeaderTitle(header: ReactNode, headerTitle?: string): string {
@@ -140,7 +143,7 @@ function DataGridSectionHeader({
 
 function DataGridPaginationBar() {
   return (
-    <div className="px-4 py-2.5">
+    <div className="border-t border-border px-4 py-2.5">
       <DataGridPagination {...PAGINATION_LABELS} />
     </div>
   )
@@ -170,46 +173,41 @@ function DataGridCardBody<TData extends object>({
   enableColumnVisibility: boolean
 }) {
   return (
-    <DataGridContainer border={false}>
-      <DataGrid
-        table={table}
-        recordCount={data.length}
-        onRowClick={onRowClick}
-        emptyMessage={emptyTitle}
-        tableLayout={{
-          dense,
-          stripped: true,
-          rowBorder: true,
-          headerSticky: true,
-          headerBackground: true,
-          headerBorder: true,
-          width: 'auto',
-          columnsVisibility: enableColumnVisibility,
-          columnsResizable: false,
-          columnsPinnable: false,
-          columnsMovable: false,
-          rowsDraggable: false,
-          rowsPinnable: false,
-        }}
-        tableClassNames={{
-          header: 'text-xs font-medium text-muted-foreground',
-        }}
-      >
+    <DataGrid
+      table={table}
+      recordCount={data.length}
+      onRowClick={onRowClick}
+      emptyMessage={emptyTitle}
+      tableLayout={{
+        dense,
+        stripped: true,
+        rowBorder: true,
+        headerSticky: true,
+        headerBackground: true,
+        headerBorder: true,
+        width: 'auto',
+        columnsVisibility: enableColumnVisibility,
+        columnsResizable: false,
+        columnsPinnable: false,
+        columnsMovable: false,
+        rowsDraggable: false,
+        rowsPinnable: false,
+      }}
+      tableClassNames={{
+        header: 'text-xs font-medium text-muted-foreground',
+      }}
+    >
+      <DataGridContainer border={false}>
         {virtualization ? (
-          <>
-            <DataGridScrollArea orientation="vertical" style={{ height }}>
-              <DataGridTableVirtual height={height} footerContent={footerContent} />
-            </DataGridScrollArea>
-            {showPagination ? <DataGridPaginationBar /> : null}
-          </>
+          <DataGridScrollArea orientation="vertical" style={{ height }}>
+            <DataGridTableVirtual height={height} footerContent={footerContent} />
+          </DataGridScrollArea>
         ) : (
-          <>
-            <DataGridTable footerContent={footerContent} />
-            {showPagination ? <DataGridPaginationBar /> : null}
-          </>
+          <DataGridTable footerContent={footerContent} />
         )}
-      </DataGrid>
-    </DataGridContainer>
+      </DataGridContainer>
+      {showPagination ? <DataGridPaginationBar /> : null}
+    </DataGrid>
   )
 }
 

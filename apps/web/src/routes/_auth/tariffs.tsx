@@ -340,9 +340,13 @@ function TariffsPage() {
                   <AlertDescription className="flex flex-col gap-1">
                     {tariffDiffs.slice(0, 5).map((d) => (
                       <span key={d.vpsId}>
-                        <Link to="/vps/$vpsId" params={{ vpsId: d.vpsId }} className="underline">
+                        <Button
+                          variant="link"
+                          className="h-auto p-0"
+                          render={<Link to="/vps/$vpsId" params={{ vpsId: d.vpsId }} />}
+                        >
                           {d.vpsLabel}
-                        </Link>
+                        </Button>
                         {' '}({d.tariffName}): {d.issues.join('; ')}
                       </span>
                     ))}
@@ -372,9 +376,13 @@ function TariffsPage() {
                 <AlertDescription className="flex flex-col gap-1">
                   {tariffDiffs.slice(0, 5).map((d) => (
                     <span key={d.vpsId}>
-                      <Link to="/vps/$vpsId" params={{ vpsId: d.vpsId }} className="underline">
+                      <Button
+                        variant="link"
+                        className="h-auto p-0"
+                        render={<Link to="/vps/$vpsId" params={{ vpsId: d.vpsId }} />}
+                      >
                         {d.vpsLabel}
-                      </Link>
+                      </Button>
                       {' '}({d.tariffName}): {d.issues.join('; ')}
                     </span>
                   ))}

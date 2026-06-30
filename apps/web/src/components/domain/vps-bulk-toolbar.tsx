@@ -44,6 +44,7 @@ export function VpsBulkToolbar({
       <div className="flex items-center gap-1">
         <SelectField
           placeholder="Проект…"
+          aria-label="Проект для массового назначения"
           value={projectValue}
           onValueChange={(v) => setProjectValue(v ?? '')}
           options={projectOptions.map((p) => ({ value: p, label: p }))}

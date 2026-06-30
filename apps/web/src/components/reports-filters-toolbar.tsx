@@ -129,6 +129,7 @@ export function ReportsFiltersToolbar({
           <SelectField
             triggerClassName="w-full sm:w-44"
             placeholder="Период"
+            aria-label="Период отчёта"
             value={filters.period}
             onValueChange={(v) =>
               onChange({ ...filters, period: (v as ReportsPeriod) ?? '12m' })

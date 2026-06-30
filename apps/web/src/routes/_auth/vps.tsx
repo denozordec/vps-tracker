@@ -29,6 +29,7 @@ import {
 } from '@/components/vps-filters'
 import { VpsFiltersToolbar } from '@/components/vps-filters-toolbar'
 import { HealthModeBanner } from '@/components/health-mode-banner'
+import { ProjectColorDot } from '@/components/project-color-dot'
 import { VpsBulkToolbar } from '@/components/domain/vps-bulk-toolbar'
 
 import type { Vps } from '@/types/entities'
@@ -189,7 +190,7 @@ function VpsPage() {
         value: name,
         label: name,
         leading: color ? (
-          <span className="size-2.5 shrink-0 rounded-full ring-1 ring-foreground/10" style={{ backgroundColor: color }} />
+          <ProjectColorDot color={color} className="ring-1 ring-foreground/10" />
         ) : undefined,
       }
     })
@@ -531,11 +532,20 @@ function VpsPage() {
       >
         {(snap) => {
           const filtersActive = hasActiveVpsFilters(filters)
-          const zeroResults = snap.vps.length > 0 && filteredVps.length === 0 && filtersActive
+          const zeroResults =
+            snap.vps.length > 0 && filteredVps.length === 0 && (filtersActive || Boolean(health))
+
+          const resetFilters = () => {
+            setFilters(buildDefaultVpsFilters())
+            if (health) {
+              void navigate({ to: '/vps', search: {} })
+            }
+          }
 
           if (zeroResults) {
             return (
               <div className="flex flex-col gap-4">
+                {health ? <HealthModeBanner health={health} exitTo="/vps" /> : null}
                 <VpsFiltersToolbar
                   filters={filters}
                   onChange={setFilters}
@@ -555,8 +565,8 @@ function VpsPage() {
                   title="Ничего не найдено"
                   description="По текущим фильтрам VPS не найдены"
                   action={
-                    <Button variant="outline" onClick={() => setFilters(buildDefaultVpsFilters())}>
-                      Сбросить фильтры
+                    <Button variant="outline" onClick={resetFilters}>
+                      {health ? 'Выйти из режима и сбросить фильтры' : 'Сбросить фильтры'}
                     </Button>
                   }
                 />

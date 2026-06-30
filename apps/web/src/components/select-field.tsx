@@ -23,6 +23,8 @@ interface SelectFieldProps extends Omit<SelectRootProps<string>, 'items' | 'valu
   size?: 'sm' | 'default'
   value?: string | null
   onValueChange?: (value: string | null) => void
+  invalid?: boolean
+  'aria-label'?: string
 }
 
 export function SelectField({
@@ -33,6 +35,8 @@ export function SelectField({
   size = 'default',
   value,
   onValueChange,
+  invalid,
+  'aria-label': ariaLabel,
   ...props
 }: SelectFieldProps) {
   const items = React.useMemo(
@@ -42,7 +46,13 @@ export function SelectField({
 
   return (
     <Select items={items} value={value} onValueChange={onValueChange} {...props}>
-      <SelectTrigger id={triggerId} size={size} className={cn('w-full', triggerClassName)}>
+      <SelectTrigger
+        id={triggerId}
+        size={size}
+        aria-label={ariaLabel}
+        aria-invalid={invalid || undefined}
+        className={cn('w-full', triggerClassName)}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

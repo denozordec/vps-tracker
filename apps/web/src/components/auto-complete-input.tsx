@@ -12,6 +12,7 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from '@/components/reui/autocomplete'
+import { TruncatedText } from '@/components/truncated-text'
 
 export interface AutoCompleteOption {
   value: string
@@ -114,7 +115,9 @@ export function AutoCompleteInput({
                 {item.leading ? (
                   <span className="relative z-1 size-4 shrink-0">{item.leading}</span>
                 ) : null}
-                <span className="relative z-1 min-w-0 flex-1 truncate">{item.label}</span>
+                <span className="relative z-1 min-w-0 flex-1">
+                  <TruncatedText>{item.label}</TruncatedText>
+                </span>
                 {isSelected ? (
                   <CheckIcon className="relative z-1 size-4 shrink-0 opacity-60" />
                 ) : null}

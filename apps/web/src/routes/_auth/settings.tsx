@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { DownloadIcon, UploadIcon } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -12,6 +12,17 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
 import { SectionCardsSkeleton } from '@/components/skeletons'
+import { EmptyState } from '@/components/empty-state'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { StatusBadge } from '@/components/status-badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@cfdm/ui/components/table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
@@ -31,6 +42,20 @@ export const Route = createFileRoute('/_auth/settings')({
 })
 
 const CURRENCIES = ['RUB', 'USD', 'EUR', 'UAH', 'KZT']
+
+const NOTIFICATION_STATUS_MAP: Record<string, string> = {
+  sent: 'ok',
+  failed: 'error',
+}
+
+const NOTIFICATION_STATUS_LABELS: Record<string, string> = {
+  sent: 'Отправлено',
+  failed: 'Ошибка',
+}
+
+function notificationStatusLabel(status: string): string {
+  return NOTIFICATION_STATUS_LABELS[status] ?? status
+}
 
 function settingsToFormValues(s: Settings): SettingsFormValues {
   return {
@@ -162,6 +187,50 @@ function SettingsPage() {
     queryFn: () => api.fetchNotificationLog(30),
   })
 
+  const importJsonMut = useMutation({
+    mutationFn: (text: string) => api.importBackupJson(JSON.parse(text)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+      toast.success('Импорт JSON выполнен')
+    },
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта'),
+  })
+
+  const importDbMut = useMutation({
+    mutationFn: (buffer: ArrayBuffer) => api.importBackupDatabase(buffer),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
+      toast.success('Импорт SQLite выполнен')
+    },
+    onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта'),
+  })
+
+  const pickJsonFile = useCallback(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'application/json,.json'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      const text = await file.text()
+      importJsonMut.mutate(text)
+    }
+    input.click()
+  }, [importJsonMut])
+
+  const pickDbFile = useCallback(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.db,application/octet-stream'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      const buffer = await file.arrayBuffer()
+      importDbMut.mutate(buffer)
+    }
+    input.click()
+  }, [importDbMut])
+
   const notificationRows = useMemo(
     () => notificationLog as NotificationLogRow[],
     [notificationLog],
@@ -209,54 +278,40 @@ function SettingsPage() {
         <DownloadIcon data-icon="inline-start" />
         SQLite
       </Button>
-      <Button
-        variant="outline"
-        onClick={() => {
-          const input = document.createElement('input')
-          input.type = 'file'
-          input.accept = 'application/json,.json'
-          input.onchange = async () => {
-            const file = input.files?.[0]
-            if (!file) return
-            try {
-              const text = await file.text()
-              await api.importBackupJson(JSON.parse(text))
-              void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
-              toast.success('Импорт JSON выполнен')
-            } catch (e) {
-              toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта')
-            }
-          }
-          input.click()
-        }}
-      >
-        <UploadIcon data-icon="inline-start" />
-        Импорт JSON
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() => {
-          const input = document.createElement('input')
-          input.type = 'file'
-          input.accept = '.db,application/octet-stream'
-          input.onchange = async () => {
-            const file = input.files?.[0]
-            if (!file) return
-            try {
-              const buffer = await file.arrayBuffer()
-              await api.importBackupDatabase(buffer)
-              void queryClient.invalidateQueries({ queryKey: ['snapshot'] })
-              toast.success('Импорт SQLite выполнен')
-            } catch (e) {
-              toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта')
-            }
-          }
-          input.click()
-        }}
-      >
-        <UploadIcon data-icon="inline-start" />
-        Импорт SQLite
-      </Button>
+      <ConfirmDialog
+        title="Импортировать JSON?"
+        description="Текущие данные будут перезаписаны содержимым файла резервной копии."
+        confirmLabel="Выбрать файл"
+        destructive
+        onConfirm={pickJsonFile}
+        trigger={
+          <LoadingButton
+            type="button"
+            variant="outline"
+            loading={importJsonMut.isPending}
+          >
+            <UploadIcon data-icon="inline-start" />
+            Импорт JSON
+          </LoadingButton>
+        }
+      />
+      <ConfirmDialog
+        title="Импортировать SQLite?"
+        description="Текущая база данных будет полностью заменена загруженным файлом .db."
+        confirmLabel="Выбрать файл"
+        destructive
+        onConfirm={pickDbFile}
+        trigger={
+          <LoadingButton
+            type="button"
+            variant="outline"
+            loading={importDbMut.isPending}
+          >
+            <UploadIcon data-icon="inline-start" />
+            Импорт SQLite
+          </LoadingButton>
+        }
+      />
     </div>
   )
 
@@ -273,7 +328,7 @@ function SettingsPage() {
         isError={isError}
         error={error}
         onRetry={() => refetch()}
-        skeleton={<SectionCardsSkeleton count={1} />}
+        skeleton={<SectionCardsSkeleton count={3} />}
       >
         {() => (
           <form
@@ -478,42 +533,45 @@ function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                   {notificationRows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Записей пока нет</p>
+                    <EmptyState title="Записей пока нет" />
                   ) : (
-                    <div className="overflow-x-auto rounded-md border">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50 text-left">
-                            <th className="px-3 py-2 font-medium">Время</th>
-                            <th className="px-3 py-2 font-medium">Событие</th>
-                            <th className="px-3 py-2 font-medium">Канал</th>
-                            <th className="px-3 py-2 font-medium">Статус</th>
-                            <th className="px-3 py-2 font-medium">Ошибка</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {notificationRows.map((row) => {
-                            const errorText =
-                              row.status === 'failed' && row.payload?.error != null
-                                ? String(row.payload.error)
-                                : ''
-                            return (
-                            <tr key={row.id} className="border-b last:border-0">
-                              <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Время</TableHead>
+                          <TableHead>Событие</TableHead>
+                          <TableHead>Канал</TableHead>
+                          <TableHead>Статус</TableHead>
+                          <TableHead>Ошибка</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {notificationRows.map((row) => {
+                          const errorText =
+                            row.status === 'failed' && row.payload?.error != null
+                              ? String(row.payload.error)
+                              : ''
+                          return (
+                            <TableRow key={row.id}>
+                              <TableCell className="whitespace-nowrap text-muted-foreground">
                                 {new Date(row.createdAt).toLocaleString('ru-RU')}
-                              </td>
-                              <td className="px-3 py-2">{row.event}</td>
-                              <td className="px-3 py-2">{row.channel}</td>
-                              <td className="px-3 py-2">{row.status}</td>
-                              <td className="max-w-xs px-3 py-2 text-xs text-destructive break-words">
+                              </TableCell>
+                              <TableCell>{row.event}</TableCell>
+                              <TableCell>{row.channel}</TableCell>
+                              <TableCell>
+                                <StatusBadge
+                                  status={NOTIFICATION_STATUS_MAP[row.status] ?? row.status}
+                                  label={notificationStatusLabel(row.status)}
+                                />
+                              </TableCell>
+                              <TableCell className="max-w-xs break-words text-xs text-destructive">
                                 {errorText || '—'}
-                              </td>
-                            </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
                   )}
                 </CardContent>
               </Card>

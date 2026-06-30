@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
 import { SectionCards } from '@/components/section-cards'
 import { SectionCardsSkeleton } from '@/components/skeletons'
+import { Skeleton } from '@cfdm/ui/components/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Badge } from '@cfdm/ui/components/badge'
 import { Button } from '@cfdm/ui/components/button'
@@ -110,6 +111,7 @@ function RenewalsPage() {
         actions={
           <SelectField
             value={horizon}
+            aria-label="Горизонт продлений"
             onValueChange={(v) => setHorizon((v ?? '30') as Horizon)}
             options={[
               { value: '7', label: '7 дней' },
@@ -127,7 +129,16 @@ function RenewalsPage() {
         isError={isError}
         error={error}
         onRetry={() => refetch()}
-        skeleton={<SectionCardsSkeleton count={3} />}
+        skeleton={
+          <div className="flex flex-col gap-4">
+            <SectionCardsSkeleton count={3} />
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
+          </div>
+        }
         empty={items.length === 0}
         emptyTitle="Нет продлений в выбранном периоде"
         emptyDescription="Активные VPS с расчётной датой оплаты не найдены"

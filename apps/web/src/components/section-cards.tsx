@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from 'react'
 import { Card, CardContent } from '@cfdm/ui/components/card'
 import { cn } from '@cfdm/ui/lib/utils'
+import { TruncatedText } from '@/components/truncated-text'
 
 export interface SectionCardItem {
   label: ReactNode
@@ -15,7 +16,7 @@ export interface SectionCardItem {
 
 const VARIANT_CLASS: Record<NonNullable<SectionCardItem['variant']>, string> = {
   default: '',
-  warning: 'border-amber-500/50',
+  warning: 'border-warning/50',
   destructive: 'border-destructive/50',
 }
 
@@ -42,13 +43,21 @@ export function SectionCards({ items, className }: { items: SectionCardItem[]; c
             ) : null}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs text-muted-foreground">{item.label}</span>
+                {typeof item.label === 'string' ? (
+                  <TruncatedText className="text-xs text-muted-foreground">{item.label}</TruncatedText>
+                ) : (
+                  <span className="truncate text-xs text-muted-foreground">{item.label}</span>
+                )}
                 {item.badge ? <span className="shrink-0">{item.badge}</span> : null}
               </div>
               <div className="flex min-w-0 items-baseline gap-1.5">
                 <span className="text-lg font-semibold tabular-nums">{item.value}</span>
                 {item.hint ? (
-                  <span className="truncate text-xs text-muted-foreground">· {item.hint}</span>
+                  typeof item.hint === 'string' ? (
+                    <TruncatedText className="text-xs text-muted-foreground">· {item.hint}</TruncatedText>
+                  ) : (
+                    <span className="truncate text-xs text-muted-foreground">· {item.hint}</span>
+                  )
                 ) : null}
               </div>
             </div>

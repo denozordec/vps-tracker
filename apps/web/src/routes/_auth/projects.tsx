@@ -27,6 +27,7 @@ import {
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { EmptyState } from '@/components/empty-state'
+import { ProjectColorDot } from '@/components/project-color-dot'
 import { ProjectEditSheet, projectFormDefaults } from '@/components/domain/project-edit-sheet'
 import type { ProjectFormValues } from '@/lib/schemas'
 import { formatCurrency, normalizeRatesPayload } from '@/lib/format'
@@ -133,9 +134,7 @@ function ProjectsPage() {
       icon: FolderKanbanIcon,
       cell: (row) => (
         <div className="flex items-center gap-2">
-          {row.color ? (
-            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />
-          ) : null}
+          <ProjectColorDot color={row.color} />
           <Button
             variant="link"
             className="h-auto p-0 font-medium"

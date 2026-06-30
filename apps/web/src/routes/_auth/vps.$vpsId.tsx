@@ -14,6 +14,8 @@ import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
+import { StatusBadge } from '@/components/status-badge'
+import { Skeleton } from '@cfdm/ui/components/skeleton'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
@@ -116,9 +118,11 @@ function VpsDetailPage() {
         title={vps ? (vps.ip || vps.dns || 'VPS') : 'VPS'}
         description={account ? accountSelectLabel(account, providerById) : undefined}
         actions={
-          <Button variant="outline" render={<Link to="/vps" search={{ edit: vpsId }} />}>
-            Редактировать
-          </Button>
+          vps ? (
+            <Button variant="outline" render={<Link to="/vps" search={{ edit: vpsId }} />}>
+              Редактировать
+            </Button>
+          ) : undefined
         }
       />
 
@@ -133,6 +137,15 @@ function VpsDetailPage() {
         isError={isError}
         error={error}
         onRetry={() => refetch()}
+        skeleton={
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-9 w-48" />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
+          </div>
+        }
         empty={!isLoading && !vps}
         emptyTitle="VPS не найден"
         emptyDescription="Запись могла быть удалена"
@@ -151,9 +164,7 @@ function VpsDetailPage() {
 
             <TabsContent value="overview" className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-2">
-                <Badge variant={row.status === 'active' ? 'default' : 'secondary'}>
-                  {vpsStatusLabel(row.status)}
-                </Badge>
+                <StatusBadge status={row.status} label={vpsStatusLabel(row.status)} />
                 {row.project ? <Badge variant="outline">{row.project}</Badge> : null}
                 {row.environment ? <Badge variant="outline">{row.environment}</Badge> : null}
               </div>

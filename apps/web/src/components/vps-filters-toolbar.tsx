@@ -13,6 +13,7 @@ import {
 import { PlusIcon } from 'lucide-react'
 
 import { ListFiltersBar, type FilterChip } from '@/components/list-filters-bar'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import type { DataGridColumnVisibilityOption } from '@/components/data-grid-card'
 import type { VisibilityState } from '@tanstack/react-table'
 
@@ -652,14 +653,22 @@ export function VpsFiltersToolbar({
                           >
                             {p.name}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => deletePreset(p.name)}
-                            aria-label="Удалить пресет"
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <Trash2Icon className="size-3.5" />
-                          </button>
+                          <ConfirmDialog
+                            title="Удалить пресет?"
+                            description={`Пресет «${p.name}» будет удалён без возможности восстановления.`}
+                            confirmLabel="Удалить"
+                            destructive
+                            onConfirm={() => deletePreset(p.name)}
+                            trigger={
+                              <button
+                                type="button"
+                                aria-label={`Удалить пресет ${p.name}`}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Trash2Icon className="size-3.5" />
+                              </button>
+                            }
+                          />
                         </div>
                       ))}
                     </div>

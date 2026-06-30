@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import {
@@ -91,6 +91,7 @@ function buildSavePayload(r: ProviderAccountFormValues) {
 
 function AccountsPage() {
   const { health } = Route.useSearch()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [open, setOpen] = useState(false)
@@ -451,8 +452,16 @@ function AccountsPage() {
             }
             emptyAction={
               health || hasActiveAccountFilters(filters) ? (
-                <Button variant="outline" onClick={() => setFilters(buildDefaultAccountFilters())}>
-                  Сбросить фильтры
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilters(buildDefaultAccountFilters())
+                    if (health) {
+                      void navigate({ to: '/accounts', search: {} })
+                    }
+                  }}
+                >
+                  {health ? 'Выйти из режима и сбросить фильтры' : 'Сбросить фильтры'}
                 </Button>
               ) : undefined
             }

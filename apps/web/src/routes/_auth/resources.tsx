@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CpuIcon, MemoryStickIcon, HardDriveIcon } from 'lucide-react'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
+import { EmptyState } from '@/components/empty-state'
 import { AnalyticsPage } from '@/components/analytics-page'
 import { SectionCards } from '@/components/section-cards'
 import { Button } from '@cfdm/ui/components/button'
@@ -102,7 +103,10 @@ function ResourcesPage() {
                 <CardDescription>Только активные VPS</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={RESOURCE_CONFIG} className="h-80 w-full">
+                {chartData.length === 0 ? (
+                  <EmptyState title="Нет данных для графика" />
+                ) : (
+                <ChartContainer config={RESOURCE_CONFIG} className="h-80 w-full" aria-label="Ресурсы по хостерам">
                   <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" />
                     <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
@@ -113,6 +117,7 @@ function ResourcesPage() {
                     <Bar dataKey="disk" fill="var(--color-disk)" radius={4} />
                   </BarChart>
                 </ChartContainer>
+                )}
               </CardContent>
             </Card>
           </>

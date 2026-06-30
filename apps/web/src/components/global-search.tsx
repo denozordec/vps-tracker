@@ -22,6 +22,7 @@ import {
 } from '@cfdm/ui/components/command'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { providerByIdMap } from '@/lib/billmanager'
+import { TruncatedText } from '@/components/truncated-text'
 
 interface GlobalSearchProps {
   open: boolean
@@ -73,7 +74,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                 onSelect={() => go('/vps/$vpsId', { vpsId: v.id })}
               >
                 <ServerIcon />
-                <span className="truncate">{v.ip || v.dns || v.id}</span>
+                <TruncatedText>{v.ip || v.dns || v.id}</TruncatedText>
                 {v.project ? (
                   <span className="text-muted-foreground text-xs">{v.project}</span>
                 ) : null}
@@ -89,7 +90,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                 onSelect={() => go('/accounts')}
               >
                 <WalletIcon />
-                <span className="truncate">{a.name}</span>
+                <TruncatedText>{a.name}</TruncatedText>
                 {providerById.get(a.providerId)?.name ? (
                   <span className="text-muted-foreground text-xs">
                     {providerById.get(a.providerId)?.name}
@@ -109,7 +110,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                   onSelect={() => go('/vps', { project: row.name })}
                 >
                   <FolderKanbanIcon />
-                  <span className="truncate">{row.name}</span>
+                  <TruncatedText>{row.name}</TruncatedText>
                 </CommandItem>
               )
             })}
@@ -119,7 +120,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             {(snapshot?.providers ?? []).map((p) => (
               <CommandItem key={p.id} value={p.name} onSelect={() => go('/providers')}>
                 <Building2Icon />
-                <span className="truncate">{p.name}</span>
+                <TruncatedText>{p.name}</TruncatedText>
               </CommandItem>
             ))}
           </CommandGroup>

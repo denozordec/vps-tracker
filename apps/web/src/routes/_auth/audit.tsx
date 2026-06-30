@@ -10,6 +10,21 @@ import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
+import { TableSkeleton } from '@/components/skeletons'
+
+const AUDIT_ENTITY_LABELS: Record<string, string> = {
+  vps: 'VPS',
+  payment: 'Платёж',
+  providerAccount: 'Аккаунт',
+  provider: 'Хостер',
+  settings: 'Настройки',
+  balanceLedger: 'Баланс',
+  serverProject: 'Проект',
+}
+
+function auditEntityLabel(entity: string): string {
+  return AUDIT_ENTITY_LABELS[entity] ?? entity
+}
 
 interface AuditRow {
   id: string
@@ -51,7 +66,7 @@ function AuditPage() {
     {
       key: 'entity',
       header: 'Сущность',
-      cell: (r) => <Badge variant="outline">{r.entity}</Badge>,
+      cell: (r) => <Badge variant="outline">{auditEntityLabel(r.entity)}</Badge>,
     },
     {
       key: 'action',
@@ -91,6 +106,7 @@ function AuditPage() {
         isError={isError}
         error={error}
         onRetry={() => refetch()}
+        skeleton={<TableSkeleton />}
         empty={!data?.length}
         emptyTitle="Записей нет"
         emptyDescription="Изменения VPS появятся здесь после CRUD-операций"

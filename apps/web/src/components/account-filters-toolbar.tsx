@@ -72,6 +72,7 @@ export function AccountFiltersToolbar({
           <SelectField
             triggerClassName="w-full sm:w-48"
             placeholder="Все хостеры"
+            aria-label="Фильтр по хостеру"
             value={filters.providerIds[0] ?? null}
             onValueChange={(v) => onChange({ ...filters, providerIds: v ? [v] : [] })}
             options={providers.map((p) => ({ value: p.id, label: p.name }))}
@@ -79,6 +80,7 @@ export function AccountFiltersToolbar({
           <SelectField
             triggerClassName="w-full sm:w-40"
             placeholder="Любой биллинг"
+            aria-label="Фильтр по режиму биллинга"
             value={filters.billingMode || null}
             onValueChange={(v) =>
               onChange({

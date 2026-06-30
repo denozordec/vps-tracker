@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { cn } from '@cfdm/ui/lib/utils'
+import { TruncatedText } from '@/components/truncated-text'
 
 export function dataGridCellStack(
   primary: ReactNode,
@@ -9,9 +10,17 @@ export function dataGridCellStack(
 ) {
   return (
     <div className={cn('flex min-w-0 flex-col leading-tight', className)}>
-      <span className="truncate font-medium">{primary}</span>
+      {typeof primary === 'string' || typeof primary === 'number' ? (
+        <TruncatedText className="font-medium">{primary}</TruncatedText>
+      ) : (
+        <span className="truncate font-medium">{primary}</span>
+      )}
       {secondary ? (
-        <span className="max-w-[14rem] truncate text-xs text-muted-foreground">{secondary}</span>
+        typeof secondary === 'string' || typeof secondary === 'number' ? (
+          <TruncatedText className="max-w-[14rem] text-xs text-muted-foreground">{secondary}</TruncatedText>
+        ) : (
+          <span className="max-w-[14rem] truncate text-xs text-muted-foreground">{secondary}</span>
+        )
       ) : null}
     </div>
   )

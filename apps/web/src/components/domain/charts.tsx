@@ -91,7 +91,7 @@ export function MonthlyExpenseChart({
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных для графика" />
         ) : (
-        <ChartContainer config={EXPENSE_CONFIG} className="h-72 w-full">
+        <ChartContainer config={EXPENSE_CONFIG} className="h-72 w-full" aria-label="График расходов по VPS">
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
@@ -155,7 +155,7 @@ export function PaymentsPieChart({
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных о платежах" />
         ) : (
-        <ChartContainer config={chartConfig} className="mx-auto h-72 w-full">
+        <ChartContainer config={chartConfig} className="mx-auto h-72 w-full" aria-label="График платежей по типам">
           <PieChart>
             <RechartsTooltip
               content={
@@ -215,7 +215,7 @@ export function MonthlyTrendChart({
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных за выбранный период" />
         ) : (
-        <ChartContainer config={trendConfig} className="h-72 w-full">
+        <ChartContainer config={trendConfig} className="h-72 w-full" aria-label="График тренда расходов">
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
@@ -281,7 +281,7 @@ export function ProjectExpenseChart({
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных для графика" />
         ) : (
-          <ChartContainer config={chartConfig} className="h-72 w-full">
+          <ChartContainer config={chartConfig} className="h-72 w-full" aria-label="График расходов по проектам">
             <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />

@@ -48,6 +48,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { GlobalSearch, GlobalSearchTrigger, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
 import { formatRelativeSyncTime } from '@/lib/sync-format'
+import { TruncatedText } from '@/components/truncated-text'
 
 interface NavItem {
   to: string
@@ -200,9 +201,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton render={<Link to="/settings" />} tooltip="Настройки">
                 <Settings />
-                <span className="truncate text-xs text-muted-foreground">
+                <TruncatedText
+                  className="text-xs text-muted-foreground"
+                  tooltip={`Синк: ${formatRelativeSyncTime(stats?.lastGlobalSyncAt)}`}
+                >
                   Синк: {formatRelativeSyncTime(stats?.lastGlobalSyncAt)}
-                </span>
+                </TruncatedText>
                 {stats?.staleSyncAccountCount ? (
                   <Badge variant="outline" className="ml-auto text-xs">
                     <RefreshCwIcon className="size-3" />

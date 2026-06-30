@@ -26,16 +26,8 @@ import { ProjectEditSheet, projectFormDefaults } from '@/components/domain/proje
 import type { ProjectFormValues } from '@/lib/schemas'
 import { Button } from '@cfdm/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@cfdm/ui/components/alert-dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import {
   formatCurrency,
   normalizeRatesPayload,
@@ -72,7 +64,6 @@ function ProjectDetailPage() {
   const { data: rawRates } = useQuery(ratesQueryOptions(settings?.ratesUrl))
   const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
   const [editOpen, setEditOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const project = snapshot ? findProject(snapshot, projectId) : undefined
   const projectVps = useMemo(
@@ -218,19 +209,31 @@ function ProjectDetailPage() {
                 <PencilIcon data-icon="inline-start" />
                 Изменить
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (projectVps.length > 0) {
+              {projectVps.length > 0 ? (
+                <Button
+                  variant="outline"
+                  onClick={() =>
                     toast.error(`Нельзя удалить: к проекту привязано ${projectVps.length} VPS`)
-                    return
                   }
-                  setDeleteOpen(true)
-                }}
-              >
-                <Trash2Icon data-icon="inline-start" />
-                Удалить
-              </Button>
+                >
+                  <Trash2Icon data-icon="inline-start" />
+                  Удалить
+                </Button>
+              ) : (
+                <ConfirmDialog
+                  title="Удалить проект?"
+                  description={`«${project.name}» будет удалён без возможности восстановления.`}
+                  confirmLabel="Удалить"
+                  destructive
+                  onConfirm={() => delMut.mutate()}
+                  trigger={
+                    <Button variant="outline" disabled={delMut.isPending}>
+                      <Trash2Icon data-icon="inline-start" />
+                      Удалить
+                    </Button>
+                  }
+                />
+              )}
             </div>
           ) : null
         }
@@ -241,6 +244,12 @@ function ProjectDetailPage() {
         isError={isError}
         error={error}
         onRetry={() => refetch()}
+        skeleton={
+          <div className="flex flex-col gap-4">
+            <SectionCardsSkeleton count={3} />
+            <TableSkeleton />
+          </div>
+        }
       >
         {() =>
           !project ? (
@@ -313,26 +322,6 @@ function ProjectDetailPage() {
                 onSubmit={(values) => saveMut.mutate(values)}
                 submitting={saveMut.isPending}
               />
-              <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Удалить проект?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      «{project.name}» будет удалён без возможности восстановления.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Отмена</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={() => delMut.mutate()}
-                      disabled={delMut.isPending}
-                    >
-                      Удалить
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
           )
         }
