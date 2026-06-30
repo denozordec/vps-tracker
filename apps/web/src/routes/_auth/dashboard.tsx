@@ -298,6 +298,9 @@ function DashboardPage() {
                 />
                 <DashboardExpensesChart
                   payments={snap.payments}
+                  balanceLedger={snap.balanceLedger ?? []}
+                  vps={snap.vps}
+                  providers={snap.providers}
                   settings={snap.settings}
                   ratesData={ratesData}
                   className="h-full"

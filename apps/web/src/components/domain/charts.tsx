@@ -30,11 +30,13 @@ import { useMemo, useState } from 'react'
 import { SelectField } from '@/components/select-field'
 import {
   aggregatePaymentsByMonthYear,
+  aggregateDashboardExpensesByMonthYear,
   availablePaymentYears,
+  availableExpenseYears,
   type PaymentChartFilter,
 } from '@/lib/chart-analytics'
 
-import type { Vps, Provider, Payment, Settings, RatesData, ServerProject } from '@/types/entities'
+import type { Vps, Provider, Payment, Settings, RatesData, ServerProject, BalanceLedgerRow } from '@/types/entities'
 import {
   canonicalPaymentType,
   convertCurrency,
@@ -216,9 +218,10 @@ function DashboardMonthlyBarChart({
 }) {
   const baseCurrency = (settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
   const years = useMemo(() => availablePaymentYears(payments), [payments])
-  const [year, setYear] = useState(() => years[0] ?? new Date().getFullYear())
+  const currentYear = new Date().getFullYear()
+  const [year, setYear] = useState(currentYear)
 
-  const effectiveYear = years.includes(year) ? year : (years[0] ?? year)
+  const effectiveYear = years.includes(year) ? year : currentYear
 
   const data = useMemo(
     () => aggregatePaymentsByMonthYear(payments, effectiveYear, settings, ratesData, paymentFilter),
@@ -302,20 +305,106 @@ export function DashboardPaymentsChart(props: {
   )
 }
 
-export function DashboardExpensesChart(props: {
+export function DashboardExpensesChart({
+  payments,
+  balanceLedger,
+  vps,
+  providers,
+  settings,
+  ratesData,
+  className,
+}: {
   payments: Payment[]
+  balanceLedger: BalanceLedgerRow[]
+  vps: Vps[]
+  providers: Provider[]
   settings: Settings[]
   ratesData: RatesData | null
   className?: string
 }) {
+  const baseCurrency = (settings[0]?.baseCurrency ?? 'RUB').toUpperCase()
+  const years = useMemo(
+    () => availableExpenseYears(payments, balanceLedger),
+    [payments, balanceLedger],
+  )
+  const currentYear = new Date().getFullYear()
+  const [year, setYear] = useState(currentYear)
+
+  const effectiveYear = years.includes(year) ? year : currentYear
+
+  const { rows: data, mode } = useMemo(
+    () =>
+      aggregateDashboardExpensesByMonthYear(
+        payments,
+        balanceLedger,
+        vps,
+        providers,
+        effectiveYear,
+        settings,
+        ratesData,
+      ),
+    [payments, balanceLedger, vps, providers, effectiveYear, settings, ratesData],
+  )
+
+  const chartConfig: ChartConfig = useMemo(
+    () => ({
+      amount: { label: 'Расходы', color: 'var(--chart-1)' },
+    }),
+    [],
+  )
+
+  const hasData = data.some((row) => row.amount > 0)
+  const description =
+    mode === 'estimate' ? 'Оценка по активным VPS за текущий год' : 'Последние 12 мес'
+
   return (
-    <DashboardMonthlyBarChart
-      {...props}
-      title="Расходы"
-      chartColor="var(--chart-1)"
-      paymentFilter="expense"
-      ariaLabel="График расходов по месяцам"
-    />
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>Расходы</CardTitle>
+        <CardDescription>{description}</CardDescription>
+        <CardAction>
+          <div className="flex flex-wrap items-center gap-2">
+            <SelectField
+              size="sm"
+              triggerClassName="w-[130px]"
+              aria-label="Группировка"
+              value="month"
+              options={[{ value: 'month', label: 'По месяцам' }]}
+            />
+            <SelectField
+              size="sm"
+              triggerClassName="w-[100px]"
+              aria-label="Год"
+              value={String(effectiveYear)}
+              onValueChange={(v) => {
+                if (v) setYear(Number(v))
+              }}
+              options={years.map((y) => ({ value: String(y), label: String(y) }))}
+            />
+          </div>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {!hasData ? (
+          <ChartEmpty message="Нет данных за выбранный период" />
+        ) : (
+          <ChartContainer config={chartConfig} className="h-72 w-full" aria-label="График расходов по месяцам">
+            <BarChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis tickLine={false} axisLine={false} width={48} />
+              <RechartsTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent formatter={(v) => formatCurrency(Number(v), baseCurrency)} />
+                }
+              />
+              <Bar dataKey="amount" fill="var(--color-amount)" radius={4} />
+            </BarChart>
+          </ChartContainer>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
