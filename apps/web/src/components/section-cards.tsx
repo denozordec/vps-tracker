@@ -26,7 +26,14 @@ function sectionGridClass(count: number): string {
   if (count === 3) return 'sm:grid-cols-2 lg:grid-cols-3'
   if (count === 4) return 'sm:grid-cols-2 lg:grid-cols-4'
   if (count === 5) return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+  if (count === 6) return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
   return 'sm:grid-cols-2 lg:grid-cols-3'
+}
+
+const VALUE_VARIANT_CLASS: Record<NonNullable<SectionCardItem['variant']>, string> = {
+  default: '',
+  warning: 'text-warning-foreground',
+  destructive: 'text-destructive',
 }
 
 export function SectionCards({ items, className }: { items: SectionCardItem[]; className?: string }) {
@@ -51,7 +58,14 @@ export function SectionCards({ items, className }: { items: SectionCardItem[]; c
                 {item.badge ? <span className="shrink-0">{item.badge}</span> : null}
               </div>
               <div className="flex min-w-0 items-baseline gap-1.5">
-                <span className="text-lg font-semibold tabular-nums">{item.value}</span>
+                <span
+                  className={cn(
+                    'flex items-center gap-1 text-lg font-semibold tabular-nums',
+                    VALUE_VARIANT_CLASS[item.variant ?? 'default'],
+                  )}
+                >
+                  {item.value}
+                </span>
                 {item.hint ? (
                   typeof item.hint === 'string' ? (
                     <TruncatedText className="text-xs text-muted-foreground">· {item.hint}</TruncatedText>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
 import {
   ServerIcon,
   AlertTriangleIcon,
@@ -11,8 +12,6 @@ import {
   FolderKanbanIcon,
   CoinsIcon,
   ClockIcon,
-  RefreshCwIcon,
-  BarChart3Icon,
   DownloadIcon,
 } from 'lucide-react'
 
@@ -28,7 +27,6 @@ import { dataGridCellStack } from '@/components/data-grid-cells'
 import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { cn } from '@cfdm/ui/lib/utils'
@@ -37,7 +35,12 @@ import { computeInventoryHealth } from '@/lib/inventory-health'
 import { buildAtRiskAccounts, type AtRiskAccount } from '@/lib/account-health'
 import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel } from '@/lib/format'
 import { exportActiveVpsCsv } from '@/lib/export-csv'
-import { MonthlyTrendChart, MonthlyExpenseChart } from '@/components/domain/charts'
+import {
+  ChartsGrid,
+  DashboardPaymentsChart,
+  DashboardExpensesChart,
+} from '@/components/domain/charts'
+import { DashboardInventoryAlert } from '@/components/domain/dashboard-inventory-alert'
 
 import type { Vps } from '@/types/entities'
 
@@ -57,6 +60,8 @@ type InventoryIssue = { key: string; title: string; count: number; to: string; h
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState('issues')
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const { data: stats, isLoading: statsLoading } = useQuery(dashboardStatsQueryOptions())
   const settings = snapshot?.settings?.[0]
@@ -68,18 +73,6 @@ function DashboardPage() {
       <PageHeader
         title="Дашборд"
         description="Сводка по VPS, балансам и здоровью инвентаря"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" render={<Link to="/reports" />}>
-              <BarChart3Icon data-icon="inline-start" />
-              Отчёты
-            </Button>
-            <Button variant="outline" render={<Link to="/accounts" />}>
-              <RefreshCwIcon data-icon="inline-start" />
-              Синхронизация
-            </Button>
-          </div>
-        }
       />
 
       <QueryState
@@ -202,8 +195,20 @@ function DashboardPage() {
             },
           ]
 
+          const activeCount = stats?.activeVpsCount ?? activeVps.length
+          const totalCount = stats?.totalVpsCount ?? snap.vps.length
+          const expiringCount = stats?.expiringWithin7Days ?? 0
+          const issuesCount = issues.length
+
+          const handleGoToIssues = () => {
+            setActiveTab('issues')
+            tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+
           return (
             <div className="flex flex-col gap-4 md:gap-6">
+              <DashboardInventoryAlert issuesCount={issuesCount} onGoToIssues={handleGoToIssues} />
+
               {statsLoading ? (
                 <SectionCardsSkeleton count={6} />
               ) : (
@@ -211,13 +216,12 @@ function DashboardPage() {
                 items={[
                   {
                     label: 'Активные VPS',
-                    value: stats?.activeVpsCount ?? activeVps.length,
+                    value: `${activeCount} из ${totalCount}`,
                     icon: <ServerIcon className="size-4" />,
-                    hint: `всего ${stats?.totalVpsCount ?? snap.vps.length}`,
                     onClick: () => navigate({ to: '/vps' }),
                   },
                   {
-                    label: 'Расход/мес',
+                    label: 'Расход в месяц',
                     value: formatInBaseCurrency(
                       stats?.monthlyBurnEstimate ?? 0,
                       baseCur,
@@ -239,7 +243,7 @@ function DashboardPage() {
                     onClick: () => navigate({ to: '/accounts' }),
                   },
                   {
-                    label: 'Runway (мин.)',
+                    label: 'Runway',
                     value: stats?.minRunwayDays != null ? `${stats.minRunwayDays} дн` : '—',
                     icon: <ClockIcon className="size-4" />,
                     variant: stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? 'warning' : 'default',
@@ -253,55 +257,59 @@ function DashboardPage() {
                   },
                   {
                     label: 'Истекает 7 дн',
-                    value: stats?.expiringWithin7Days ?? 0,
+                    value:
+                      expiringCount > 0 ? (
+                        <span className="inline-flex items-center gap-1">
+                          {expiringCount}
+                          <AlertTriangleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        expiringCount
+                      ),
                     icon: <AlertTriangleIcon className="size-4" />,
-                    variant: (stats?.expiringWithin7Days ?? 0) > 0 ? 'warning' : 'default',
-                    badge:
-                      (stats?.expiringWithin7Days ?? 0) > 0 ? (
-                        <Badge variant="outline" className="text-xs">
-                          внимание
-                        </Badge>
-                      ) : undefined,
+                    variant: expiringCount > 0 ? 'warning' : 'default',
                     onClick: () => navigate({ to: '/vps', search: { health: 'expiring-soon' } }),
                   },
                   {
                     label: 'Проблемы',
-                    value: issues.length,
+                    value:
+                      issuesCount > 0 ? (
+                        <span className="inline-flex items-center gap-1">
+                          {issuesCount}
+                          <AlertTriangleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        issuesCount
+                      ),
                     icon: <HashIcon className="size-4" />,
-                    variant: issues.length > 0 ? 'destructive' : 'default',
+                    variant: issuesCount > 0 ? 'destructive' : 'default',
+                    onClick: handleGoToIssues,
                   },
                 ]}
               />
               )}
 
-              {issues.length > 0 ? (
-                <Alert variant="destructive">
-                  <AlertTriangleIcon />
-                  <AlertTitle>Требует внимания</AlertTitle>
-                  <AlertDescription>
-                    Обнаружено {issues.length} категорий проблем в инвентаре. Проверьте вкладку «Проблемы».
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <MonthlyTrendChart
+              <ChartsGrid>
+                <DashboardPaymentsChart
                   payments={snap.payments}
                   settings={snap.settings}
                   ratesData={ratesData}
                   className="h-full"
                 />
-                <MonthlyExpenseChart
-                  vps={snap.vps}
-                  providers={snap.providers}
-                  providerAccounts={snap.providerAccounts}
+                <DashboardExpensesChart
+                  payments={snap.payments}
                   settings={snap.settings}
                   ratesData={ratesData}
                   className="h-full"
                 />
-              </div>
+              </ChartsGrid>
 
-              <Tabs defaultValue="issues" className="flex w-full flex-col gap-4">
+              <div ref={tabsRef}>
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="flex w-full flex-col gap-4"
+              >
                 <TabsList variant="line" className="mb-0 h-auto w-fit gap-1 border-b border-border p-0">
                   <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                     Проблемы
@@ -360,6 +368,7 @@ function DashboardPage() {
                   />
                 </TabsContent>
               </Tabs>
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" render={<Link to="/resources" />}>
