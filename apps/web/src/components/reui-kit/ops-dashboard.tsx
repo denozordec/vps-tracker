@@ -32,7 +32,7 @@ function OpsDashboardSkeleton() {
         <Skeleton className="mt-2 h-4 w-80 max-w-full" />
       </header>
       <KpiStatGrid cards={[]} isLoading skeletonCount={4} />
-      <div className="grid w-full gap-2">
+      <div className="grid w-full gap-2 lg:grid-cols-2">
         <Skeleton className="h-64 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
