@@ -17,7 +17,7 @@ Ops / list / dashboard / detail / settings — только **Frame**, не shad
 
 | Зона | Block | Preview |
 |------|-------|---------|
-| Shell | `app-shell-12` (+ cmdk/monitor где нужно) | https://reui.io/preview/base/app-shell-12 |
+| Shell | `app-shell-12` (+ cmdk/monitor где нужно) | https://reui.io/preview/base/app-shell-12 · https://reui.io/preview/base/app-shell-7 |
 | KPI | horizontal compact hybrid (icon left + label/Badge + value ± variant; EvoBGP visual) | https://reui.io/preview/base/stats-12 |
 | Dashboard | `dashboard-1` | https://reui.io/preview/base/dashboard-1 |
 | Lists | `data-grid-filtering-2` | https://reui.io/preview/base/data-grid-filtering-2 |
@@ -47,9 +47,28 @@ Ops / list / dashboard / detail / settings — только **Frame**, не shad
 
 Gating: DB preference `showQuickActions` / `show_quick_actions` / `ui_show_quick_actions` (default `true`).
 
+## Shared App Shell chrome
+
+Эталон: CFDM + ReUI [app-shell-12](https://reui.io/preview/base/app-shell-12) · monitor/switchers [app-shell-7](https://reui.io/preview/base/app-shell-7).
+
+При переключении между vps-tracker / CFDM / EvoBGP меняются **только** sidebar nav и `main` content. ClassNames chrome идентичны.
+
+| Токен / зона | Значение |
+|--------------|----------|
+| `--sidebar-width` | `240px` |
+| Sidebar accent | primary **14%** mix + transparent border |
+| Header | `h-12`, `sticky`, `border-b`, `px-4 md:px-6` (без blur / без `h-16`) |
+| Header right | **AppsMenu** → **SystemMonitorPopover** → **ModeToggle** |
+| `main` | `gap-4 md:gap-6`, `px-4 py-4 md:px-6 md:py-5` |
+| Sidebar header | `AppSwitcher` (не static brand) |
+
+App Switcher ids: `vps-tracker` · `cfdm` · `evobgp`. Override: `VITE_APP_SWITCHER` JSON.
+
+QuickActionGrid icons: только semantic **text** (`text-info` / `text-primary` / …) на kit `bg-muted` — без solid `bg-primary` fills. Preview: [stats-12](https://reui.io/preview/base/stats-12).
+
 ## System monitor
 
-`SystemMonitorPopover` in app header next to `ModeToggle` (EvoBGP pattern: pill «Система» + Норма/Внимание). Preview shell: https://reui.io/preview/base/app-shell-12
+`SystemMonitorPopover` in app header next to `ModeToggle` (после AppsMenu). Preview: https://reui.io/preview/base/app-shell-12 · https://reui.io/preview/base/app-shell-7
 
 ## MCP workflow
 
@@ -63,7 +82,7 @@ Primitives: MCP `plugin-shadcn-shadcn` + `@cfdm/ui` / `@evobgp/ui`.
 
 ## Spacing
 
-- Main: `gap-4 md:gap-6`, `px-4 md:px-6`
+- AppShell main: `gap-4 md:gap-6`, `px-4 py-4 md:px-6 md:py-5` (shared chrome)
 - No `space-y-*` / `space-x-*` — use `flex` + `gap-*`
 - Max 1 primary CTA per screen
 - Semantic tokens only (`variant="success"|"info"|"warning"`) — no raw `bg-emerald-*`

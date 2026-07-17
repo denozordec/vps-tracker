@@ -42,15 +42,17 @@ import { Badge } from '@cfdm/ui/components/badge'
 
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 
 import { ModeToggle } from '@/components/mode-toggle'
 import { SystemMonitorPopover } from '@/components/layout/system-monitor-popover'
+import { AppsMenu } from '@/components/layout/apps-menu'
 import { AppSwitcher } from '@/components/app-switcher'
 import { GlobalSearch, GlobalSearchTrigger, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
 import { formatRelativeSyncTime } from '@/lib/sync-format'
 import { TruncatedText } from '@/components/truncated-text'
+import { cn } from '@cfdm/ui/lib/utils'
 
 interface NavItem {
   to: string
@@ -146,7 +148,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   }))
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      className={cn(
+        '[--sidebar:color-mix(in_oklab,var(--color-sidebar)_60%,transparent)]',
+        '[--sidebar-border:transparent]',
+        '[--sidebar-accent:color-mix(in_oklab,var(--color-primary)_14%,transparent)]',
+        '[--sidebar-accent-foreground:var(--color-primary)]',
+      )}
+      style={
+        {
+          '--sidebar-width': '240px',
+        } as CSSProperties
+      }
+    >
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <AppSwitcher />
@@ -206,8 +220,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <SidebarTrigger />
+        <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-4 md:px-6">
+          <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <Breadcrumb>
             <BreadcrumbList>
@@ -231,11 +245,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {stats.issuesCount} проблем
               </Badge>
             ) : null}
+            <AppsMenu />
             <SystemMonitorPopover />
             <ModeToggle />
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">{children}</main>
+        <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">{children}</main>
       </SidebarInset>
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </SidebarProvider>

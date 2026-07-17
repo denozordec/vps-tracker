@@ -58,6 +58,14 @@ export const DEFAULT_APP_SWITCHER_CONFIG: AppSwitcherConfig = {
       icon: 'cloud',
       shortcut: '⌘2',
     },
+    {
+      id: 'evobgp',
+      name: 'EvoBGP',
+      subtitle: 'BGP маршрутизация',
+      url: 'http://192.168.100.67:3000',
+      icon: 'globe',
+      shortcut: '⌘3',
+    },
   ],
 }
 
