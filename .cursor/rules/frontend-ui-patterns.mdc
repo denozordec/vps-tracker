@@ -6,110 +6,68 @@ alwaysApply: false
 
 # Frontend UI Patterns
 
-См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [Components](https://ui.shadcn.com/docs/components), [ReUI llms.txt](https://reui.io/llms.txt).
+См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [`docs/ui-design-contract.md`](../../docs/ui-design-contract.md), [ReUI llms.txt](https://reui.io/llms.txt).
+
+## Surface
+
+**`UI_SURFACE = 'frame'`** (`lib/ui-surface.ts`). Ops/list/dashboard/detail/settings — ReUI Frame, не Card shell.
 
 ## Docs workflow (обязательно)
 
-0. Codegraph `codegraph_explore` — найти существующие shared/domain-компоненты
-1. [`reui-mcp.mdc`](reui-mcp.mdc) — если нужен Data Grid, Filters, Autocomplete и др.
-2. MCP `plugin-shadcn-shadcn` — search → examples → add command (`@shadcn` / `@reui`)
-3. CLI: `@shadcn/*` → `pnpm dlx shadcn@latest docs <component>`; `@reui/*` → ReUI docs + llms.txt
-4. Код по examples + docs API (только после совпадения MCP ↔ docs)
-5. Context7 — **только** TanStack Router/Query, Recharts (не shadcn/ReUI primitives)
-6. MCP `get_audit_checklist` — перед merge
-7. Codegraph `codegraph_status` — Pending sync пустой
+0. Codegraph / поиск `reui-kit/*`
+1. MCP **`user-reui`** — search → `get_block` / `compose_page` (`surface: "frame"`) — cite `previewUrl` + `docsUrl`
+2. Primitives: MCP `plugin-shadcn-shadcn` + CLI docs
+3. CLI: `cd apps/web && pnpm dlx shadcn@latest add @reui/...`
+4. Adapt в kit — не hand-roll
+5. Context7 — только TanStack / Recharts
+6. `validate_usage` / `get_audit_checklist`
 
 ## Иерархия компонентов
 
 ```
 @cfdm/ui/components/*     ← shadcn CLI (packages/ui)
 @/components/reui/*       ← ReUI CLI @reui/* (apps/web)
-apps/web/src/components/  ← shared + domain + layout
-  page-shell.tsx          ← обёртка страницы
+apps/web/src/components/
+  reui-kit/               ← ResourcePage, KpiStatGrid, OpsDashboard, SettingsShell
+  page-shell.tsx
   page-header.tsx
-  empty-state.tsx
+  empty-state.tsx         ← Empty + IconStack (empty-state-12)
   query-state.tsx
-  confirm-dialog.tsx
-  data-grid-card.tsx
-  section-cards.tsx
-  status-badge.tsx
-  form-sheet.tsx          ← Sheet + RHF FormProvider
-  form-field.tsx          ← Field + Controller + aria-invalid
-  loading-button.tsx      ← Button + Spinner + label swap
-  section-cards-skeleton.tsx
-  table-skeleton.tsx
-  layout/                 ← app-shell, site-header
-  domain-*                ← бизнес-компоненты
+  form-sheet.tsx
+  layout/
+  domain-*
 ```
 
 ## Матрица стандартизации
 
-| Элемент | Shared | Primitive |
-|---------|--------|-----------|
+| Элемент | Shared | Primitive / Preview |
+|---------|--------|---------------------|
 | Page wrapper | `PageShell` | — |
 | Page title | `PageHeader` | — |
-| Stat metrics | `SectionCards` | `Card` |
-| Data list | `DataGridCard` | `@reui/data-grid`, `Table` |
-| Filters toolbar | `VpsFiltersToolbar` | `@reui/filters` |
-| Autocomplete | `AutoCompleteInput` | `@reui/autocomplete` |
-| Number input | — | `@reui/number-field` |
-| Date range | `lib/date-selector-i18n.ts` | `@reui/date-selector` |
-| Empty | `EmptyState` | `Empty` |
-| Loading / Error | `QueryState` | `Skeleton`, `Alert` |
-| Status | `StatusBadge` | `Badge`, `@reui/badge` |
-| Create/Edit | `FormSheet` + `*-edit-sheet.tsx` | `Sheet`, `Field` |
-| Form field | `FormField` | `Field`, `Input`, `Select` |
-| Submit button | `LoadingButton` | `Button`, `Spinner` |
-| Table wrapper | `DataGridCard` | `Table`, `Card` |
-| Delete confirm | `ConfirmDialog` | `AlertDialog` |
-| List row | — | `Item variant="outline" size="sm"` |
-| Nav | `AppSidebar` | `Sidebar` |
-| Breadcrumbs | `SiteHeader` | `Breadcrumb` |
-| Dates | `lib/format.ts` | — |
+| KPI | `reui-kit/KpiStatGrid` | [stats-12](https://reui.io/preview/base/stats-12) |
+| Data list | `reui-kit/ResourcePage` | [data-grid-filtering-2](https://reui.io/preview/base/data-grid-filtering-2) |
+| Dashboard | `reui-kit/OpsDashboard` | [dashboard-1](https://reui.io/preview/base/dashboard-1) |
+| Settings | `reui-kit/SettingsShell` | [settings-16](https://reui.io/preview/base/settings-16) |
+| Filters | ResourcePage / domain toolbars | `@reui/filters` |
+| Empty | `EmptyState` | [empty-state-12](https://reui.io/preview/base/empty-state-12) |
+| Loading / Error | `QueryState` | Skeleton, ReUI Alert |
+| Status | `StatusBadge` | `@reui/badge` |
+| Create/Edit | `FormSheet` | Sheet, Field |
+| Delete confirm | `ConfirmDialog` | AlertDialog |
+| Nav | `AppShell` | [app-shell-12](https://reui.io/preview/base/app-shell-12) |
 
-## Overlay selection
-
-| Сценарий | Компонент |
-|----------|-----------|
-| Create/edit форма | `Sheet` |
-| Destructive confirm | `AlertDialog` via `ConfirmDialog` |
-| Modal preview | `Dialog` |
-
-## Block registry
-
-| Зона | Block |
-|------|-------|
-| Shell | sidebar-07 |
-| Dashboard | dashboard-01 |
-| Login | login-03 |
+**Устарело (не использовать на новых экранах):** `DataGridCard`, `SectionCards` (Card KPI).
 
 ## Spacing
 
 ```
-PageShell:     gap-4 md:gap-6, px-4 lg:px-6 py-4 md:py-6
-Card grid:     gap-4
-FieldGroup:    gap-4
-Item list:     gap-2
-Toolbar:       gap-2
+PageShell / main: gap-4 md:gap-6, px-4 md:px-6
+FieldGroup:       gap-4
+Toolbar:          gap-2
 ```
 
-**Запрещено:** `space-y-*`, raw colors (`bg-emerald-*`), custom empty divs, page-level Spinner.
+**Запрещено:** `space-y-*`, raw colors, Card как ops-shell, page-level Spinner.
 
-## UX/UI 2026 (состояния данных)
+## Button hierarchy
 
-Каждый блок: **default, hover, focus, disabled, empty, loading, error**.
-
-- **Loading** — `Skeleton` с размерами финального контента (`QueryState skeleton={…}`), не Spinner на странице
-- **Empty** — `EmptyState` с CTA (кнопка создания)
-- **Zero-results** — отдельный empty с «Сбросить фильтр» (не «Создать»)
-- **Error** — `QueryState` + `onRetry` + иконка + текст
-- **Overflow** — `truncate`, `max-w-*`, `Tooltip`; `tabular-nums` для чисел
-- **Density** — таблицы `h-10 text-sm`; max 1 primary CTA на экран
-- **A11y** — `aria-invalid` на полях, `aria-label`/`sr-only` на icon-only кнопках, цвет не единственный сигнал статуса
-
-## Button hierarchy (max 1 primary per screen)
-
-1. `default` — главный CTA
-2. `outline` — вторичные действия
-3. `ghost` / `link` — навигация, cancel
-4. `destructive` — только с `ConfirmDialog`
+Max 1 primary (`default`) на экран; остальные `outline` / `ghost`.

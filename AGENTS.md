@@ -102,6 +102,7 @@ pnpm --filter web test         # Vitest frontend
 ## ReUI
 
 - Registry: `@reui` в [`apps/web/components.json`](apps/web/components.json)
+- **Design contract:** [`docs/ui-design-contract.md`](docs/ui-design-contract.md) — surface `frame`, kit `reui-kit/`
 - AI-карта: [llms.txt](https://reui.io/llms.txt)
 - Установка: `cd apps/web && pnpm dlx shadcn@latest add @reui/<name>`
 - Правила: [`reui-mcp.mdc`](.cursor/rules/reui-mcp.mdc), [`shadcn-mcp.mdc`](.cursor/rules/shadcn-mcp.mdc)

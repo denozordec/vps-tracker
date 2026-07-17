@@ -13,6 +13,10 @@ data
 dist-ssr
 *.local
 
+# Env
+.env
+.env.local
+
 # pnpm
 .pnpm-store
 coverage

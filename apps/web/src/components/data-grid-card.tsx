@@ -28,6 +28,14 @@ import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-colu
 import { DataGridColumnVisibility } from '@/components/reui/data-grid/data-grid-column-visibility'
 import { EmptyState } from './empty-state'
 import type { DataGridColumn } from './data-grid-types'
+import {
+  Frame,
+  FrameDescription,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@/components/reui/frame'
 
 const PAGINATION_LABELS = {
   rowsPerPageLabel: 'Строк на странице',
@@ -131,21 +139,25 @@ function DataGridSectionHeader({
   if (!title && !description && !actions) return null
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        {title ? <h3 className="text-sm font-medium">{title}</h3> : null}
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+    <FrameHeader className="flex-row items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-px">
+        {title ? <FrameTitle className="text-balance">{title}</FrameTitle> : null}
+        {description ? (
+          <FrameDescription className="text-xs text-pretty">{description}</FrameDescription>
+        ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-    </div>
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>
+      ) : null}
+    </FrameHeader>
   )
 }
 
 function DataGridPaginationBar() {
   return (
-    <div className="border-t border-border px-4 py-2.5">
+    <FrameFooter>
       <DataGridPagination {...PAGINATION_LABELS} />
-    </div>
+    </FrameFooter>
   )
 }
 
@@ -354,12 +366,14 @@ export function DataGridCard<TData extends object>({
 
   if (data.length === 0) {
     return (
-      <div className={cn('flex flex-col gap-3', className)}>
+      <Frame dense variant="default" spacing="sm" className={cn('w-full', className)}>
         {hasHeader ? (
           <DataGridSectionHeader title={title} description={description} actions={headerActions} />
         ) : null}
-        <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
-      </div>
+        <FramePanel>
+          <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+        </FramePanel>
+      </Frame>
     )
   }
 
@@ -379,12 +393,12 @@ export function DataGridCard<TData extends object>({
   )
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
+    <Frame dense variant="default" spacing="sm" className={cn('w-full', className)}>
       {hasHeader ? (
         <DataGridSectionHeader title={title} description={description} actions={headerActions} />
       ) : null}
-      {gridBody}
-    </div>
+      <FramePanel className="p-0 shadow-none!">{gridBody}</FramePanel>
+    </Frame>
   )
 }
 

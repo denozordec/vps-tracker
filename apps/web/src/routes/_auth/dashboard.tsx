@@ -17,9 +17,7 @@ import {
 
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
-import { PageShell } from '@/components/page-shell'
-import { PageHeader } from '@/components/page-header'
-import { SectionCards } from '@/components/section-cards'
+import { OpsDashboard, type KpiStatCard } from '@/components/reui-kit'
 import { QueryState } from '@/components/query-state'
 import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
 import type { DataGridColumn } from '@/components/data-grid-types'
@@ -69,26 +67,20 @@ function DashboardPage() {
   const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Дашборд"
-        description="Сводка по VPS, балансам и здоровью инвентаря"
-      />
-
-      <QueryState
-        data={snapshot}
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        skeleton={
-          <div className="flex flex-col gap-4">
-            <SectionCardsSkeleton count={6} />
-            <TableSkeleton />
-          </div>
-        }
-      >
-        {(snap) => {
+    <QueryState
+      data={snapshot}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      skeleton={
+        <div className="flex flex-col gap-4">
+          <SectionCardsSkeleton count={6} />
+          <TableSkeleton />
+        </div>
+      }
+    >
+      {(snap) => {
           const activeVps = snap.vps.filter((v) => v.status === 'active')
           const issues = computeInventoryHealth({ ...snap, syncLog: snap.syncLog ?? [] })
           const atRisk = buildAtRiskAccounts(snap.providerAccounts, snap.providers, snap.syncLog ?? [])
@@ -205,173 +197,163 @@ function DashboardPage() {
             tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }
 
+          const kpiCards: KpiStatCard[] = [
+            {
+              id: 'active-vps',
+              label: 'Активные VPS',
+              value: `${activeCount} из ${totalCount}`,
+              icon: <ServerIcon className="size-4" />,
+              to: '/vps',
+            },
+            {
+              id: 'burn',
+              label: 'Расход в месяц',
+              value: formatInBaseCurrency(
+                stats?.monthlyBurnEstimate ?? 0,
+                baseCur,
+                snap.settings,
+                ratesData,
+              ),
+              icon: <TrendingUpIcon className="size-4" />,
+              to: '/reports',
+            },
+            {
+              id: 'balance',
+              label: 'Баланс API',
+              value: formatInBaseCurrency(
+                stats?.totalBalanceApi ?? 0,
+                baseCur,
+                snap.settings,
+                ratesData,
+              ),
+              icon: <WalletIcon className="size-4" />,
+              to: '/accounts',
+            },
+            {
+              id: 'runway',
+              label: 'Runway',
+              value: stats?.minRunwayDays != null ? `${stats.minRunwayDays} дн` : '—',
+              icon: <ClockIcon className="size-4" />,
+              to: '/accounts',
+              footer:
+                stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? (
+                  <Badge variant="outline" className="text-xs">
+                    &lt; 14 дн
+                  </Badge>
+                ) : undefined,
+            },
+            {
+              id: 'expiring',
+              label: 'Истекает 7 дн',
+              value: expiringCount,
+              icon: <AlertTriangleIcon className="size-4" />,
+              onSelect: () => navigate({ to: '/vps', search: { health: 'expiring-soon' } }),
+            },
+            {
+              id: 'issues',
+              label: 'Проблемы',
+              value: issuesCount,
+              icon: <HashIcon className="size-4" />,
+              onSelect: handleGoToIssues,
+            },
+          ]
+
           return (
             <div className="flex flex-col gap-4 md:gap-6">
               <DashboardInventoryAlert issuesCount={issuesCount} onGoToIssues={handleGoToIssues} />
 
-              {statsLoading ? (
-                <SectionCardsSkeleton count={6} />
-              ) : (
-              <SectionCards
-                items={[
-                  {
-                    label: 'Активные VPS',
-                    value: `${activeCount} из ${totalCount}`,
-                    icon: <ServerIcon className="size-4" />,
-                    onClick: () => navigate({ to: '/vps' }),
-                  },
-                  {
-                    label: 'Расход в месяц',
-                    value: formatInBaseCurrency(
-                      stats?.monthlyBurnEstimate ?? 0,
-                      baseCur,
-                      snap.settings,
-                      ratesData,
-                    ),
-                    icon: <TrendingUpIcon className="size-4" />,
-                    onClick: () => navigate({ to: '/reports' }),
-                  },
-                  {
-                    label: 'Баланс API',
-                    value: formatInBaseCurrency(
-                      stats?.totalBalanceApi ?? 0,
-                      baseCur,
-                      snap.settings,
-                      ratesData,
-                    ),
-                    icon: <WalletIcon className="size-4" />,
-                    onClick: () => navigate({ to: '/accounts' }),
-                  },
-                  {
-                    label: 'Runway',
-                    value: stats?.minRunwayDays != null ? `${stats.minRunwayDays} дн` : '—',
-                    icon: <ClockIcon className="size-4" />,
-                    variant: stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? 'warning' : 'default',
-                    badge:
-                      stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? (
-                        <Badge variant="outline" className="text-xs">
-                          &lt; 14 дн
-                        </Badge>
-                      ) : undefined,
-                    onClick: () => navigate({ to: '/accounts' }),
-                  },
-                  {
-                    label: 'Истекает 7 дн',
-                    value:
-                      expiringCount > 0 ? (
-                        <span className="inline-flex items-center gap-1">
-                          {expiringCount}
-                          <AlertTriangleIcon className="size-4" />
-                        </span>
-                      ) : (
-                        expiringCount
-                      ),
-                    icon: <AlertTriangleIcon className="size-4" />,
-                    variant: expiringCount > 0 ? 'warning' : 'default',
-                    onClick: () => navigate({ to: '/vps', search: { health: 'expiring-soon' } }),
-                  },
-                  {
-                    label: 'Проблемы',
-                    value:
-                      issuesCount > 0 ? (
-                        <span className="inline-flex items-center gap-1">
-                          {issuesCount}
-                          <AlertTriangleIcon className="size-4" />
-                        </span>
-                      ) : (
-                        issuesCount
-                      ),
-                    icon: <HashIcon className="size-4" />,
-                    variant: issuesCount > 0 ? 'destructive' : 'default',
-                    onClick: handleGoToIssues,
-                  },
-                ]}
+              <OpsDashboard
+                title="Дашборд"
+                description="Сводка по VPS, балансам и здоровью инвентаря"
+                kpiCards={statsLoading ? [] : kpiCards}
+                isLoading={statsLoading}
+                charts={
+                  <ChartsGrid>
+                    <DashboardPaymentsChart
+                      payments={snap.payments}
+                      settings={snap.settings}
+                      ratesData={ratesData}
+                      className="h-full"
+                    />
+                    <DashboardExpensesChart
+                      payments={snap.payments}
+                      balanceLedger={snap.balanceLedger ?? []}
+                      vps={snap.vps}
+                      providers={snap.providers}
+                      settings={snap.settings}
+                      ratesData={ratesData}
+                      className="h-full"
+                    />
+                  </ChartsGrid>
+                }
+                queue={
+                  <div ref={tabsRef}>
+                    <Tabs
+                      value={activeTab}
+                      onValueChange={setActiveTab}
+                      className="flex w-full flex-col gap-4"
+                    >
+                      <TabsList variant="line" className="mb-0 h-auto w-fit gap-1 border-b border-border p-0">
+                        <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
+                          Проблемы
+                          {issues.length > 0 ? (
+                            <Badge variant="secondary">{issues.length}</Badge>
+                          ) : null}
+                        </TabsTrigger>
+                        <TabsTrigger value="recent" className={DASHBOARD_TAB_TRIGGER_CLASS}>
+                          Последние VPS
+                        </TabsTrigger>
+                        <TabsTrigger value="risk" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
+                          Аккаунты
+                          {atRisk.length > 0 ? (
+                            <Badge variant="outline">{atRisk.length}</Badge>
+                          ) : null}
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="issues" className="mt-0">
+                        <DataGridCard
+                          title="Здоровье инвентаря"
+                          description="Ставка, оплата, синк, баланс аккаунтов"
+                          columns={columnDefFromDataGrid(issueColumns)}
+                          data={issues}
+                          rowId={(i) => i.key}
+                          emptyTitle="Проблем не найдено"
+                          emptyDescription="Критичных проблем в инвентаре не обнаружено"
+                          pagination={false}
+                        />
+                      </TabsContent>
+                      <TabsContent value="recent" className="mt-0">
+                        <DataGridCard
+                          title="Последние VPS"
+                          description="Активные серверы"
+                          actions={
+                            <Button variant="outline" size="sm" render={<Link to="/vps" />}>
+                              Все VPS
+                            </Button>
+                          }
+                          columns={columnDefFromDataGrid(vpsColumns)}
+                          data={activeVps.slice(0, 8)}
+                          rowId={(v) => v.id}
+                          pagination={false}
+                          onRowClick={(v) => navigate({ to: '/vps', search: { edit: v.id } })}
+                        />
+                      </TabsContent>
+                      <TabsContent value="risk" className="mt-0">
+                        <DataGridCard
+                          title="Аккаунты под риском"
+                          description="Низкий баланс или устаревший синк BILLmanager"
+                          columns={columnDefFromDataGrid(riskColumns)}
+                          data={atRisk}
+                          rowId={(r) => r.id}
+                          emptyTitle="Рисков нет"
+                          emptyDescription="Балансы и синхронизация в норме"
+                          pagination={false}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                }
               />
-              )}
-
-              <ChartsGrid>
-                <DashboardPaymentsChart
-                  payments={snap.payments}
-                  settings={snap.settings}
-                  ratesData={ratesData}
-                  className="h-full"
-                />
-                <DashboardExpensesChart
-                  payments={snap.payments}
-                  balanceLedger={snap.balanceLedger ?? []}
-                  vps={snap.vps}
-                  providers={snap.providers}
-                  settings={snap.settings}
-                  ratesData={ratesData}
-                  className="h-full"
-                />
-              </ChartsGrid>
-
-              <div ref={tabsRef}>
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="flex w-full flex-col gap-4"
-              >
-                <TabsList variant="line" className="mb-0 h-auto w-fit gap-1 border-b border-border p-0">
-                  <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
-                    Проблемы
-                    {issues.length > 0 ? (
-                      <Badge variant="secondary">{issues.length}</Badge>
-                    ) : null}
-                  </TabsTrigger>
-                  <TabsTrigger value="recent" className={DASHBOARD_TAB_TRIGGER_CLASS}>
-                    Последние VPS
-                  </TabsTrigger>
-                  <TabsTrigger value="risk" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
-                    Аккаунты
-                    {atRisk.length > 0 ? (
-                      <Badge variant="outline">{atRisk.length}</Badge>
-                    ) : null}
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="issues" className="mt-0">
-                  <DataGridCard
-                    title="Здоровье инвентаря"
-                    description="Ставка, оплата, синк, баланс аккаунтов"
-                    columns={columnDefFromDataGrid(issueColumns)}
-                    data={issues}
-                    rowId={(i) => i.key}
-                    emptyTitle="Проблем не найдено"
-                    emptyDescription="Критичных проблем в инвентаре не обнаружено"
-                    pagination={false}
-                  />
-                </TabsContent>
-                <TabsContent value="recent" className="mt-0">
-                  <DataGridCard
-                    title="Последние VPS"
-                    description="Активные серверы"
-                    actions={
-                      <Button variant="outline" size="sm" render={<Link to="/vps" />}>
-                        Все VPS
-                      </Button>
-                    }
-                    columns={columnDefFromDataGrid(vpsColumns)}
-                    data={activeVps.slice(0, 8)}
-                    rowId={(v) => v.id}
-                    pagination={false}
-                    onRowClick={(v) => navigate({ to: '/vps', search: { edit: v.id } })}
-                  />
-                </TabsContent>
-                <TabsContent value="risk" className="mt-0">
-                  <DataGridCard
-                    title="Аккаунты под риском"
-                    description="Низкий баланс или устаревший синк BILLmanager"
-                    columns={columnDefFromDataGrid(riskColumns)}
-                    data={atRisk}
-                    rowId={(r) => r.id}
-                    emptyTitle="Рисков нет"
-                    emptyDescription="Балансы и синхронизация в норме"
-                    pagination={false}
-                  />
-                </TabsContent>
-              </Tabs>
-              </div>
 
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" render={<Link to="/resources" />}>
@@ -389,7 +371,6 @@ function DashboardPage() {
             </div>
           )
         }}
-      </QueryState>
-    </PageShell>
+    </QueryState>
   )
 }

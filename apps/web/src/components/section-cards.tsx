@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react'
-import { Card, CardContent } from '@cfdm/ui/components/card'
 import { cn } from '@cfdm/ui/lib/utils'
-import { TruncatedText } from '@/components/truncated-text'
+import { KpiStatGrid, type KpiStatCard } from '@/components/reui-kit/kpi-stat-grid'
+import { Badge } from '@cfdm/ui/components/badge'
 
 export interface SectionCardItem {
   label: ReactNode
@@ -14,96 +14,47 @@ export interface SectionCardItem {
   onClick?: () => void
 }
 
-const VARIANT_CLASS: Record<NonNullable<SectionCardItem['variant']>, string> = {
-  default: '',
-  warning: 'border-warning/50',
-  destructive: 'border-destructive/50',
-}
-
-function sectionGridClass(count: number): string {
-  if (count <= 1) return 'grid-cols-1'
-  if (count === 2) return 'sm:grid-cols-2'
-  if (count === 3) return 'sm:grid-cols-2 lg:grid-cols-3'
-  if (count === 4) return 'sm:grid-cols-2 lg:grid-cols-4'
-  if (count === 5) return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
-  if (count === 6) return 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
-  return 'sm:grid-cols-2 lg:grid-cols-3'
-}
-
-const VALUE_VARIANT_CLASS: Record<NonNullable<SectionCardItem['variant']>, string> = {
-  default: '',
-  warning: 'text-warning-foreground',
-  destructive: 'text-destructive',
-}
-
+/**
+ * @deprecated Prefer `KpiStatGrid` directly.
+ * Thin adapter → stats-12 Frame KPI. Preview: https://reui.io/preview/base/stats-12
+ */
 export function SectionCards({ items, className }: { items: SectionCardItem[]; className?: string }) {
-  return (
-    <div className={cn('grid gap-3', sectionGridClass(items.length), className)}>
-      {items.map((item, idx) => {
-        const clickable = Boolean(item.onClick)
-        const content = (
-          <CardContent className="flex items-start gap-2.5 px-3 py-2.5">
-            {item.icon ? (
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
-                {item.icon}
-              </span>
-            ) : null}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <div className="flex items-center justify-between gap-2">
-                {typeof item.label === 'string' ? (
-                  <TruncatedText className="text-xs text-muted-foreground">{item.label}</TruncatedText>
-                ) : (
-                  <span className="truncate text-xs text-muted-foreground">{item.label}</span>
-                )}
-                {item.badge ? <span className="shrink-0">{item.badge}</span> : null}
-              </div>
-              <div className="flex min-w-0 items-baseline gap-1.5">
-                <span
-                  className={cn(
-                    'flex items-center gap-1 text-lg font-semibold tabular-nums',
-                    VALUE_VARIANT_CLASS[item.variant ?? 'default'],
-                  )}
-                >
-                  {item.value}
-                </span>
-                {item.hint ? (
-                  typeof item.hint === 'string' ? (
-                    <TruncatedText className="text-xs text-muted-foreground">· {item.hint}</TruncatedText>
-                  ) : (
-                    <span className="truncate text-xs text-muted-foreground">· {item.hint}</span>
-                  )
-                ) : null}
-              </div>
-            </div>
-          </CardContent>
-        )
-        return (
-          <Card
-            key={typeof item.label === 'string' ? item.label : idx}
+  const cards: KpiStatCard[] = items.map((item, idx) => {
+    const label = typeof item.label === 'string' ? item.label : `kpi-${idx}`
+    const footer =
+      item.badge || item.hint ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {item.badge}
+          {item.hint && !item.badge ? (
+            <span className="text-muted-foreground text-xs">{item.hint}</span>
+          ) : null}
+        </div>
+      ) : undefined
+
+    return {
+      id: label,
+      label,
+      value: item.value as string | number,
+      hint: typeof item.hint === 'string' ? item.hint : undefined,
+      icon: item.icon,
+      selected: item.active,
+      onSelect: item.onClick,
+      footer:
+        item.variant && item.variant !== 'default' && !item.badge ? (
+          <Badge
+            variant="outline"
             className={cn(
-              'gap-0',
-              VARIANT_CLASS[item.variant ?? 'default'],
-              item.active && 'border-primary ring-1 ring-primary/30',
-              clickable && 'cursor-pointer transition-colors hover:bg-muted/40',
+              item.variant === 'warning' && 'border-warning/50 text-warning-foreground',
+              item.variant === 'destructive' && 'border-destructive/50 text-destructive',
             )}
-            onClick={item.onClick}
-            role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
-            onKeyDown={
-              clickable
-                ? (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      item.onClick?.()
-                    }
-                  }
-                : undefined
-            }
           >
-            {content}
-          </Card>
-        )
-      })}
-    </div>
-  )
+            {item.variant === 'warning' ? 'Внимание' : 'Критично'}
+          </Badge>
+        ) : (
+          footer
+        ),
+    }
+  })
+
+  return <KpiStatGrid cards={cards} className={className} />
 }
