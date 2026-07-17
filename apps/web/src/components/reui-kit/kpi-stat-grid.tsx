@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Frame, FramePanel } from '@/components/reui/frame'
+import { Badge } from '@/components/reui/badge'
 import { Item, ItemMedia } from '@cfdm/ui/components/item'
 import { cn } from '@cfdm/ui/lib/utils'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
+
+export type KpiStatVariant = 'default' | 'warning' | 'destructive'
 
 export interface KpiStatCard {
   id: string
@@ -16,6 +19,8 @@ export interface KpiStatCard {
   selected?: boolean
   icon?: ReactNode
   iconClassName?: string
+  /** Semantic color for the primary value */
+  variant?: KpiStatVariant
   footer?: ReactNode
 }
 
@@ -31,8 +36,13 @@ interface KpiStatGridProps {
   skeletonCount?: number
 }
 
-const DEFAULT_ICON_CLASS =
-  'text-muted-foreground [&_svg]:text-current'
+const DEFAULT_ICON_CLASS = 'text-muted-foreground [&_svg]:text-current'
+
+const VALUE_VARIANT_CLASS: Record<KpiStatVariant, string> = {
+  default: 'text-foreground',
+  warning: 'text-warning',
+  destructive: 'text-destructive',
+}
 
 function kpiCols(count: number): string {
   if (count <= 1) return 'grid-cols-1'
@@ -44,9 +54,24 @@ function kpiCols(count: number): string {
   return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
 }
 
+function resolveFooter(card: KpiStatCard): ReactNode {
+  if (card.footer) return card.footer
+  if (card.hint) {
+    return (
+      <Badge variant="outline" size="sm">
+        {card.hint}
+      </Badge>
+    )
+  }
+  return null
+}
+
 function KpiStatCardBody({ card }: { card: KpiStatCard }) {
+  const footer = resolveFooter(card)
+  const valueVariant = card.variant ?? 'default'
+
   return (
-    <div className="relative z-10 flex h-full flex-col items-start gap-4">
+    <div className="relative z-10 flex h-full flex-col items-start gap-3">
       {card.icon ? (
         <Item
           className={cn(
@@ -59,16 +84,20 @@ function KpiStatCardBody({ card }: { card: KpiStatCard }) {
           </ItemMedia>
         </Item>
       ) : null}
+
       <div className="flex flex-col gap-0.5">
-        <span className="text-foreground text-2xl leading-none font-bold tabular-nums">
+        <span
+          className={cn(
+            'text-2xl leading-none font-bold tabular-nums',
+            VALUE_VARIANT_CLASS[valueVariant],
+          )}
+        >
           {card.value}
         </span>
         <span className="text-muted-foreground text-sm font-medium">{card.label}</span>
-        {card.hint ? (
-          <span className="text-muted-foreground text-xs leading-snug">{card.hint}</span>
-        ) : null}
       </div>
-      {card.footer ? <div className="mt-auto w-full">{card.footer}</div> : null}
+
+      {footer ? <div className="mt-auto w-full">{footer}</div> : null}
     </div>
   )
 }
@@ -76,7 +105,7 @@ function KpiStatCardBody({ card }: { card: KpiStatCard }) {
 function KpiStatCardItem({ card }: { card: KpiStatCard }) {
   const interactive = Boolean(card.to || card.onSelect)
   const panelClass = cn(
-    'relative isolate flex h-full flex-col items-start gap-4',
+    'relative isolate flex h-full flex-col',
     card.selected && 'ring-primary/30 bg-muted/30 ring-1',
     interactive &&
       'hover:bg-muted/40 focus-within:ring-ring cursor-pointer transition-colors focus-within:ring-2',
@@ -116,12 +145,13 @@ function KpiStatCardItem({ card }: { card: KpiStatCard }) {
 function KpiStatGridSkeleton({ count }: { count: number }) {
   return (
     <Frame className="@container w-full">
-      <div className={cn('grid gap-1', kpiCols(count))}>
+      <div className={cn('grid gap-2', kpiCols(count))}>
         {Array.from({ length: count }).map((_, index) => (
-          <FramePanel key={index} className="flex flex-col gap-4">
+          <FramePanel key={index} className="flex flex-col gap-3">
             <Skeleton className="size-10.5 rounded-lg" />
             <Skeleton className="h-7 w-14" />
             <Skeleton className="h-4 w-20" />
+            <Skeleton className="mt-auto h-4.5 w-16 rounded-full" />
           </FramePanel>
         ))}
       </div>
@@ -129,7 +159,10 @@ function KpiStatGridSkeleton({ count }: { count: number }) {
   )
 }
 
-/** KPI grid — ReUI stats-12. Preview: https://reui.io/preview/base/stats-12 */
+/**
+ * Hybrid KPI grid — compact stats-12 Frame strip.
+ * Preview: https://reui.io/preview/base/stats-12
+ */
 export function KpiStatGrid({
   cards,
   isLoading = false,
@@ -157,7 +190,7 @@ export function KpiStatGrid({
 
   return (
     <Frame className={cn('@container w-full', className)}>
-      <div className={cn('grid gap-1', kpiCols(cards.length))}>
+      <div className={cn('grid gap-2', kpiCols(cards.length))}>
         {cards.map((card) => (
           <KpiStatCardItem key={card.id} card={card} />
         ))}

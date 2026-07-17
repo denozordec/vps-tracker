@@ -18,7 +18,7 @@ Ops / list / dashboard / detail / settings — только **Frame**, не shad
 | Зона | Block | Preview |
 |------|-------|---------|
 | Shell | `app-shell-12` (+ cmdk/monitor где нужно) | https://reui.io/preview/base/app-shell-12 |
-| KPI | `stats-12` (primary); `card-35` compact strip | https://reui.io/preview/base/stats-12 · https://reui.io/preview/base/card-35 |
+| KPI | hybrid `stats-12` (compact Frame strip: colored icon → value ± variant → label → Badge footer) | https://reui.io/preview/base/stats-12 |
 | Dashboard | `dashboard-1` | https://reui.io/preview/base/dashboard-1 |
 | Lists | `data-grid-filtering-2` | https://reui.io/preview/base/data-grid-filtering-2 |
 | Settings | `settings-16` + SettingRow | https://reui.io/preview/base/settings-16 |
@@ -31,7 +31,7 @@ Ops / list / dashboard / detail / settings — только **Frame**, не shad
 | Component | Role |
 |-----------|------|
 | `ResourcePage` | Frame + line tabs + Filters + DataGrid |
-| `KpiStatGrid` | stats-12 KPI tiles |
+| `KpiStatGrid` | hybrid compact stats-12 KPI tiles (`variant`, Badge footer) |
 | `OpsDashboard` | KPI + charts + attention queue |
 | `SettingsShell` | settings nav + Outlet |
 | `DetailPanel` | detail Frame sections |

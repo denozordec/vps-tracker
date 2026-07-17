@@ -24,7 +24,7 @@ import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { cn } from '@cfdm/ui/lib/utils'
@@ -197,13 +197,22 @@ function DashboardPage() {
             tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }
 
+          const runwayDays = stats?.minRunwayDays
+          const runwayLow = runwayDays != null && runwayDays < 14
+
           const kpiCards: KpiStatCard[] = [
             {
               id: 'active-vps',
               label: 'Активные VPS',
               value: `${activeCount} из ${totalCount}`,
               icon: <ServerIcon className="size-4" />,
+              iconClassName: 'text-primary',
               to: '/vps',
+              footer: (
+                <Badge variant="outline" size="sm">
+                  {totalCount} всего
+                </Badge>
+              ),
             },
             {
               id: 'burn',
@@ -215,7 +224,13 @@ function DashboardPage() {
                 ratesData,
               ),
               icon: <TrendingUpIcon className="size-4" />,
+              iconClassName: 'text-info',
               to: '/reports',
+              footer: (
+                <Badge variant="info-light" size="sm">
+                  оценка
+                </Badge>
+              ),
             },
             {
               id: 'balance',
@@ -227,34 +242,65 @@ function DashboardPage() {
                 ratesData,
               ),
               icon: <WalletIcon className="size-4" />,
+              iconClassName: 'text-success',
               to: '/accounts',
+              footer: (
+                <Badge variant="success-light" size="sm">
+                  API
+                </Badge>
+              ),
             },
             {
               id: 'runway',
               label: 'Runway',
-              value: stats?.minRunwayDays != null ? `${stats.minRunwayDays} дн` : '—',
+              value: runwayDays != null ? `${runwayDays} дн` : '—',
               icon: <ClockIcon className="size-4" />,
+              iconClassName: runwayLow ? 'text-warning' : 'text-muted-foreground',
+              variant: runwayLow ? 'warning' : 'default',
               to: '/accounts',
-              footer:
-                stats?.minRunwayDays != null && stats.minRunwayDays < 14 ? (
-                  <Badge variant="outline" className="text-xs">
-                    &lt; 14 дн
-                  </Badge>
-                ) : undefined,
+              footer: runwayLow ? (
+                <Badge variant="warning-light" size="sm">
+                  &lt; 14 дн
+                </Badge>
+              ) : (
+                <Badge variant="outline" size="sm">
+                  запас
+                </Badge>
+              ),
             },
             {
               id: 'expiring',
               label: 'Истекает 7 дн',
               value: expiringCount,
               icon: <AlertTriangleIcon className="size-4" />,
+              iconClassName: expiringCount > 0 ? 'text-warning' : 'text-muted-foreground',
+              variant: expiringCount > 0 ? 'warning' : 'default',
               onSelect: () => navigate({ to: '/vps', search: { health: 'expiring-soon' } }),
+              footer: (
+                <Badge
+                  variant={expiringCount > 0 ? 'warning-light' : 'success-light'}
+                  size="sm"
+                >
+                  {expiringCount > 0 ? 'скоро' : 'в норме'}
+                </Badge>
+              ),
             },
             {
               id: 'issues',
               label: 'Проблемы',
               value: issuesCount,
               icon: <HashIcon className="size-4" />,
+              iconClassName: issuesCount > 0 ? 'text-destructive' : 'text-muted-foreground',
+              variant: issuesCount > 0 ? 'destructive' : 'default',
               onSelect: handleGoToIssues,
+              footer: (
+                <Badge
+                  variant={issuesCount > 0 ? 'destructive-light' : 'success-light'}
+                  size="sm"
+                >
+                  {issuesCount > 0 ? 'требует внимания' : 'в норме'}
+                </Badge>
+              ),
             },
           ]
 
