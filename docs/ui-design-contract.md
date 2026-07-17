@@ -49,18 +49,22 @@ Gating: DB preference `showQuickActions` / `show_quick_actions` / `ui_show_quick
 
 ## Shared App Shell chrome
 
-Эталон: CFDM + ReUI [app-shell-12](https://reui.io/preview/base/app-shell-12) · monitor/switchers [app-shell-7](https://reui.io/preview/base/app-shell-7).
+Эталон: **EvoBGP** production AppShell + ReUI [app-shell-12](https://reui.io/preview/base/app-shell-12).
 
-При переключении между vps-tracker / CFDM / EvoBGP меняются **только** sidebar nav и `main` content. ClassNames chrome идентичны.
+При переключении между vps-tracker / CFDM / EvoBGP меняются **только** sidebar nav labels/hrefs и `main` content. Разметка, ширина, фон и hover chrome идентичны.
 
 | Токен / зона | Значение |
 |--------------|----------|
-| `--sidebar-width` | `240px` |
-| Sidebar accent | primary **14%** mix + transparent border |
-| Header | `h-12`, `sticky`, `border-b`, `px-4 md:px-6` (без blur / без `h-16`) |
-| Header right | **AppsMenu** → **SystemMonitorPopover** → **ModeToggle** |
+| `SIDEBAR_WIDTH` / `--sidebar-width` | `240px` (в `packages/ui` sidebar + Provider style) |
+| Sidebar / hover colors | theme `--sidebar` / `--sidebar-accent` из `globals.css` — **без** AppShell `color-mix` override |
+| Header | `h-12`, `sticky`, `border-b`, `px-4 md:px-6` |
+| Header left | `SidebarTrigger` + `Separator` + Breadcrumb |
+| Header right | **AppsMenu** → **SystemMonitorPopover** → **ModeToggle** (без Search в chrome) |
+| Sidebar | AppSwitcher → groups (`SidebarGroupContent`) → icons `size-4` → **пустой** `SidebarFooter` |
 | `main` | `gap-4 md:gap-6`, `px-4 py-4 md:px-6 md:py-5` |
-| Sidebar header | `AppSwitcher` (не static brand) |
+| Search | hotkey ⌘K / Ctrl+K only (не кнопка в header) |
+
+Запрещено в chrome: `SidebarRail`, `NavUser` footer, sync-row footer, Search/Ctrl+K pill в header, issues Badge в header, muted/hover cascade на right-cluster, Provider `color-mix` для `--sidebar*`.
 
 App Switcher ids: `vps-tracker` · `cfdm` · `evobgp`. Override: `VITE_APP_SWITCHER` JSON.
 

@@ -39,6 +39,7 @@ import {
 } from '@cfdm/ui/components/breadcrumb'
 import { Separator } from '@cfdm/ui/components/separator'
 import { Badge } from '@cfdm/ui/components/badge'
+import { TooltipProvider } from '@cfdm/ui/components/tooltip'
 
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -48,11 +49,8 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { SystemMonitorPopover } from '@/components/layout/system-monitor-popover'
 import { AppsMenu } from '@/components/layout/apps-menu'
 import { AppSwitcher } from '@/components/app-switcher'
-import { GlobalSearch, GlobalSearchTrigger, useGlobalSearchHotkey } from '@/components/global-search'
+import { GlobalSearch, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
-import { formatRelativeSyncTime } from '@/lib/sync-format'
-import { TruncatedText } from '@/components/truncated-text'
-import { cn } from '@cfdm/ui/lib/utils'
 
 interface NavItem {
   to: string
@@ -127,11 +125,14 @@ const PARENT_ROUTE: Record<string, string> = {
   '/audit': '/settings',
 }
 
+/** Shared ops chrome — etalon EvoBGP. @see docs/ui-design-contract.md */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const [searchOpen, setSearchOpen] = useState(false)
   useGlobalSearchHotkey(() => setSearchOpen(true))
-  const activeItem = ALL_NAV_ITEMS.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`)) ?? ALL_NAV_ITEMS[0]
+  const activeItem =
+    ALL_NAV_ITEMS.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`)) ??
+    ALL_NAV_ITEMS[0]
   const parentTo = PARENT_ROUTE[activeItem.to]
   const parentLabel = parentTo ? ROUTE_LABELS[parentTo] : null
 
@@ -148,111 +149,94 @@ export function AppShell({ children }: { children: ReactNode }) {
   }))
 
   return (
-    <SidebarProvider
-      className={cn(
-        '[--sidebar:color-mix(in_oklab,var(--color-sidebar)_60%,transparent)]',
-        '[--sidebar-border:transparent]',
-        '[--sidebar-accent:color-mix(in_oklab,var(--color-primary)_14%,transparent)]',
-        '[--sidebar-accent-foreground:var(--color-primary)]',
-      )}
-      style={
-        {
-          '--sidebar-width': '240px',
-        } as CSSProperties
-      }
-    >
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <AppSwitcher />
-        </SidebarHeader>
-        <SidebarContent>
-          {navGroups.map((group) => (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const Icon = item.icon
-                    const isActive = pathname === item.to || pathname.startsWith(`${item.to}/`)
-                    return (
-                      <SidebarMenuItem key={item.to}>
-                        <SidebarMenuButton
-                          render={<Link to={item.to} />}
-                          isActive={isActive}
-                          tooltip={item.label}
-                        >
-                          <Icon />
-                          <span>{item.label}</span>
-                          {item.badge ? (
-                            <Badge variant="destructive" className="ml-auto size-5 justify-center p-0 text-xs">
-                              {item.badge}
-                            </Badge>
-                          ) : null}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link to="/settings" />} tooltip="Настройки">
-                <Settings />
-                <TruncatedText
-                  className="text-xs text-muted-foreground"
-                  tooltip={`Синк: ${formatRelativeSyncTime(stats?.lastGlobalSyncAt)}`}
-                >
-                  Синк: {formatRelativeSyncTime(stats?.lastGlobalSyncAt)}
-                </TruncatedText>
-                {stats?.staleSyncAccountCount ? (
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    <RefreshCwIcon className="size-3" />
-                    {stats.staleSyncAccountCount}
-                  </Badge>
+    <TooltipProvider delay={0}>
+      <SidebarProvider
+        style={
+          {
+            '--sidebar-width': '240px',
+          } as CSSProperties
+        }
+      >
+        <Sidebar collapsible="icon">
+          <SidebarHeader>
+            <AppSwitcher />
+          </SidebarHeader>
+          <SidebarContent>
+            {navGroups.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const isActive =
+                        pathname === item.to || pathname.startsWith(`${item.to}/`)
+                      return (
+                        <SidebarMenuItem key={item.to}>
+                          <SidebarMenuButton
+                            render={<Link to={item.to} />}
+                            isActive={isActive}
+                            tooltip={item.label}
+                          >
+                            <Icon className="size-4" />
+                            <span>{item.label}</span>
+                            {item.badge ? (
+                              <Badge
+                                variant="destructive"
+                                className="ml-auto size-5 justify-center p-0 text-xs"
+                              >
+                                {item.badge}
+                              </Badge>
+                            ) : null}
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+          <SidebarFooter />
+        </Sidebar>
+        <SidebarInset>
+          <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-4 md:px-6">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <Breadcrumb>
+              <BreadcrumbList>
+                {parentLabel && parentTo ? (
+                  <>
+                    <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbLink render={<Link to={parentTo} />}>
+                        {parentLabel}
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden md:block" />
+                  </>
                 ) : null}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-4 md:px-6">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              {parentLabel && parentTo ? (
-                <>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink render={<Link to={parentTo} />}>{parentLabel}</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                </>
-              ) : null}
-              <BreadcrumbItem>
-                <BreadcrumbPage>{ROUTE_LABELS[activeItem.to] ?? ''}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="ml-auto flex items-center gap-2">
-            <GlobalSearchTrigger onClick={() => setSearchOpen(true)} />
-            {stats?.issuesCount ? (
-              <Badge variant="destructive" className="hidden sm:inline-flex">
-                {stats.issuesCount} проблем
-              </Badge>
-            ) : null}
-            <AppsMenu />
-            <SystemMonitorPopover />
-            <ModeToggle />
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">{children}</main>
-      </SidebarInset>
-      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-    </SidebarProvider>
+                <BreadcrumbItem>
+                  <BreadcrumbPage>
+                    {ROUTE_LABELS[activeItem.to] ?? ''}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="ml-auto flex items-center gap-2">
+              <AppsMenu />
+              <SystemMonitorPopover />
+              <ModeToggle />
+            </div>
+          </header>
+          <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
+            {children}
+          </main>
+        </SidebarInset>
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      </SidebarProvider>
+    </TooltipProvider>
   )
 }
