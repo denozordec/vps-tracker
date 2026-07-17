@@ -205,7 +205,7 @@ export function SystemMonitorPopover() {
         </Badge>
       </PopoverTrigger>
 
-      <PopoverContent align="end" sideOffset={8} className="w-80 gap-0! space-y-0! p-0!">
+      <PopoverContent align="end" sideOffset={8} className="flex w-80 flex-col gap-0! p-0!">
         <div className="border-border flex items-center justify-between border-b px-3 py-2.5">
           <span className="text-foreground text-xs font-medium">Монитор VPS Tracker</span>
           <span className="text-muted-foreground text-[11px] tabular-nums">
