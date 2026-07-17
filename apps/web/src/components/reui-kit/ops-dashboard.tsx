@@ -32,7 +32,7 @@ function OpsDashboardSkeleton() {
         <Skeleton className="mt-2 h-4 w-80 max-w-full" />
       </header>
       <KpiStatGrid cards={[]} isLoading skeletonCount={4} />
-      <div className="grid gap-2 @3xl:grid-cols-2">
+      <div className="grid w-full gap-2">
         <Skeleton className="h-64 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
@@ -61,10 +61,7 @@ export function OpsDashboard({
         <KpiStatGrid cards={kpiCards} skeletonCount={4} />
       </section>
 
-      <section
-        aria-label="Аналитика"
-        className="grid min-w-0 items-start gap-2 @3xl:grid-cols-2"
-      >
+      <section aria-label="Аналитика" className="grid w-full min-w-0 gap-2">
         {charts}
       </section>
 

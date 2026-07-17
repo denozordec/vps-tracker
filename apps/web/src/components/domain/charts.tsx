@@ -460,7 +460,7 @@ export function MonthlyTrendChart({
 }
 
 export function ChartsGrid({ children }: { children: ReactNode }) {
-  return <div className="grid gap-4 lg:grid-cols-2">{children}</div>
+  return <div className="grid w-full gap-4">{children}</div>
 }
 
 export function ProjectExpenseChart({
