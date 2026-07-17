@@ -71,11 +71,11 @@ function KpiStatCardBody({ card }: { card: KpiStatCard }) {
   const valueVariant = card.variant ?? 'default'
 
   return (
-    <div className="relative z-10 flex h-full flex-col items-start gap-3">
+    <div className="relative z-10 flex h-full items-start gap-3">
       {card.icon ? (
         <Item
           className={cn(
-            'border-background bg-muted flex size-10.5 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-4',
+            'border-background bg-muted flex size-10.5 shrink-0 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-4',
             card.iconClassName ?? DEFAULT_ICON_CLASS,
           )}
         >
@@ -85,7 +85,11 @@ function KpiStatCardBody({ card }: { card: KpiStatCard }) {
         </Item>
       ) : null}
 
-      <div className="flex flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-muted-foreground text-sm font-medium">{card.label}</span>
+          {footer ? <div className="shrink-0">{footer}</div> : null}
+        </div>
         <span
           className={cn(
             'text-2xl leading-none font-bold tabular-nums',
@@ -94,10 +98,7 @@ function KpiStatCardBody({ card }: { card: KpiStatCard }) {
         >
           {card.value}
         </span>
-        <span className="text-muted-foreground text-sm font-medium">{card.label}</span>
       </div>
-
-      {footer ? <div className="mt-auto w-full">{footer}</div> : null}
     </div>
   )
 }
@@ -147,11 +148,15 @@ function KpiStatGridSkeleton({ count }: { count: number }) {
     <Frame className="@container w-full">
       <div className={cn('grid gap-2', kpiCols(count))}>
         {Array.from({ length: count }).map((_, index) => (
-          <FramePanel key={index} className="flex flex-col gap-3">
-            <Skeleton className="size-10.5 rounded-lg" />
-            <Skeleton className="h-7 w-14" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="mt-auto h-4.5 w-16 rounded-full" />
+          <FramePanel key={index} className="flex items-start gap-3">
+            <Skeleton className="size-10.5 shrink-0 rounded-lg" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4.5 w-14 rounded-full" />
+              </div>
+              <Skeleton className="h-7 w-16" />
+            </div>
           </FramePanel>
         ))}
       </div>
@@ -160,7 +165,7 @@ function KpiStatGridSkeleton({ count }: { count: number }) {
 }
 
 /**
- * Hybrid KPI grid — compact stats-12 Frame strip.
+ * Hybrid KPI — EvoBGP visual (colored icon + Badge) + horizontal compact layout.
  * Preview: https://reui.io/preview/base/stats-12
  */
 export function KpiStatGrid({
