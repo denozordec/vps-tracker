@@ -13,11 +13,15 @@ import {
   CoinsIcon,
   ClockIcon,
   DownloadIcon,
+  CreditCardIcon,
+  ChartColumnBigIcon,
+  ChartBarIcon,
+  PlugIcon,
 } from 'lucide-react'
 
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
-import { OpsDashboard, type KpiStatCard } from '@/components/reui-kit'
+import { OpsDashboard, QuickActionGrid, type KpiStatCard, type QuickActionItem } from '@/components/reui-kit'
 import { QueryState } from '@/components/query-state'
 import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
 import type { DataGridColumn } from '@/components/data-grid-types'
@@ -44,6 +48,57 @@ import type { Vps } from '@/types/entities'
 
 const DASHBOARD_TAB_TRIGGER_CLASS =
   'flex-none rounded-none border-0 border-b-2 border-transparent px-3 pb-2.5 pt-2 shadow-none after:hidden data-active:border-foreground data-active:bg-transparent data-active:shadow-none dark:data-active:border-foreground dark:data-active:bg-transparent'
+
+const DASHBOARD_QUICK_ACTIONS: QuickActionItem[] = [
+  {
+    id: 'vps',
+    title: 'VPS',
+    description: 'Список серверов, оплата и здоровье.',
+    to: '/vps',
+    icon: <ServerIcon aria-hidden />,
+    iconClassName: 'text-primary',
+  },
+  {
+    id: 'accounts',
+    title: 'Аккаунты',
+    description: 'Аккаунты хостеров и баланс API.',
+    to: '/accounts',
+    icon: <WalletIcon aria-hidden />,
+    iconClassName: 'text-success',
+  },
+  {
+    id: 'payments',
+    title: 'Платежи',
+    description: 'Пополнения и оплаты VPS.',
+    to: '/payments',
+    icon: <CreditCardIcon aria-hidden />,
+    iconClassName: 'text-info',
+  },
+  {
+    id: 'reports',
+    title: 'Отчёты',
+    description: 'Сводки по расходам и балансам.',
+    to: '/reports',
+    icon: <ChartColumnBigIcon aria-hidden />,
+    iconClassName: 'text-warning',
+  },
+  {
+    id: 'resources',
+    title: 'Ресурсы',
+    description: 'CPU, RAM и диск по инвентарю.',
+    to: '/resources',
+    icon: <ChartBarIcon aria-hidden />,
+    iconClassName: 'text-focus',
+  },
+  {
+    id: 'integrations',
+    title: 'Интеграции',
+    description: 'App switcher и внешние связки.',
+    to: '/settings/integrations',
+    icon: <PlugIcon aria-hidden />,
+    iconClassName: 'text-muted-foreground',
+  },
+]
 
 export const Route = createFileRoute('/_auth/dashboard')({
   loader: ({ context: { queryClient } }) =>
@@ -401,10 +456,14 @@ function DashboardPage() {
                 }
               />
 
+              {snap.settings?.[0]?.showQuickActions !== false ? (
+                <QuickActionGrid
+                  actions={DASHBOARD_QUICK_ACTIONS}
+                  description="Частые разделы учёта и аналитики"
+                />
+              ) : null}
+
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" render={<Link to="/resources" />}>
-                  Ресурсы
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"

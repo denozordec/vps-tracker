@@ -29,6 +29,7 @@ import { LoadingButton } from '@/components/loading-button'
 import { SelectField } from '@/components/select-field'
 import { FormField } from '@/components/form-field'
 import { Button } from '@cfdm/ui/components/button'
+import { Switch } from '@cfdm/ui/components/switch'
 import { settingsSchema, type SettingsFormValues } from '@/lib/schemas'
 import { CustomFieldsEditor } from '@/components/domain/custom-fields-editor'
 import type { NotificationLogRow, Settings } from '@/types/entities'
@@ -77,6 +78,7 @@ function settingsToFormValues(s: Settings): SettingsFormValues {
     webhookEnabled: s.webhookEnabled === true,
     customFields: parseCustomFieldDefs(s.customFields),
     telegramMessageThreadId: s.telegramMessageThreadId ?? '',
+    showQuickActions: s.showQuickActions !== false,
   }
 }
 
@@ -330,6 +332,34 @@ function SettingsPage() {
             onSubmit={(e) => void form.handleSubmit((values) => upsertMut.mutate(values))(e)}
           >
             <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Интерфейс</CardTitle>
+                  <CardDescription>Блоки на дашборде</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <FormField label="Быстрые действия" htmlFor="set-qa">
+                      <Controller
+                        control={form.control}
+                        name="showQuickActions"
+                        render={({ field }) => (
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              id="set-qa"
+                              checked={field.value !== false}
+                              onCheckedChange={field.onChange}
+                            />
+                            <span className="text-muted-foreground text-sm">
+                              Показывать на дашборде
+                            </span>
+                          </div>
+                        )}
+                      />
+                    </FormField>
+                  </FieldGroup>
+                </CardContent>
+              </Card>
               <Card>
                 <CardHeader>
                   <CardTitle>Валюта и курсы</CardTitle>

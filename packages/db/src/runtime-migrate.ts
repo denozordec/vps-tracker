@@ -14,6 +14,7 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE settings ADD COLUMN integrationEnabled INTEGER`,
   `ALTER TABLE settings ADD COLUMN integrationLastSyncAt TEXT`,
   `ALTER TABLE settings ADD COLUMN cfdmApiUrl TEXT`,
+  `ALTER TABLE settings ADD COLUMN showQuickActions INTEGER`,
   `ALTER TABLE vps_domains ADD COLUMN targetIps TEXT`,
 ]
 

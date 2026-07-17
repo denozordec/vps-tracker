@@ -27,6 +27,7 @@ export const settingsSchema = z.object({
   appSwitcher: appSwitcherConfigSchema.optional(),
   integrationToken: z.string().optional(),
   integrationEnabled: z.boolean().optional(),
+  showQuickActions: z.boolean().optional(),
 })
 
 export type Settings = z.infer<typeof settingsSchema>

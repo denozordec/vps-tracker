@@ -44,6 +44,7 @@ export type SettingsDto = Omit<
   | 'integrationEnabled'
   | 'customFields'
   | 'appSwitcherJson'
+  | 'showQuickActions'
 > & {
   telegramBotTokenSet: boolean
   integrationTokenSet: boolean
@@ -56,6 +57,7 @@ export type SettingsDto = Omit<
   notifyVpsDownEnabled: boolean
   webhookEnabled: boolean
   integrationEnabled: boolean
+  showQuickActions: boolean
   notifyIntervalMinutes: number
   uptimeCheckIntervalMinutes: number
   customFields: unknown[]
@@ -81,7 +83,8 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
       customFields = []
     }
   }
-  const { telegramBotToken, integrationToken, appSwitcherJson, ...rest } = row
+  const { telegramBotToken, integrationToken, appSwitcherJson, showQuickActions: _showQa, ...rest } =
+    row
   return {
     ...rest,
     telegramBotTokenSet: Boolean(telegramBotToken?.trim()),
@@ -95,6 +98,7 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
     notifyVpsDownEnabled: Boolean(row.notifyVpsDownEnabled),
     webhookEnabled: Boolean(row.webhookEnabled),
     integrationEnabled: Boolean(row.integrationEnabled),
+    showQuickActions: row.showQuickActions == null ? true : Boolean(row.showQuickActions),
     notifyIntervalMinutes: Number(row.notifyIntervalMinutes) || 60,
     uptimeCheckIntervalMinutes: Number(row.uptimeCheckIntervalMinutes) || 5,
     customFields: Array.isArray(customFields) ? customFields : [],
@@ -135,6 +139,7 @@ interface SettingsInput {
   integrationEnabled?: boolean
   integrationLastSyncAt?: string
   cfdmApiUrl?: string
+  showQuickActions?: boolean
 }
 
 function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
@@ -238,6 +243,16 @@ function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
         ? r.integrationLastSyncAt || ''
         : existing?.integrationLastSyncAt ?? '',
     cfdmApiUrl: r.cfdmApiUrl !== undefined ? r.cfdmApiUrl || '' : existing?.cfdmApiUrl ?? '',
+    showQuickActions:
+      r.showQuickActions !== undefined
+        ? r.showQuickActions
+          ? 1
+          : 0
+        : existing?.showQuickActions == null
+          ? 1
+          : existing.showQuickActions
+            ? 1
+            : 0,
   }
 }
 

@@ -133,6 +133,7 @@ export const settings = sqliteTable('settings', {
   integrationEnabled: integer('integrationEnabled'),
   integrationLastSyncAt: text('integrationLastSyncAt'),
   cfdmApiUrl: text('cfdmApiUrl'),
+  showQuickActions: integer('showQuickActions'),
 })
 
 export const vpsDomains = sqliteTable('vps_domains', {

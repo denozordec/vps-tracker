@@ -112,6 +112,7 @@ export const settingsSchema = z.object({
       (fields) => new Set(fields.map((f) => f.key)).size === fields.length,
       'Ключи кастомных полей должны быть уникальными',
     ),
+  showQuickActions: z.boolean().optional().default(true),
 })
 
 export {

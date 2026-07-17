@@ -45,6 +45,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 
 import { ModeToggle } from '@/components/mode-toggle'
+import { SystemMonitorPopover } from '@/components/layout/system-monitor-popover'
 import { AppSwitcher } from '@/components/app-switcher'
 import { GlobalSearch, GlobalSearchTrigger, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
@@ -230,6 +231,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {stats.issuesCount} проблем
               </Badge>
             ) : null}
+            <SystemMonitorPopover />
             <ModeToggle />
           </div>
         </header>

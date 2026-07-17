@@ -32,10 +32,24 @@ Ops / list / dashboard / detail / settings — только **Frame**, не shad
 |-----------|------|
 | `ResourcePage` | Frame + line tabs + Filters + DataGrid |
 | `KpiStatGrid` | horizontal compact hybrid KPI tiles (`variant`, Badge) |
-| `OpsDashboard` | KPI + charts + attention queue |
+| `QuickActionGrid` | KPI-like quick action tiles under/after KPI (gated by `showQuickActions`) |
+| `OpsDashboard` | KPI + charts + attention queue (+ optional `afterKpi`) |
 | `SettingsShell` | settings nav + Outlet |
 | `DetailPanel` | detail Frame sections |
 | `filter-utils` | apply/clear ReUI Filters |
+
+## Dashboard layout
+
+| App | Section order |
+|-----|---------------|
+| EvoBGP / CFDM | KPI → **QuickActionGrid** → charts / rest |
+| vps-tracker | banner → KPI → charts → attention → **QuickActionGrid** → CSV |
+
+Gating: DB preference `showQuickActions` / `show_quick_actions` / `ui_show_quick_actions` (default `true`).
+
+## System monitor
+
+`SystemMonitorPopover` in app header next to `ModeToggle` (EvoBGP pattern: pill «Система» + Норма/Внимание). Preview shell: https://reui.io/preview/base/app-shell-12
 
 ## MCP workflow
 

@@ -134,6 +134,7 @@ export interface Settings {
   integrationTokenSet?: boolean
   integrationLastSyncAt?: string
   cfdmApiUrl?: string
+  showQuickActions?: boolean
 }
 
 export interface VpsDomain {

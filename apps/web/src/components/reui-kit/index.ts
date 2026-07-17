@@ -6,6 +6,10 @@ export {
   type KpiStatVariant,
   type OpsKpiCard,
 } from './kpi-stat-grid'
+export {
+  QuickActionGrid,
+  type QuickActionItem,
+} from './quick-action-grid'
 export { OpsDashboard } from './ops-dashboard'
 export { DetailPanel, type DetailMetricCard } from './detail-panel'
 export { SettingsShell, type SettingsTabConfig } from './settings-shell'
