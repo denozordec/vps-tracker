@@ -26,7 +26,7 @@ import { PageHeader } from '@/components/page-header'
 import { PageShell } from '@/components/page-shell'
 import { QueryState } from '@/components/query-state'
 import { api } from '@/lib/api-client'
-import { getStoredSpaceId } from '@/lib/space'
+import { useSpaceId } from '@/lib/space'
 import { spacesKeys, spacesQueryOptions } from '@/queries/snapshot'
 
 export const Route = createFileRoute('/_auth/spaces')({
@@ -42,7 +42,7 @@ type MemberRow = {
 
 function SpacesPage() {
   const qc = useQueryClient()
-  const spaceId = getStoredSpaceId()
+  const { spaceId } = useSpaceId()
   const { data: spaces = [] } = useQuery(spacesQueryOptions())
   const current = spaces.find((s) => s.id === spaceId) ?? spaces[0]
   const currentId = current?.id ?? ''

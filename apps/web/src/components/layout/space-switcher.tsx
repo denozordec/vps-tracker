@@ -30,26 +30,28 @@ import {
 } from '@cfdm/ui/components/sidebar'
 
 import { api } from '@/lib/api-client'
-import { getStoredSpaceId, setStoredSpaceId, type SpaceDto } from '@/lib/space'
+import { useSpaceId, type SpaceDto } from '@/lib/space'
 import { spacesKeys, spacesQueryOptions, snapshotKeys } from '@/queries/snapshot'
 
 export function SpaceSwitcher() {
   const { isMobile } = useSidebar()
   const qc = useQueryClient()
+  const { spaceId, setSpaceId } = useSpaceId()
   const { data: spaces = [] } = useQuery(spacesQueryOptions())
-  const currentId = getStoredSpaceId() ?? spaces[0]?.id
+  const currentId = spaceId ?? spaces[0]?.id
   const current = spaces.find((s) => s.id === currentId) ?? spaces[0]
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState('')
 
   useEffect(() => {
-    if (!getStoredSpaceId() && spaces[0]?.id) {
-      setStoredSpaceId(spaces[0].id)
+    if (!spaceId && spaces[0]?.id) {
+      setSpaceId(spaces[0].id)
     }
-  }, [spaces])
+  }, [spaceId, spaces, setSpaceId])
 
   function selectSpace(space: SpaceDto) {
-    setStoredSpaceId(space.id)
+    if (space.id === currentId) return
+    setSpaceId(space.id)
     void qc.invalidateQueries({ queryKey: snapshotKeys.all })
     void qc.invalidateQueries({ queryKey: spacesKeys.all })
     toast.success(`Пространство: ${space.name}`)
@@ -64,7 +66,7 @@ export function SpaceSwitcher() {
     if (!n) return
     try {
       const created = await api.createSpace({ name: n })
-      setStoredSpaceId(created.id)
+      setSpaceId(created.id)
       setCreateOpen(false)
       setName('')
       await qc.invalidateQueries({ queryKey: spacesKeys.all })

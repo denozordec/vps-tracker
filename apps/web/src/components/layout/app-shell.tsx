@@ -57,6 +57,7 @@ import {
   can,
   permissionForPath,
 } from '@/lib/auth'
+import { SpaceProvider, useSpaceId } from '@/lib/space'
 
 interface NavItem {
   to: string
@@ -162,6 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   })).filter((g) => g.items.length > 0)
 
   return (
+    <SpaceProvider>
     <TooltipProvider delay={0}>
       <SidebarProvider
         style={
@@ -247,11 +249,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
           <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
-            {children}
+            <SpaceScopedMain>{children}</SpaceScopedMain>
           </main>
         </SidebarInset>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       </SidebarProvider>
     </TooltipProvider>
+    </SpaceProvider>
+  )
+}
+
+/** Remount route content when space changes so snapshot queries pick new X-Space-Id. */
+function SpaceScopedMain({ children }: { children: ReactNode }) {
+  const { spaceId } = useSpaceId()
+  return (
+    <div key={spaceId ?? 'default'} className="flex flex-1 flex-col gap-4 md:gap-6">
+      {children}
+    </div>
   )
 }

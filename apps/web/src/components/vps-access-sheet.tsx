@@ -21,7 +21,7 @@ import {
 } from '@cfdm/ui/components/sheet'
 
 import { api } from '@/lib/api-client'
-import { getStoredSpaceId } from '@/lib/space'
+import { useSpaceId } from '@/lib/space'
 import { spacesQueryOptions, snapshotKeys } from '@/queries/snapshot'
 import type { Vps } from '@/types/entities'
 
@@ -33,8 +33,9 @@ type Props = {
 
 export function VpsAccessSheet({ vps, open, onOpenChange }: Props) {
   const qc = useQueryClient()
+  const { spaceId } = useSpaceId()
   const { data: spaces = [] } = useQuery(spacesQueryOptions())
-  const fromSpaceId = getStoredSpaceId() ?? spaces.find((s) => s.kind === 'main')?.id ?? ''
+  const fromSpaceId = spaceId ?? spaces.find((s) => s.kind === 'main')?.id ?? ''
   const targets = spaces.filter((s) => s.id !== fromSpaceId)
   const [toSpaceId, setToSpaceId] = useState('')
   const [permission, setPermission] = useState<'read' | 'write'>('read')

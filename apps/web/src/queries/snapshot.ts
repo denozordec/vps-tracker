@@ -7,11 +7,15 @@ export const snapshotKeys = {
   space: (spaceId: string | null) => ['snapshot', spaceId ?? 'default'] as const,
 }
 
-export const snapshotQueryOptions = () => ({
-  queryKey: snapshotKeys.space(getStoredSpaceId()),
-  queryFn: () => api.fetchData(),
-  staleTime: 30_000,
-})
+/** Pass spaceId from useSpaceId() so queryKey updates on switch. */
+export const snapshotQueryOptions = (spaceId?: string | null) => {
+  const id = spaceId === undefined ? getStoredSpaceId() : spaceId
+  return {
+    queryKey: snapshotKeys.space(id),
+    queryFn: () => api.fetchData(),
+    staleTime: 30_000,
+  }
+}
 
 export const spacesKeys = {
   all: ['spaces'] as const,
