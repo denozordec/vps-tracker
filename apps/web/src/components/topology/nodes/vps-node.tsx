@@ -3,9 +3,10 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { ServerIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@cfdm/ui/lib/utils'
+import { CountryFlag } from '@/components/country-flag'
 import { StatusBadge } from '@/components/status-badge'
 import { snapshotQueryOptions } from '@/queries/snapshot'
-import { vpsStatusLabel } from '@/lib/format'
+import { resolveCountryCode, vpsStatusLabel } from '@/lib/format'
 import type { Vps } from '@/types/entities'
 import { type VpsNodeData, vpsSpecsLine } from '../types'
 
@@ -28,15 +29,27 @@ function VpsNodeComponent({ data, selected }: NodeProps & { data: VpsNodeData })
   const orphan = !vps
   const name = vps?.dns || vps?.ip || data.label || 'VPS'
   const rate = vps ? formatRate(vps) : null
+  const countryCode = resolveCountryCode(vps?.country)
+  const hasFlag = Boolean(countryCode)
 
   return (
     <div
       className={cn(
-        'min-w-[220px] rounded-lg border bg-background px-3 py-2 shadow-sm',
+        'relative min-w-[220px] rounded-lg border bg-background px-3 py-2 shadow-sm',
+        hasFlag && 'pt-3',
         selected ? 'border-primary ring-2 ring-primary/20' : 'border-border',
         orphan && 'border-warning/60',
       )}
     >
+      {hasFlag ? (
+        <div className="absolute -top-1.5 left-2 z-10" title={vps?.country || undefined}>
+          <CountryFlag
+            code={countryCode}
+            country={vps?.country}
+            className="size-5 rounded-[3px] shadow-sm ring-1 ring-border"
+          />
+        </div>
+      ) : null}
       <Handle
         type="target"
         position={Position.Left}
