@@ -48,6 +48,10 @@ export type TopologyEdgeData = {
   lineStyle?: 'solid' | 'dashed'
   direction?: TopologyEdgeDirection
   protocol?: string
+  /** Локальный IP VPN/туннеля (опционально) */
+  localIp?: string
+  /** Удалённый / peer IP VPN/туннеля (опционально) */
+  remoteIp?: string
   notes?: string
 }
 
@@ -104,12 +108,41 @@ export function defaultEdgeData(): TopologyEdgeData {
     lineStyle: 'solid',
     direction: 'forward',
     protocol: '',
+    localIp: '',
+    remoteIp: '',
     notes: '',
   }
 }
 
 export function edgeRelationLabel(relation: TopologyEdgeRelation): string {
   return EDGE_RELATION_OPTIONS.find((o) => o.value === relation)?.label ?? relation
+}
+
+/** Краткая подпись IP туннеля: `10.8.0.1 ↔ 10.8.0.2` или один адрес */
+export function formatEdgeTunnelIps(data: Pick<TopologyEdgeData, 'localIp' | 'remoteIp'>): string {
+  const local = data.localIp?.trim() ?? ''
+  const remote = data.remoteIp?.trim() ?? ''
+  if (local && remote) return `${local} ↔ ${remote}`
+  return local || remote
+}
+
+export function edgeRelationShortLabel(relation: TopologyEdgeRelation): string {
+  switch (relation) {
+    case 'network':
+      return 'Сеть'
+    case 'dependency':
+      return 'Зависимость'
+    case 'tunnel':
+      return 'Туннель'
+    case 'vpn':
+      return 'VPN'
+    case 'sync':
+      return 'Синк'
+    case 'custom':
+      return 'Связь'
+    default:
+      return relation
+  }
 }
 
 export function vpsSpecsLine(vps: Pick<Vps, 'vcpu' | 'ramGb' | 'diskGb' | 'diskType'>): string {

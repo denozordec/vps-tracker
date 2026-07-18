@@ -19,8 +19,8 @@ import {
   useReactFlow,
   type Connection,
   type Edge,
-  type Node,
   type OnConnect,
+  type OnNodeDrag,
   type OnNodesChange,
   type OnEdgesChange,
   type Viewport,
@@ -31,6 +31,7 @@ import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { cn } from '@cfdm/ui/lib/utils'
 import { topologyNodeTypes } from './node-types'
+import { topologyEdgeTypes } from './edge-types'
 import { TopologyPalette, parsePaletteDrag, shapeLabel } from './palette'
 import { TopologyToolbar } from './toolbar'
 import { AddVpsSheet } from './add-vps-sheet'
@@ -38,6 +39,12 @@ import { VpsDetailSheet } from './vps-detail-sheet'
 import { ElementEditSheet, type EditableElement } from './element-edit-sheet'
 import { EdgeEditSheet } from './edge-edit-sheet'
 import { applyEdgeVisuals, createConnectedEdge } from './edge-utils'
+import {
+  normalizeGroupLayers,
+  placeWithOptionalParent,
+  reconcileNodeParenting,
+  sortParentsFirst,
+} from './group-utils'
 import {
   defaultEdgeData,
   isGroupNodeData,
@@ -50,11 +57,11 @@ import {
   type PaletteItem,
   type ShapeNodeData,
   type TopologyEdgeData,
-  type TopologyNodeData,
+  type TopologyFlowNode,
   type TopologyNodeType,
 } from './types'
 
-type FlowNode = Node<TopologyNodeData, TopologyNodeType>
+type FlowNode = TopologyFlowNode
 type FlowEdge = Edge<TopologyEdgeData>
 
 interface TopologyEditorProps {
@@ -88,7 +95,9 @@ function TopologyEditorInner({
   const { screenToFlowPosition, fitView, zoomIn, zoomOut, getViewport, setViewport } =
     useReactFlow()
 
-  const [nodes, setNodes, onNodesChangeBase] = useNodesState<FlowNode>(initialNodes)
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState<FlowNode>(
+    normalizeGroupLayers(sortParentsFirst(initialNodes)),
+  )
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState<FlowEdge>(
     normalizeEdges(initialEdges),
   )
@@ -107,7 +116,7 @@ function TopologyEditorInner({
   useEffect(() => {
     skipSave.current = true
     hydrated.current = false
-    setNodes(initialNodes)
+    setNodes(normalizeGroupLayers(sortParentsFirst(initialNodes)))
     setEdges(normalizeEdges(initialEdges))
     setEditElement(null)
     setElementOpen(false)
@@ -144,8 +153,17 @@ function TopologyEditorInner({
     (changes) => {
       if (locked) return
       onNodesChangeBase(changes)
+      const touchesSelection = changes.some(
+        (c) => c.type === 'select' || c.type === 'dimensions' || c.type === 'replace',
+      )
+      if (touchesSelection) {
+        // Keep groups on back layer after select/resize updates settle
+        queueMicrotask(() => {
+          setNodes((ns) => normalizeGroupLayers(ns))
+        })
+      }
     },
-    [locked, onNodesChangeBase],
+    [locked, onNodesChangeBase, setNodes],
   )
 
   const onEdgesChange: OnEdgesChange<FlowEdge> = useCallback(
@@ -175,6 +193,24 @@ function TopologyEditorInner({
     [locked, setEdges],
   )
 
+  const onNodeDragStop: OnNodeDrag<FlowNode> = useCallback(
+    (_e, node) => {
+      if (locked) return
+      setNodes((ns) => {
+        const current = ns.find((n) => n.id === node.id) ?? node
+        const next = reconcileNodeParenting(current, ns)
+        if (next === current && next.parentId === current.parentId) {
+          const samePos =
+            next.position.x === current.position.x && next.position.y === current.position.y
+          if (samePos) return normalizeGroupLayers(ns)
+        }
+        const updated = ns.map((n) => (n.id === next.id ? next : n))
+        return normalizeGroupLayers(sortParentsFirst(updated))
+      })
+    },
+    [locked, setNodes],
+  )
+
   const existingVpsIds = useMemo(() => {
     const ids = new Set<string>()
     for (const n of nodes) {
@@ -188,36 +224,36 @@ function TopologyEditorInner({
       setAddVpsOpen(true)
       return
     }
-    if (item.kind === 'shape') {
-      const node: FlowNode = {
-        id: newNodeId('shape'),
-        type: 'shape',
-        position,
-        data: { kind: item.shape, label: shapeLabel(item.shape) },
+    setNodes((ns) => {
+      let draft: FlowNode | null = null
+      if (item.kind === 'shape') {
+        draft = {
+          id: newNodeId('shape'),
+          type: 'shape',
+          position,
+          data: { kind: item.shape, label: shapeLabel(item.shape) },
+        }
+      } else if (item.kind === 'note') {
+        draft = {
+          id: newNodeId('note'),
+          type: 'note',
+          position,
+          data: { text: 'Заметка' },
+        }
+      } else if (item.kind === 'group') {
+        draft = {
+          id: newNodeId('group'),
+          type: 'group',
+          position,
+          style: { width: 320, height: 200 },
+          data: { label: 'Группа' },
+          zIndex: -1,
+        }
       }
-      setNodes((ns) => [...ns, node])
-      return
-    }
-    if (item.kind === 'note') {
-      const node: FlowNode = {
-        id: newNodeId('note'),
-        type: 'note',
-        position,
-        data: { text: 'Заметка' },
-      }
-      setNodes((ns) => [...ns, node])
-      return
-    }
-    if (item.kind === 'group') {
-      const node: FlowNode = {
-        id: newNodeId('group'),
-        type: 'group',
-        position,
-        style: { width: 320, height: 200 },
-        data: { label: 'Группа' },
-      }
-      setNodes((ns) => [...ns, node])
-    }
+      if (!draft) return ns
+      const placed = placeWithOptionalParent(draft, position, ns)
+      return normalizeGroupLayers(sortParentsFirst([...ns, placed]))
+    })
   }
 
   function onDragOver(e: DragEvent) {
@@ -240,13 +276,22 @@ function TopologyEditorInner({
       x: (wrapperRef.current?.clientWidth ?? 400) / 2 + 80,
       y: (wrapperRef.current?.clientHeight ?? 300) / 2,
     })
-    const created: FlowNode[] = vpsIds.map((vpsId, i) => ({
-      id: newNodeId('vps'),
-      type: 'vps' as const,
-      position: { x: origin.x + (i % 3) * 240, y: origin.y + Math.floor(i / 3) * 110 },
-      data: { vpsId },
-    }))
-    setNodes((ns) => [...ns, ...created])
+    setNodes((ns) => {
+      const created = vpsIds.map((vpsId, i) => {
+        const pos = {
+          x: origin.x + (i % 3) * 240,
+          y: origin.y + Math.floor(i / 3) * 110,
+        }
+        const draft: FlowNode = {
+          id: newNodeId('vps'),
+          type: 'vps',
+          position: pos,
+          data: { vpsId },
+        }
+        return placeWithOptionalParent(draft, pos, ns)
+      })
+      return normalizeGroupLayers(sortParentsFirst([...ns, ...created]))
+    })
   }
 
   function placeItemAtCenter(item: PaletteItem) {
@@ -351,6 +396,7 @@ function TopologyEditorInner({
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
+        onNodeDragStop={onNodeDragStop}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onMoveEnd={(_, vp) => {
@@ -360,6 +406,7 @@ function TopologyEditorInner({
           }
         }}
         nodeTypes={topologyNodeTypes}
+        edgeTypes={topologyEdgeTypes}
         nodesDraggable={!locked}
         nodesConnectable={!locked}
         elementsSelectable={!locked}
@@ -368,7 +415,7 @@ function TopologyEditorInner({
         fitView
         colorMode={colorMode}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'topology',
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
         }}
         proOptions={{ hideAttribution: true }}

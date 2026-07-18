@@ -1,9 +1,5 @@
 import { MarkerType, type Edge } from '@xyflow/react'
-import {
-  defaultEdgeData,
-  edgeRelationLabel,
-  type TopologyEdgeData,
-} from './types'
+import { defaultEdgeData, type TopologyEdgeData } from './types'
 
 export function applyEdgeVisuals(
   edge: Edge<TopologyEdgeData>,
@@ -11,16 +7,11 @@ export function applyEdgeVisuals(
 ): Edge<TopologyEdgeData> {
   const direction = data.direction ?? 'forward'
   const lineStyle = data.lineStyle ?? 'solid'
-  const label =
-    data.label?.trim() ||
-    (data.protocol?.trim()
-      ? `${edgeRelationLabel(data.relation)} · ${data.protocol.trim()}`
-      : edgeRelationLabel(data.relation))
 
   return {
     ...edge,
-    type: 'smoothstep',
-    label,
+    type: 'topology',
+    label: undefined,
     data,
     style: {
       ...edge.style,
@@ -37,9 +28,12 @@ export function applyEdgeVisuals(
   }
 }
 
-export function createConnectedEdge(
-  connection: { source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null },
-): Edge<TopologyEdgeData> {
+export function createConnectedEdge(connection: {
+  source: string
+  target: string
+  sourceHandle?: string | null
+  targetHandle?: string | null
+}): Edge<TopologyEdgeData> {
   const data = defaultEdgeData()
   return applyEdgeVisuals(
     {

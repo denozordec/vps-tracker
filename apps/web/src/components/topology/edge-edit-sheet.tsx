@@ -35,6 +35,8 @@ export function EdgeEditSheet({
   const [lineStyle, setLineStyle] = useState<'solid' | 'dashed'>('solid')
   const [direction, setDirection] = useState<TopologyEdgeDirection>('forward')
   const [protocol, setProtocol] = useState('')
+  const [localIp, setLocalIp] = useState('')
+  const [remoteIp, setRemoteIp] = useState('')
   const [notes, setNotes] = useState('')
 
   useEffect(() => {
@@ -44,8 +46,12 @@ export function EdgeEditSheet({
     setLineStyle(d.lineStyle ?? 'solid')
     setDirection(d.direction ?? 'forward')
     setProtocol(d.protocol ?? '')
+    setLocalIp(d.localIp ?? '')
+    setRemoteIp(d.remoteIp ?? '')
     setNotes(d.notes ?? '')
   }, [data, edgeId, open])
+
+  const showTunnelIps = relation === 'vpn' || relation === 'tunnel'
 
   return (
     <FormSheet
@@ -55,7 +61,7 @@ export function EdgeEditSheet({
       description={
         locked
           ? 'Схема заблокирована — только просмотр'
-          : 'Тип связи и подпись отображаются на схеме'
+          : 'Тип, подпись, протокол и IP отображаются на схеме вместе'
       }
       submitLabel="Сохранить"
       submitDisabled={locked || !edgeId}
@@ -67,6 +73,8 @@ export function EdgeEditSheet({
           lineStyle,
           direction,
           protocol: protocol.trim(),
+          localIp: localIp.trim(),
+          remoteIp: remoteIp.trim(),
           notes: notes.trim(),
         })
         onOpenChange(false)
@@ -92,7 +100,7 @@ export function EdgeEditSheet({
           onChange={(e) => setLabel(e.target.value)}
           disabled={locked}
           maxLength={60}
-          placeholder="Например: eth0 / 10 Gbit"
+          placeholder="Например: eth0 / uplink — рядом с протоколом"
         />
       </FormField>
       <FormField label="Направление" htmlFor="edge-direction">
@@ -130,6 +138,32 @@ export function EdgeEditSheet({
           placeholder="TCP/443, WireGuard, BGP…"
         />
       </FormField>
+      {showTunnelIps ? (
+        <>
+          <FormField label="Локальный IP туннеля" htmlFor="edge-local-ip">
+            <Input
+              id="edge-local-ip"
+              value={localIp}
+              onChange={(e) => setLocalIp(e.target.value)}
+              disabled={locked}
+              maxLength={45}
+              placeholder="10.8.0.1"
+              className="font-mono"
+            />
+          </FormField>
+          <FormField label="Удалённый IP туннеля" htmlFor="edge-remote-ip">
+            <Input
+              id="edge-remote-ip"
+              value={remoteIp}
+              onChange={(e) => setRemoteIp(e.target.value)}
+              disabled={locked}
+              maxLength={45}
+              placeholder="10.8.0.2"
+              className="font-mono"
+            />
+          </FormField>
+        </>
+      ) : null}
       <FormField label="Заметки" htmlFor="edge-notes">
         <Textarea
           id="edge-notes"
