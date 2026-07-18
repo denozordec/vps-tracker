@@ -39,7 +39,7 @@ import {
   clearToken,
   getClaims,
   isAuthEnabled,
-  redirectToPortalLogin,
+  redirectToPortalLogout,
   resetPortalHandoff,
 } from '@/lib/auth'
 
@@ -130,7 +130,7 @@ export function NavUser() {
   function handleSignOut() {
     clearToken()
     resetPortalHandoff()
-    redirectToPortalLogin()
+    redirectToPortalLogout()
   }
 
   return (

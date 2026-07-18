@@ -146,6 +146,14 @@ export function redirectToPortalLogin(returnTo?: string): boolean {
   return true
 }
 
+/** End portal SSO session (refresh cookie + portal token). Do not pass return_to. */
+export function redirectToPortalLogout(): void {
+  clearToken()
+  resetPortalHandoff()
+  const url = `${authPortalUrl()}/logout`
+  window.location.assign(url)
+}
+
 export function parseHashToken(hash: string): {
   accessToken: string | null
   expiresAt: string | null
