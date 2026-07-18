@@ -1,6 +1,7 @@
 /** Portal JWT storage + claims helpers for VPS Tracker UI. */
 
 const TOKEN_KEY = 'vps_auth_token'
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export type AccessClaims = {
   sub: string
@@ -11,6 +12,66 @@ export type AccessClaims = {
   is_admin?: boolean
   iss?: string
   exp?: number
+}
+
+export type RuntimeAuthConfig = {
+  required: boolean
+  portalUrl: string
+}
+
+let runtimeConfig: RuntimeAuthConfig | null = null
+let runtimeConfigPromise: Promise<RuntimeAuthConfig> | null = null
+
+function viteAuthEnabled(): boolean {
+  return (
+    import.meta.env.VITE_AUTH_ENABLED === 'true' ||
+    import.meta.env.VITE_AUTH_ENABLED === '1'
+  )
+}
+
+function vitePortalUrl(): string {
+  return (import.meta.env.VITE_AUTH_PORTAL_URL ?? 'http://localhost:5175').replace(
+    /\/$/,
+    '',
+  )
+}
+
+/** Load auth mode from API (Docker-friendly). Falls back to VITE_* flags. */
+export async function ensureAuthConfig(): Promise<RuntimeAuthConfig> {
+  if (runtimeConfig) return runtimeConfig
+  if (runtimeConfigPromise) return runtimeConfigPromise
+
+  runtimeConfigPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/config`)
+      if (res.ok) {
+        const data = (await res.json()) as {
+          required?: boolean
+          portal_url?: string
+        }
+        runtimeConfig = {
+          required: Boolean(data.required) || viteAuthEnabled(),
+          portalUrl: (data.portal_url || vitePortalUrl()).replace(/\/$/, ''),
+        }
+        return runtimeConfig
+      }
+    } catch {
+      /* ignore — use vite defaults */
+    }
+    runtimeConfig = {
+      required: viteAuthEnabled(),
+      portalUrl: vitePortalUrl(),
+    }
+    return runtimeConfig
+  })().finally(() => {
+    runtimeConfigPromise = null
+  })
+
+  return runtimeConfigPromise
+}
+
+export function getAuthConfigSync(): RuntimeAuthConfig | null {
+  return runtimeConfig
 }
 
 export function getToken(): string | null {
@@ -26,17 +87,13 @@ export function clearToken() {
 }
 
 export function isAuthEnabled(): boolean {
-  return (
-    import.meta.env.VITE_AUTH_ENABLED === 'true' ||
-    import.meta.env.VITE_AUTH_ENABLED === '1'
-  )
+  if (runtimeConfig) return runtimeConfig.required
+  return viteAuthEnabled()
 }
 
 export function authPortalUrl(): string {
-  return (import.meta.env.VITE_AUTH_PORTAL_URL ?? 'http://localhost:5175').replace(
-    /\/$/,
-    '',
-  )
+  if (runtimeConfig?.portalUrl) return runtimeConfig.portalUrl
+  return vitePortalUrl()
 }
 
 export function redirectToPortalLogin(returnTo?: string) {
@@ -44,7 +101,7 @@ export function redirectToPortalLogin(returnTo?: string) {
     returnTo ?? `${window.location.origin}/auth/callback`
   const url = new URL(authPortalUrl())
   url.searchParams.set('return_to', callback)
-  window.location.href = url.toString()
+  window.location.assign(url.toString())
 }
 
 export function parseHashToken(hash: string): {

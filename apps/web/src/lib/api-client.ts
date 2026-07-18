@@ -8,7 +8,7 @@ import type {
   Payment,
   BalanceLedgerRow,
 } from '@/types/entities'
-import { clearToken, getToken, isAuthEnabled, redirectToPortalLogin } from '@/lib/auth'
+import { clearToken, ensureAuthConfig, getToken, isAuthEnabled, redirectToPortalLogin } from '@/lib/auth'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -27,20 +27,22 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (options.body != null && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  if (isAuthEnabled()) {
-    const token = getToken()
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`)
-    }
+  // Always attach token if present (API may require it even without VITE_AUTH_ENABLED)
+  const token = getToken()
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
   }
   const res = await fetch(url, {
     ...options,
     headers,
   })
   if (!res.ok) {
-    if (isAuthEnabled() && res.status === 401) {
+    if (res.status === 401) {
       clearToken()
-      redirectToPortalLogin()
+      const cfg = await ensureAuthConfig()
+      if (cfg.required || isAuthEnabled()) {
+        redirectToPortalLogin(`${window.location.origin}/auth/callback`)
+      }
     }
     let message = res.statusText || 'API error'
     try {
@@ -153,23 +155,37 @@ export const api = {
 
   downloadBackupJson: async (): Promise<Blob> => {
     const headers = new Headers()
-    if (isAuthEnabled()) {
-      const token = getToken()
-      if (token) headers.set('Authorization', `Bearer ${token}`)
-    }
+    const token = getToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
     const res = await fetch(`${API_BASE}/api/backup/json`, { headers })
-    if (!res.ok) throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
+    if (!res.ok) {
+      if (res.status === 401) {
+        clearToken()
+        const cfg = await ensureAuthConfig()
+        if (cfg.required || isAuthEnabled()) {
+          redirectToPortalLogin(`${window.location.origin}/auth/callback`)
+        }
+      }
+      throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
+    }
     return res.blob()
   },
 
   downloadBackupDatabase: async (): Promise<Blob> => {
     const headers = new Headers()
-    if (isAuthEnabled()) {
-      const token = getToken()
-      if (token) headers.set('Authorization', `Bearer ${token}`)
-    }
+    const token = getToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
     const res = await fetch(`${API_BASE}/api/backup/database`, { headers })
-    if (!res.ok) throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
+    if (!res.ok) {
+      if (res.status === 401) {
+        clearToken()
+        const cfg = await ensureAuthConfig()
+        if (cfg.required || isAuthEnabled()) {
+          redirectToPortalLogin(`${window.location.origin}/auth/callback`)
+        }
+      }
+      throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
+    }
     return res.blob()
   },
 
@@ -178,16 +194,23 @@ export const api = {
 
   importBackupDatabase: async (buffer: ArrayBuffer) => {
     const headers = new Headers({ 'Content-Type': 'application/octet-stream' })
-    if (isAuthEnabled()) {
-      const token = getToken()
-      if (token) headers.set('Authorization', `Bearer ${token}`)
-    }
+    const token = getToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
     const res = await fetch(`${API_BASE}/api/backup/database`, {
       method: 'POST',
       headers,
       body: buffer,
     })
-    if (!res.ok) throw new ApiError(res.statusText || 'Ошибка восстановления', res.status)
+    if (!res.ok) {
+      if (res.status === 401) {
+        clearToken()
+        const cfg = await ensureAuthConfig()
+        if (cfg.required || isAuthEnabled()) {
+          redirectToPortalLogin(`${window.location.origin}/auth/callback`)
+        }
+      }
+      throw new ApiError(res.statusText || 'Ошибка восстановления', res.status)
+    }
     return res.json()
   },
 

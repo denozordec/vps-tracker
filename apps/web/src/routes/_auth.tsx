@@ -2,23 +2,26 @@ import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import {
   can,
+  ensureAuthConfig,
   firstAllowedPath,
   getClaims,
   getToken,
-  isAuthEnabled,
   permissionForPath,
   redirectToPortalLogin,
 } from '@/lib/auth'
 
 export const Route = createFileRoute('/_auth')({
-  beforeLoad: ({ location }) => {
-    if (!isAuthEnabled()) return
+  beforeLoad: async ({ location }) => {
+    const cfg = await ensureAuthConfig()
+    if (!cfg.required) return
 
     const token = getToken()
     const claims = getClaims()
     if (!token || !claims) {
       redirectToPortalLogin(`${window.location.origin}/auth/callback`)
-      throw new Error('Redirecting to auth portal')
+      // Abort route load while browser navigates away
+      await new Promise(() => {})
+      return
     }
     if (!claims.apps.includes('vps')) {
       throw redirect({ to: '/' })

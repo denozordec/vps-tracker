@@ -23,9 +23,11 @@ describe('auth plugin (AUTH_REQUIRED)', () => {
       AUTH_REQUIRED: 'true',
       AUTH_JWT_SECRET: secret,
       AUTH_ISSUER: issuer,
+      AUTH_PORTAL_URL: 'http://192.168.100.67:8080',
     })
     expect(cfg.required).toBe(true)
     expect(cfg.jwtSecret).toBe(secret)
+    expect(cfg.portalUrl).toBe('http://192.168.100.67:8080')
   })
 
   it('401 without token; 403 without vps app; 403 without permission; 200 with rights', async () => {

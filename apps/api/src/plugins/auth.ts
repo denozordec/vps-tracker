@@ -11,6 +11,7 @@ export type AuthConfig = {
   required: boolean
   jwtSecret: string
   issuer: string
+  portalUrl: string
 }
 
 declare module 'fastify' {
@@ -61,12 +62,18 @@ export function loadAuthConfig(
       env.JWT_SECRET ??
       (isProd ? '' : 'dev-secret-change-me'),
     issuer: env.AUTH_ISSUER ?? env.ISSUER ?? 'https://auth.shnt.top',
+    portalUrl: (
+      env.AUTH_PORTAL_URL ??
+      env.VITE_AUTH_PORTAL_URL ??
+      'http://localhost:5175'
+    ).replace(/\/$/, ''),
   }
 }
 
 function isPublicPath(url: string): boolean {
   const path = url.split('?')[0] ?? url
   if (path === '/health' || path === '/ready') return true
+  if (path === '/api/auth/config') return true
   if (path.startsWith('/api/integrations/cfdm')) return true
   return false
 }
@@ -74,6 +81,11 @@ function isPublicPath(url: string): boolean {
 export const authPlugin = fp(async (app) => {
   const config = loadAuthConfig()
   app.decorate('authConfig', config)
+
+  app.get('/api/auth/config', async () => ({
+    required: config.required,
+    portal_url: config.portalUrl,
+  }))
 
   if (!config.required) {
     app.log.info('AUTH_REQUIRED=false — portal JWT middleware disabled')

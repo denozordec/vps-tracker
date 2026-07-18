@@ -1,19 +1,20 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import {
+  ensureAuthConfig,
   firstAllowedPath,
-  isAuthEnabled,
   parseHashToken,
+  redirectToPortalLogin,
   setToken,
 } from '@/lib/auth'
 
 export const Route = createFileRoute('/auth/callback')({
-  beforeLoad: () => {
-    if (!isAuthEnabled()) {
-      throw redirect({ to: '/dashboard' })
-    }
+  beforeLoad: async () => {
+    await ensureAuthConfig()
     const { accessToken } = parseHashToken(window.location.hash)
     if (!accessToken) {
-      throw redirect({ to: '/' })
+      redirectToPortalLogin(`${window.location.origin}/auth/callback`)
+      await new Promise(() => {})
+      return
     }
     setToken(accessToken)
     window.history.replaceState(null, '', '/auth/callback')
