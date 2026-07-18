@@ -13,6 +13,7 @@ import {
   FolderKanbanIcon,
   HistoryIcon,
   UsersIcon,
+  Network,
 } from 'lucide-react'
 
 import {
@@ -80,6 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Инфраструктура',
     items: [
       { to: '/vps', label: 'VPS', icon: Server },
+      { to: '/topology', label: 'Схема', icon: Network },
       { to: '/tariffs', label: 'Активные тарифы', icon: ServerCog },
       { to: '/providers', label: 'Хостеры', icon: Building2 },
       { to: '/accounts', label: 'Аккаунты хостеров', icon: Wallet },
@@ -120,6 +122,7 @@ const ROUTE_LABELS: Record<string, string> = Object.fromEntries(
 
 const PARENT_ROUTE: Record<string, string> = {
   '/vps': '/dashboard',
+  '/topology': '/dashboard',
   '/tariffs': '/dashboard',
   '/providers': '/dashboard',
   '/accounts': '/dashboard',

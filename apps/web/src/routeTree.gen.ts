@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthVpsRouteImport } from './routes/_auth/vps'
+import { Route as AuthTopologyRouteImport } from './routes/_auth/topology'
 import { Route as AuthTariffsRouteImport } from './routes/_auth/tariffs'
 import { Route as AuthSyncJournalRouteImport } from './routes/_auth/sync-journal'
 import { Route as AuthSpacesRouteImport } from './routes/_auth/spaces'
@@ -49,6 +50,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 const AuthVpsRoute = AuthVpsRouteImport.update({
   id: '/vps',
   path: '/vps',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthTopologyRoute = AuthTopologyRouteImport.update({
+  id: '/topology',
+  path: '/topology',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthTariffsRoute = AuthTariffsRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/spaces': typeof AuthSpacesRoute
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
+  '/topology': typeof AuthTopologyRoute
   '/vps': typeof AuthVpsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/spaces': typeof AuthSpacesRoute
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
+  '/topology': typeof AuthTopologyRoute
   '/vps': typeof AuthVpsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/_auth/spaces': typeof AuthSpacesRoute
   '/_auth/sync-journal': typeof AuthSyncJournalRoute
   '/_auth/tariffs': typeof AuthTariffsRoute
+  '/_auth/topology': typeof AuthTopologyRoute
   '/_auth/vps': typeof AuthVpsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/_auth/projects/$projectId': typeof AuthProjectsProjectIdRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/spaces'
     | '/sync-journal'
     | '/tariffs'
+    | '/topology'
     | '/vps'
     | '/auth/callback'
     | '/projects/$projectId'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/spaces'
     | '/sync-journal'
     | '/tariffs'
+    | '/topology'
     | '/vps'
     | '/auth/callback'
     | '/projects/$projectId'
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/_auth/spaces'
     | '/_auth/sync-journal'
     | '/_auth/tariffs'
+    | '/_auth/topology'
     | '/_auth/vps'
     | '/auth/callback'
     | '/_auth/projects/$projectId'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/vps'
       fullPath: '/vps'
       preLoaderRoute: typeof AuthVpsRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/topology': {
+      id: '/_auth/topology'
+      path: '/topology'
+      fullPath: '/topology'
+      preLoaderRoute: typeof AuthTopologyRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/tariffs': {
@@ -501,6 +520,7 @@ interface AuthRouteChildren {
   AuthSpacesRoute: typeof AuthSpacesRoute
   AuthSyncJournalRoute: typeof AuthSyncJournalRoute
   AuthTariffsRoute: typeof AuthTariffsRoute
+  AuthTopologyRoute: typeof AuthTopologyRoute
   AuthVpsRoute: typeof AuthVpsRouteWithChildren
 }
 
@@ -519,6 +539,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthSpacesRoute: AuthSpacesRoute,
   AuthSyncJournalRoute: AuthSyncJournalRoute,
   AuthTariffsRoute: AuthTariffsRoute,
+  AuthTopologyRoute: AuthTopologyRoute,
   AuthVpsRoute: AuthVpsRouteWithChildren,
 }
 

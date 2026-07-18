@@ -347,4 +347,17 @@ export const tariffSyncOptions = sqliteTable('tariff_sync_options', {
   syncedAt: text('syncedAt'),
 })
 
+export const topologyDiagrams = sqliteTable('topology_diagrams', {
+  id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
+  name: text('name').notNull(),
+  document: text('document').notNull().default('{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'),
+  locked: integer('locked').notNull().default(0),
+  createdAt: text('createdAt').notNull(),
+  updatedAt: text('updatedAt').notNull(),
+})
+
 export const now = sql`(datetime('now'))`

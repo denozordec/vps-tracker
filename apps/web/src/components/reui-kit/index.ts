@@ -13,3 +13,4 @@ export {
 export { OpsDashboard } from './ops-dashboard'
 export { DetailPanel, type DetailMetricCard } from './detail-panel'
 export { SettingsShell, type SettingsTabConfig } from './settings-shell'
+export { TopologyCanvas } from './topology-canvas'

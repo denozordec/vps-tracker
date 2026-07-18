@@ -17,6 +17,7 @@ import { balanceLedgerRoutes } from './routes/balance-ledger.js'
 import { settingsRoutes } from './routes/settings.js'
 import { syncRoutes } from './routes/sync.js'
 import { projectsRoutes } from './routes/projects.js'
+import { topologyRoutes } from './routes/topology.js'
 import { backupRoutes } from './routes/backup.js'
 import { ratesProxyRoutes } from './routes/rates-proxy.js'
 import { migrateRoutes } from './routes/migrate.js'
@@ -62,6 +63,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(settingsRoutes)
   await app.register(syncRoutes)
   await app.register(projectsRoutes)
+  await app.register(topologyRoutes)
   await app.register(backupRoutes)
   await app.register(ratesProxyRoutes)
   await app.register(migrateRoutes)

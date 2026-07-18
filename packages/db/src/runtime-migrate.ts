@@ -117,6 +117,15 @@ const TABLE_MIGRATIONS: string[] = [
     createdAt TEXT NOT NULL,
     UNIQUE(vpsId, toSpaceId)
   )`,
+  `CREATE TABLE IF NOT EXISTS topology_diagrams (
+    id TEXT PRIMARY KEY,
+    spaceId TEXT NOT NULL DEFAULT 'space-main' REFERENCES spaces(id),
+    name TEXT NOT NULL,
+    document TEXT NOT NULL DEFAULT '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}',
+    locked INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  )`,
 ]
 
 const SPACE_BACKFILL_TABLES = [
@@ -135,6 +144,7 @@ const SPACE_BACKFILL_TABLES = [
   'sync_log',
   'active_tariffs',
   'tariff_sync_options',
+  'topology_diagrams',
 ] as const
 
 function ensureMainSpace(sqlite: Database.Database): void {

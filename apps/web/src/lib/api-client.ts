@@ -302,6 +302,35 @@ export const api = {
   deleteProject: (id: string) =>
     fetchApi<void>(`/api/projects/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
+  fetchTopologyList: () =>
+    fetchApi<import('@cfdm/shared/contracts/topology').TopologyDiagramListItem[]>('/api/topology'),
+
+  fetchTopology: (id: string) =>
+    fetchApi<import('@cfdm/shared/contracts/topology').TopologyDiagram>(
+      `/api/topology/${encodeURIComponent(id)}`,
+    ),
+
+  createTopology: (payload: import('@cfdm/shared/contracts/topology').TopologyCreateInput) =>
+    fetchApi<import('@cfdm/shared/contracts/topology').TopologyDiagram>('/api/topology', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  updateTopology: (
+    id: string,
+    payload: import('@cfdm/shared/contracts/topology').TopologyUpdateInput,
+  ) =>
+    fetchApi<import('@cfdm/shared/contracts/topology').TopologyDiagram>(
+      `/api/topology/${encodeURIComponent(id)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  deleteTopology: (id: string) =>
+    fetchApi<void>(`/api/topology/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
   fetchAuditLog: (limit = 100) =>
     fetchApi<Array<{
       id: string

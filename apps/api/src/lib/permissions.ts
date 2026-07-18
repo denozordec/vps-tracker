@@ -50,13 +50,16 @@ const RULES: Rule[] = [
       p === '/api/vps' ||
       p.startsWith('/api/vps/') ||
       p.startsWith('/api/projects') ||
+      p.startsWith('/api/topology') ||
       p.startsWith('/api/data'),
     permission: 'vps:vps:read',
   },
   {
     methods: ['POST', 'PUT', 'PATCH', 'DELETE'],
     match: (p) =>
-      p.startsWith('/api/vps') || p.startsWith('/api/projects'),
+      p.startsWith('/api/vps') ||
+      p.startsWith('/api/projects') ||
+      p.startsWith('/api/topology'),
     permission: 'vps:vps:write',
   },
   {
