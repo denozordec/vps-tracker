@@ -23,7 +23,14 @@ interface EmptyStateProps {
 }
 
 function isLucideIcon(icon: LucideIcon | ReactNode): icon is LucideIcon {
-  return typeof icon === 'function'
+  if (typeof icon === 'function') return true
+  // lucide-react icons are forwardRef objects ({ $$typeof, render, displayName })
+  if (icon != null && typeof icon === 'object' && '$$typeof' in icon) {
+    // React elements have `props` — those are pre-rendered nodes, not components
+    if ('props' in icon) return false
+    return true
+  }
+  return false
 }
 
 /** Empty state — ReUI empty-state-12. Preview: https://reui.io/preview/base/empty-state-12 */
