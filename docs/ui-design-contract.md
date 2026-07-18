@@ -67,7 +67,7 @@ Gating: DB preference `showQuickActions` / `show_quick_actions` / `ui_show_quick
 
 Запрещено в chrome: `SidebarRail`, sync-row footer, Search/Ctrl+K pill в header, issues Badge в header, muted/hover cascade на right-cluster, Provider `color-mix` для `--sidebar*`, ModeToggle в header (тема только в NavUser).
 
-App Switcher ids: `vps-tracker` · `cfdm` · `evobgp`. Override: `VITE_APP_SWITCHER` JSON.
+App Switcher: source of truth — auth-portal `GET /api/v1/app-switcher`. Ids: `cfdm` · `vps` · `bgp`. Admin: portal `/admin/apps`. Локальный editor убран.
 
 QuickActionGrid icons: только semantic **text** (`text-info` / `text-primary` / …) на kit `bg-muted` — без solid `bg-primary` fills. Preview: [stats-12](https://reui.io/preview/base/stats-12).
 

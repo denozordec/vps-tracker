@@ -10,15 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@cfdm/ui/components/dropdown-menu'
+import { authPortalUrl, isAuthEnabled } from '@/lib/auth'
 import {
   APP_SWITCHER_ICONS,
   CURRENT_APP_ID,
 } from '@/lib/app-switcher-config'
 import { useAppSwitcherConfig } from '@/hooks/use-app-switcher'
 
-/** Header apps grid — app-shell-12 AppsMenu. @see https://reui.io/preview/base/app-shell-12 */
+/** Header apps grid — app-shell-12 AppsMenu, wired to auth-portal App Switcher. */
 export function AppsMenu() {
   const { config, isLoading } = useAppSwitcherConfig()
+  const portalAppsUrl = `${authPortalUrl().replace(/\/$/, '')}/admin/apps`
 
   return (
     <DropdownMenu>
@@ -45,7 +47,7 @@ export function AppsMenu() {
           </DropdownMenuLabel>
           <div className="grid grid-cols-3 gap-1 p-1">
             {config.apps.map((app) => {
-              const Icon = APP_SWITCHER_ICONS[app.icon]
+              const Icon = APP_SWITCHER_ICONS[app.icon] ?? APP_SWITCHER_ICONS.server
               const isCurrent = app.id === CURRENT_APP_ID
 
               if (isCurrent) {
@@ -79,13 +81,23 @@ export function AppsMenu() {
             })}
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            nativeButton={false}
-            render={<Link to="/settings/integrations" />}
-            className="justify-center text-sm font-medium"
-          >
-            Настроить приложения
-          </DropdownMenuItem>
+          {isAuthEnabled() ? (
+            <DropdownMenuItem
+              nativeButton={false}
+              render={<a href={portalAppsUrl} />}
+              className="justify-center text-sm font-medium"
+            >
+              Настроить на портале
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              nativeButton={false}
+              render={<Link to="/settings/integrations" />}
+              className="justify-center text-sm font-medium"
+            >
+              Интеграции
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

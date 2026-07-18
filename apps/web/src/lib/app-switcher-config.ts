@@ -6,15 +6,17 @@ import {
   ServerIcon,
   type LucideIcon,
 } from 'lucide-react'
-import { z } from 'zod'
+import type { AppSwitcherConfig, AppSwitcherEntry } from '@cfdm/shared/contracts/app-switcher'
 
-export const CURRENT_APP_ID = 'vps-tracker'
+/** JWT / portal app id for this product */
+export const CURRENT_APP_ID = 'vps'
 
-const appSwitcherIconSchema = z.enum(['server', 'cloud', 'globe', 'dashboard', 'chart'])
+export type AppSwitcherIconName = keyof typeof APP_SWITCHER_ICONS
 
-export type AppSwitcherIconName = z.infer<typeof appSwitcherIconSchema>
-
-export const APP_SWITCHER_ICONS: Record<AppSwitcherIconName, LucideIcon> = {
+export const APP_SWITCHER_ICONS: Record<
+  'server' | 'cloud' | 'globe' | 'dashboard' | 'chart',
+  LucideIcon
+> = {
   server: ServerIcon,
   cloud: CloudIcon,
   globe: GlobeIcon,
@@ -22,80 +24,43 @@ export const APP_SWITCHER_ICONS: Record<AppSwitcherIconName, LucideIcon> = {
   chart: ChartBarIcon,
 }
 
-const appSwitcherEntrySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  subtitle: z.string().optional(),
-  url: z.string(),
-  icon: appSwitcherIconSchema.default('server'),
-  shortcut: z.string().optional(),
-})
-
-const appSwitcherConfigSchema = z.object({
-  menuLabel: z.string().default('Приложения'),
-  apps: z.array(appSwitcherEntrySchema).min(1),
-})
-
-export type AppSwitcherEntry = z.infer<typeof appSwitcherEntrySchema>
-export type AppSwitcherConfig = z.infer<typeof appSwitcherConfigSchema>
-
+/** Offline fallback when auth-portal is unreachable */
 export const DEFAULT_APP_SWITCHER_CONFIG: AppSwitcherConfig = {
   menuLabel: 'Приложения',
   apps: [
     {
-      id: 'vps-tracker',
+      id: 'vps',
       name: 'VPS Tracker',
       subtitle: 'Учёт виртуальных серверов',
-      url: 'http://192.168.100.67:3001',
+      url: 'https://vps.shnt.top',
       icon: 'server',
-      shortcut: '⌘1',
     },
     {
       id: 'cfdm',
       name: 'CF Domain Manager',
       subtitle: 'Управление доменами',
-      url: 'http://192.168.100.67:6363',
+      url: 'https://cfdm.shnt.top',
       icon: 'cloud',
-      shortcut: '⌘2',
     },
     {
-      id: 'evobgp',
+      id: 'bgp',
       name: 'EvoBGP',
       subtitle: 'BGP маршрутизация',
-      url: 'http://192.168.100.67:3000',
+      url: 'https://bgp.shnt.top',
       icon: 'globe',
-      shortcut: '⌘3',
     },
   ],
 }
 
-export function parseAppSwitcherConfig(raw?: string): AppSwitcherConfig {
-  if (!raw?.trim()) {
-    return DEFAULT_APP_SWITCHER_CONFIG
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    return appSwitcherConfigSchema.parse(parsed)
-  } catch (error) {
-    console.warn('Invalid VITE_APP_SWITCHER, using defaults:', error)
-    return DEFAULT_APP_SWITCHER_CONFIG
-  }
-}
-
-export function getAppSwitcherConfig(): AppSwitcherConfig {
-  return parseAppSwitcherConfig(import.meta.env.VITE_APP_SWITCHER)
-}
-
 export function getAppUrl(
   appId: string,
-  config: AppSwitcherConfig = getAppSwitcherConfig(),
+  config: AppSwitcherConfig = DEFAULT_APP_SWITCHER_CONFIG,
 ): string | undefined {
   return config.apps.find((app) => app.id === appId)?.url
 }
 
 export function getCurrentApp(
-  config: AppSwitcherConfig = getAppSwitcherConfig(),
+  config: AppSwitcherConfig = DEFAULT_APP_SWITCHER_CONFIG,
 ): AppSwitcherEntry {
   return config.apps.find((app) => app.id === CURRENT_APP_ID) ?? config.apps[0]!
 }

@@ -8,6 +8,8 @@ export const appSwitcherEntrySchema = z.object({
   subtitle: z.string().optional(),
   url: z.string().url('Невалидный URL'),
   icon: appSwitcherIconSchema.default('server'),
+  enabled: z.boolean().optional(),
+  sort: z.number().optional(),
   shortcut: z.string().optional(),
 })
 

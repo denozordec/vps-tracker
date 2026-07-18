@@ -24,7 +24,7 @@ export function AppSwitcher() {
   const { isMobile } = useSidebar()
   const { config, isLoading } = useAppSwitcherConfig()
   const current = getCurrentApp(config)
-  const CurrentIcon = APP_SWITCHER_ICONS[current.icon]
+  const CurrentIcon = APP_SWITCHER_ICONS[current.icon] ?? APP_SWITCHER_ICONS.server
 
   return (
     <SidebarMenu>
@@ -61,7 +61,7 @@ export function AppSwitcher() {
               {isLoading ? 'Загрузка…' : config.menuLabel}
             </div>
             {config.apps.map((app) => {
-              const Icon = APP_SWITCHER_ICONS[app.icon]
+              const Icon = APP_SWITCHER_ICONS[app.icon] ?? APP_SWITCHER_ICONS.server
               const isCurrent = app.id === CURRENT_APP_ID
 
               if (isCurrent) {
