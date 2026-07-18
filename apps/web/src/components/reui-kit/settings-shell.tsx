@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { PlugIcon, SettingsIcon } from 'lucide-react'
+import {
+  BellIcon,
+  PlugIcon,
+  RefreshCwIcon,
+  SettingsIcon,
+} from 'lucide-react'
 
 import { useIsMobile } from '@cfdm/ui/hooks/use-mobile'
 import { cn } from '@cfdm/ui/lib/utils'
@@ -23,6 +28,18 @@ const DEFAULT_TABS: SettingsTabConfig[] = [
     label: 'Общие',
     exact: true,
     icon: <SettingsIcon className="size-4" aria-hidden="true" />,
+  },
+  {
+    id: 'sync',
+    to: '/settings/sync',
+    label: 'Синхронизация',
+    icon: <RefreshCwIcon className="size-4" aria-hidden="true" />,
+  },
+  {
+    id: 'notifications',
+    to: '/settings/notifications',
+    label: 'Уведомления',
+    icon: <BellIcon className="size-4" aria-hidden="true" />,
   },
   {
     id: 'integrations',

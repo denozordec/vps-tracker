@@ -30,6 +30,8 @@ import { Route as AuthAccountsRouteImport } from './routes/_auth/accounts'
 import { Route as AuthSettingsRouteRouteImport } from './routes/_auth/settings/route'
 import { Route as AuthSettingsIndexRouteImport } from './routes/_auth/settings/index'
 import { Route as AuthVpsVpsIdRouteImport } from './routes/_auth/vps.$vpsId'
+import { Route as AuthSettingsSyncRouteImport } from './routes/_auth/settings/sync'
+import { Route as AuthSettingsNotificationsRouteImport } from './routes/_auth/settings/notifications'
 import { Route as AuthSettingsIntegrationsRouteImport } from './routes/_auth/settings/integrations'
 import { Route as AuthProjectsProjectIdRouteImport } from './routes/_auth/projects.$projectId'
 
@@ -137,6 +139,17 @@ const AuthVpsVpsIdRoute = AuthVpsVpsIdRouteImport.update({
   path: '/$vpsId',
   getParentRoute: () => AuthVpsRoute,
 } as any)
+const AuthSettingsSyncRoute = AuthSettingsSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AuthSettingsRouteRoute,
+} as any)
+const AuthSettingsNotificationsRoute =
+  AuthSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthSettingsRouteRoute,
+  } as any)
 const AuthSettingsIntegrationsRoute =
   AuthSettingsIntegrationsRouteImport.update({
     id: '/integrations',
@@ -170,6 +183,8 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/settings/integrations': typeof AuthSettingsIntegrationsRoute
+  '/settings/notifications': typeof AuthSettingsNotificationsRoute
+  '/settings/sync': typeof AuthSettingsSyncRoute
   '/vps/$vpsId': typeof AuthVpsVpsIdRoute
   '/settings/': typeof AuthSettingsIndexRoute
 }
@@ -193,6 +208,8 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/settings/integrations': typeof AuthSettingsIntegrationsRoute
+  '/settings/notifications': typeof AuthSettingsNotificationsRoute
+  '/settings/sync': typeof AuthSettingsSyncRoute
   '/vps/$vpsId': typeof AuthVpsVpsIdRoute
   '/settings': typeof AuthSettingsIndexRoute
 }
@@ -219,6 +236,8 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/_auth/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/_auth/settings/integrations': typeof AuthSettingsIntegrationsRoute
+  '/_auth/settings/notifications': typeof AuthSettingsNotificationsRoute
+  '/_auth/settings/sync': typeof AuthSettingsSyncRoute
   '/_auth/vps/$vpsId': typeof AuthVpsVpsIdRoute
   '/_auth/settings/': typeof AuthSettingsIndexRoute
 }
@@ -245,6 +264,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/projects/$projectId'
     | '/settings/integrations'
+    | '/settings/notifications'
+    | '/settings/sync'
     | '/vps/$vpsId'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -268,6 +289,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/projects/$projectId'
     | '/settings/integrations'
+    | '/settings/notifications'
+    | '/settings/sync'
     | '/vps/$vpsId'
     | '/settings'
   id:
@@ -293,6 +316,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/_auth/projects/$projectId'
     | '/_auth/settings/integrations'
+    | '/_auth/settings/notifications'
+    | '/_auth/settings/sync'
     | '/_auth/vps/$vpsId'
     | '/_auth/settings/'
   fileRoutesById: FileRoutesById
@@ -452,6 +477,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthVpsVpsIdRouteImport
       parentRoute: typeof AuthVpsRoute
     }
+    '/_auth/settings/sync': {
+      id: '/_auth/settings/sync'
+      path: '/sync'
+      fullPath: '/settings/sync'
+      preLoaderRoute: typeof AuthSettingsSyncRouteImport
+      parentRoute: typeof AuthSettingsRouteRoute
+    }
+    '/_auth/settings/notifications': {
+      id: '/_auth/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AuthSettingsNotificationsRouteImport
+      parentRoute: typeof AuthSettingsRouteRoute
+    }
     '/_auth/settings/integrations': {
       id: '/_auth/settings/integrations'
       path: '/integrations'
@@ -471,11 +510,15 @@ declare module '@tanstack/react-router' {
 
 interface AuthSettingsRouteRouteChildren {
   AuthSettingsIntegrationsRoute: typeof AuthSettingsIntegrationsRoute
+  AuthSettingsNotificationsRoute: typeof AuthSettingsNotificationsRoute
+  AuthSettingsSyncRoute: typeof AuthSettingsSyncRoute
   AuthSettingsIndexRoute: typeof AuthSettingsIndexRoute
 }
 
 const AuthSettingsRouteRouteChildren: AuthSettingsRouteRouteChildren = {
   AuthSettingsIntegrationsRoute: AuthSettingsIntegrationsRoute,
+  AuthSettingsNotificationsRoute: AuthSettingsNotificationsRoute,
+  AuthSettingsSyncRoute: AuthSettingsSyncRoute,
   AuthSettingsIndexRoute: AuthSettingsIndexRoute,
 }
 

@@ -3,13 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
+import { SettingRow } from '@/components/setting-row'
+import { LoadingButton } from '@/components/loading-button'
 import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
-import { FormField } from '@/components/form-field'
-import { SelectField } from '@/components/select-field'
-import { LoadingButton } from '@/components/loading-button'
 import { Button } from '@cfdm/ui/components/button'
+import { Switch } from '@cfdm/ui/components/switch'
 import type { Settings } from '@/types/entities'
 
 const formSchema = z.object({
@@ -26,7 +25,7 @@ function generateToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-interface CfdmIntegrationCardProps {
+interface CfdmIntegrationFormProps {
   settings?: Settings
   onSave: (values: {
     cfdmApiUrl?: string
@@ -36,7 +35,12 @@ interface CfdmIntegrationCardProps {
   isSaving?: boolean
 }
 
-export function CfdmIntegrationCard({ settings, onSave, isSaving }: CfdmIntegrationCardProps) {
+/** CFDM integration form — Frame/SettingRow, no Card. Preview https://reui.io/preview/base/settings-3 */
+export function CfdmIntegrationForm({
+  settings,
+  onSave,
+  isSaving,
+}: CfdmIntegrationFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     values: {
@@ -56,79 +60,104 @@ export function CfdmIntegrationCard({ settings, onSave, isSaving }: CfdmIntegrat
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>CF Domain Manager</CardTitle>
-        <CardDescription>
-          Приём синхронизации доменов и сервисов из CFDM. Скопируйте токен в настройки CFDM.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="flex flex-col gap-4" onSubmit={(e) => void form.handleSubmit(handleSubmit)(e)}>
-          <FieldGroup>
-            <FormField label="URL API CFDM" htmlFor="cfdm-api-url">
-              <Input
-                id="cfdm-api-url"
-                placeholder="http://192.168.100.67:6363 (для failover vps_down)"
-                {...form.register('cfdmApiUrl')}
+    <form
+      className="flex flex-col gap-0"
+      onSubmit={(e) => void form.handleSubmit(handleSubmit)(e)}
+    >
+      <FieldGroup className="gap-0">
+        <SettingRow
+          title="Принимать синхронизацию"
+          description="Разрешить CFDM пушить домены и сервисы"
+        >
+          <Controller
+            control={form.control}
+            name="integrationEnabled"
+            render={({ field }) => (
+              <Switch
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                aria-label="Принимать синхронизацию"
               />
-            </FormField>
-            <FormField label="Integration token" htmlFor="integration-token">
-              <div className="flex gap-2">
-                <Input
-                  id="integration-token"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={
-                    settings?.integrationTokenSet
-                      ? 'Токен установлен — введите новый для замены'
-                      : 'Сгенерируйте или вставьте токен'
-                  }
-                  {...form.register('integrationToken')}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const token = generateToken()
-                    form.setValue('integrationToken', token, { shouldDirty: true })
-                    void navigator.clipboard.writeText(token)
-                    toast.success('Токен сгенерирован и скопирован')
-                  }}
-                >
-                  Сгенерировать
-                </Button>
-              </div>
-            </FormField>
-            <Controller
-              control={form.control}
-              name="integrationEnabled"
-              render={({ field }) => (
-                <FormField label="Принимать синхронизацию" htmlFor="integration-enabled">
-                  <SelectField
-                    triggerId="integration-enabled"
-                    triggerClassName="w-32"
-                    value={field.value ? 'on' : 'off'}
-                    onValueChange={(v) => field.onChange((v ?? 'on') === 'on')}
-                    options={[
-                      { value: 'on', label: 'Вкл' },
-                      { value: 'off', label: 'Выкл' },
-                    ]}
-                  />
-                </FormField>
-              )}
+            )}
+          />
+        </SettingRow>
+        <SettingRow
+          title="URL API CFDM"
+          description="Для failover vps_down"
+          labelFor="cfdm-api-url"
+          stacked
+        >
+          <Input
+            id="cfdm-api-url"
+            className="w-full"
+            placeholder="http://192.168.100.67:6363"
+            {...form.register('cfdmApiUrl')}
+          />
+        </SettingRow>
+        <SettingRow
+          title="Integration token"
+          description={
+            settings?.integrationTokenSet
+              ? 'Токен установлен — введите новый для замены'
+              : 'Сгенерируйте или вставьте токен'
+          }
+          labelFor="integration-token"
+          stacked
+          last={!settings?.integrationLastSyncAt}
+        >
+          <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <Input
+              id="integration-token"
+              type="password"
+              autoComplete="new-password"
+              className="min-w-0 flex-1"
+              placeholder={
+                settings?.integrationTokenSet
+                  ? 'Токен установлен — введите новый для замены'
+                  : 'Сгенерируйте или вставьте токен'
+              }
+              {...form.register('integrationToken')}
             />
-            {settings?.integrationLastSyncAt ? (
-              <p className="text-sm text-muted-foreground">
-                Последний sync: {new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}
-              </p>
-            ) : null}
-          </FieldGroup>
-          <LoadingButton type="submit" className="w-fit" loading={isSaving} disabled={!form.formState.isDirty}>
-            Сохранить интеграцию
-          </LoadingButton>
-        </form>
-      </CardContent>
-    </Card>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                const token = generateToken()
+                form.setValue('integrationToken', token, { shouldDirty: true })
+                void navigator.clipboard.writeText(token)
+                toast.success('Токен сгенерирован и скопирован')
+              }}
+            >
+              Сгенерировать
+            </Button>
+          </div>
+        </SettingRow>
+        {settings?.integrationLastSyncAt ? (
+          <SettingRow
+            title="Последний sync"
+            description={new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}
+            last
+          >
+            <span className="text-muted-foreground text-sm tabular-nums">
+              {new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}
+            </span>
+          </SettingRow>
+        ) : null}
+      </FieldGroup>
+      <div className="flex justify-end border-t px-5 py-3">
+        <LoadingButton
+          type="submit"
+          loading={isSaving}
+          disabled={!form.formState.isDirty}
+        >
+          Сохранить интеграцию
+        </LoadingButton>
+      </div>
+    </form>
   )
 }
+
+/** @deprecated Use CfdmIntegrationForm */
+export const CfdmIntegrationCard = CfdmIntegrationForm
