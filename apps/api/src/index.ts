@@ -26,6 +26,7 @@ import { notificationsRoutes } from './routes/notifications.js'
 import { integrationsCfdmRoutes } from './routes/integrations-cfdm.js'
 import { appSwitcherRoutes } from './routes/app-switcher.js'
 import { startScheduler } from './services/scheduler.js'
+import { authPlugin } from './plugins/auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -44,6 +45,9 @@ export async function buildApp(opts: BuildAppOptions = {}) {
 
   await app.register(cors, { origin: true })
   await app.register(sensible)
+  await app.register(authPlugin)
+
+  app.get('/health', async () => ({ ok: true }))
 
   await app.register(dataRoutes)
   await app.register(vpsRoutes)

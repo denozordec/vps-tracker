@@ -51,6 +51,10 @@ import { AppsMenu } from '@/components/layout/apps-menu'
 import { AppSwitcher } from '@/components/app-switcher'
 import { GlobalSearch, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
+import {
+  can,
+  permissionForPath,
+} from '@/lib/auth'
 
 interface NavItem {
   to: string
@@ -140,13 +144,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const navGroups: NavGroup[] = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.map((item) => {
-      if (item.to === '/dashboard' && stats?.issuesCount) {
-        return { ...item, badge: stats.issuesCount }
-      }
-      return item
-    }),
-  }))
+    items: group.items
+      .filter((item) => {
+        const perm = permissionForPath(item.to)
+        return !perm || can(perm)
+      })
+      .map((item) => {
+        if (item.to === '/dashboard' && stats?.issuesCount) {
+          return { ...item, badge: stats.issuesCount }
+        }
+        return item
+      }),
+  })).filter((g) => g.items.length > 0)
 
   return (
     <TooltipProvider delay={0}>

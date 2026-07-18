@@ -8,6 +8,7 @@ import type {
   Payment,
   BalanceLedgerRow,
 } from '@/types/entities'
+import { clearToken, getToken, isAuthEnabled, redirectToPortalLogin } from '@/lib/auth'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -26,11 +27,21 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (options.body != null && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
+  if (isAuthEnabled()) {
+    const token = getToken()
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+  }
   const res = await fetch(url, {
     ...options,
     headers,
   })
   if (!res.ok) {
+    if (isAuthEnabled() && res.status === 401) {
+      clearToken()
+      redirectToPortalLogin()
+    }
     let message = res.statusText || 'API error'
     try {
       const data = (await res.json()) as {
@@ -141,13 +152,23 @@ export const api = {
   },
 
   downloadBackupJson: async (): Promise<Blob> => {
-    const res = await fetch(`${API_BASE}/api/backup/json`)
+    const headers = new Headers()
+    if (isAuthEnabled()) {
+      const token = getToken()
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+    }
+    const res = await fetch(`${API_BASE}/api/backup/json`, { headers })
     if (!res.ok) throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
     return res.blob()
   },
 
   downloadBackupDatabase: async (): Promise<Blob> => {
-    const res = await fetch(`${API_BASE}/api/backup/database`)
+    const headers = new Headers()
+    if (isAuthEnabled()) {
+      const token = getToken()
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+    }
+    const res = await fetch(`${API_BASE}/api/backup/database`, { headers })
     if (!res.ok) throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
     return res.blob()
   },
@@ -156,9 +177,14 @@ export const api = {
     fetchApi('/api/backup/json', { method: 'POST', body: JSON.stringify(payload) }),
 
   importBackupDatabase: async (buffer: ArrayBuffer) => {
+    const headers = new Headers({ 'Content-Type': 'application/octet-stream' })
+    if (isAuthEnabled()) {
+      const token = getToken()
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+    }
     const res = await fetch(`${API_BASE}/api/backup/database`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
+      headers,
       body: buffer,
     })
     if (!res.ok) throw new ApiError(res.statusText || 'Ошибка восстановления', res.status)
