@@ -59,11 +59,12 @@ function TopologyEdgeComponent(props: EdgeProps<Edge<TopologyEdgeData>>) {
       <EdgeLabelRenderer>
         <div
           className={cn(
-            'nodrag nopan absolute flex max-w-[220px] flex-wrap items-center justify-center gap-1 rounded-md border border-border bg-background/95 px-1.5 py-1 shadow-sm backdrop-blur-sm',
+            'nodrag nopan absolute z-[1000] flex max-w-[220px] flex-wrap items-center justify-center gap-1 rounded-md border border-border bg-background px-1.5 py-1 shadow-sm',
             selected && 'ring-1 ring-primary/40',
           )}
           style={{
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            // Смещение вверх от центра линии, чтобы легенда была над stroke
+            transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 6}px)`,
             pointerEvents: 'all',
           }}
         >

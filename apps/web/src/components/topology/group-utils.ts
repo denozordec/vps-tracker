@@ -14,10 +14,12 @@ export function normalizeGroupLayers(nodes: TopologyFlowNode[]): TopologyFlowNod
     if (n.type === 'group') {
       return { ...n, zIndex: n.selected ? 0 : GROUP_Z }
     }
-    if (n.zIndex != null && n.zIndex < CONTENT_Z) {
-      return { ...n, zIndex: CONTENT_Z }
+    // extent: 'parent' блокирует вытаскивание — не используем; parentId достаточно для «прилипания»
+    const cleared = n.extent != null ? { ...n, extent: undefined } : n
+    if (cleared.zIndex != null && cleared.zIndex < CONTENT_Z) {
+      return { ...cleared, zIndex: CONTENT_Z }
     }
-    return n.zIndex == null ? { ...n, zIndex: CONTENT_Z } : n
+    return cleared.zIndex == null ? { ...cleared, zIndex: CONTENT_Z } : cleared
   })
 }
 
@@ -122,7 +124,7 @@ export function attachNodeToGroup(
     return {
       ...node,
       parentId: group.id,
-      extent: 'parent',
+      extent: undefined,
       zIndex: CONTENT_Z,
     }
   }
@@ -132,7 +134,7 @@ export function attachNodeToGroup(
   return {
     ...node,
     parentId: group.id,
-    extent: 'parent',
+    extent: undefined,
     position: {
       x: abs.x - groupAbs.x,
       y: abs.y - groupAbs.y,
@@ -201,7 +203,7 @@ export function placeWithOptionalParent(
   return {
     ...node,
     parentId: group.id,
-    extent: 'parent',
+    extent: undefined,
     position: {
       x: flowPosition.x - groupAbs.x,
       y: flowPosition.y - groupAbs.y,
