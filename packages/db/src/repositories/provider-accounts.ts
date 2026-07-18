@@ -1,6 +1,7 @@
-import { asc, count, eq } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 import { parseApiLogin } from '@cfdm/shared'
 import { getDb, schema } from '../index.js'
+import { getCurrentSpaceId } from '../space-context.js'
 import { generateId } from './utils.js'
 
 type AccountRow = typeof schema.providerAccounts.$inferSelect
@@ -81,29 +82,56 @@ function countSyncLogForAccount(id: string): number {
 
 export const providerAccountsRepository = {
   list(): PublicAccountRow[] {
+    const spaceId = getCurrentSpaceId()
     const rows = getDb()
       .select()
       .from(schema.providerAccounts)
+      .where(eq(schema.providerAccounts.spaceId, spaceId))
       .orderBy(asc(schema.providerAccounts.name))
       .all()
     return rows.map((r) => sanitize(r)!) as PublicAccountRow[]
   },
 
   get(id: string): PublicAccountRow | undefined {
+    const spaceId = getCurrentSpaceId()
     const row = getDb()
       .select()
       .from(schema.providerAccounts)
-      .where(eq(schema.providerAccounts.id, id))
+      .where(
+        and(
+          eq(schema.providerAccounts.id, id),
+          eq(schema.providerAccounts.spaceId, spaceId),
+        ),
+      )
       .get()
     return sanitize(row)
   },
 
   getWithCredentials(id: string): AccountRow | undefined {
+    const spaceId = getCurrentSpaceId()
+    return getDb()
+      .select()
+      .from(schema.providerAccounts)
+      .where(
+        and(
+          eq(schema.providerAccounts.id, id),
+          eq(schema.providerAccounts.spaceId, spaceId),
+        ),
+      )
+      .get()
+  },
+
+  /** Unscoped lookup for sync/scheduler (account may be in any space). */
+  getWithCredentialsAnySpace(id: string): AccountRow | undefined {
     return getDb()
       .select()
       .from(schema.providerAccounts)
       .where(eq(schema.providerAccounts.id, id))
       .get()
+  },
+
+  listAllSpaces(): AccountRow[] {
+    return getDb().select().from(schema.providerAccounts).all()
   },
 
   getDependencyCounts(id: string): AccountDependencyCounts {
@@ -120,7 +148,7 @@ export const providerAccountsRepository = {
     const db = getDb()
     const finalId = id ?? input.id ?? generateId('account')
     db.insert(schema.providerAccounts)
-      .values({ id: finalId, ...normalize(input) })
+      .values({ id: finalId, spaceId: getCurrentSpaceId(), ...normalize(input) })
       .run()
     return this.get(finalId)!
   },
@@ -152,16 +180,29 @@ export const providerAccountsRepository = {
         apiBaseUrl: '',
         apiCredentials,
         balanceAlertBelow,
+        spaceId: existing.spaceId,
       })
-      .where(eq(schema.providerAccounts.id, id))
+      .where(
+        and(
+          eq(schema.providerAccounts.id, id),
+          eq(schema.providerAccounts.spaceId, existing.spaceId),
+        ),
+      )
       .run()
     return this.get(id)
   },
 
   delete(id: string): boolean {
+    const existing = this.getWithCredentials(id)
+    if (!existing) return false
     const res = getDb()
       .delete(schema.providerAccounts)
-      .where(eq(schema.providerAccounts.id, id))
+      .where(
+        and(
+          eq(schema.providerAccounts.id, id),
+          eq(schema.providerAccounts.spaceId, existing.spaceId),
+        ),
+      )
       .run()
     return res.changes > 0
   },

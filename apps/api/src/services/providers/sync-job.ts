@@ -1,9 +1,5 @@
-/**
- * Generic account sync with sync_log recording
- */
-
 import { eq } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { getDb, schema, getCurrentSpaceId } from '@cfdm/db'
 
 import type { ProviderAdapter, SyncResult } from './types.js'
 
@@ -18,12 +14,14 @@ export async function runAccountSync(
   opts: { skipTariffs?: boolean; skipVpsPayments?: boolean } = {},
 ): Promise<RunAccountSyncResult> {
   const db = getDb()
-  const accountRow = account as { id: string }
+  const accountRow = account as { id: string; spaceId?: string }
   const logId = `sync-${accountRow.id}-${Date.now()}`
+  const spaceId = accountRow.spaceId ?? getCurrentSpaceId()
 
   db.insert(schema.syncLog)
     .values({
       id: logId,
+      spaceId,
       accountId: accountRow.id,
       startedAt: new Date().toISOString(),
       status: 'running',

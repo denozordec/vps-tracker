@@ -29,6 +29,7 @@ import {
 function makeAccount(apiType: 'macloud' | 'vdsina'): UserApiSyncAccount {
   return {
     id: `acc-${apiType}`,
+    spaceId: 'space-main',
     providerId: `prov-${apiType}`,
     name: `${apiType} Account`,
     panelUrl: '',

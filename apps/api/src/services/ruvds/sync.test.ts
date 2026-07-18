@@ -33,6 +33,7 @@ import {
 function makeAccount(): RuvdsSyncAccount {
   return {
     id: 'acc-ruvds',
+    spaceId: 'space-main',
     providerId: 'prov-ruvds',
     name: 'RuVDS',
     panelUrl: '',

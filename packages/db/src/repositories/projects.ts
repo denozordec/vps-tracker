@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { eq, like, asc, sql } from 'drizzle-orm'
+import { and, eq, like, asc, sql } from 'drizzle-orm'
 import { getDb, schema } from '../index.js'
+import { getCurrentSpaceId } from '../space-context.js'
 
 export function normalizeProjectNameInput(name: unknown): string {
   if (name == null) return ''
@@ -12,10 +13,16 @@ export function findProjectByNameCaseInsensitive(
 ): (typeof schema.serverProjects.$inferSelect) | undefined {
   const n = normalizeProjectNameInput(name)
   if (!n) return undefined
+  const spaceId = getCurrentSpaceId()
   return getDb()
     .select()
     .from(schema.serverProjects)
-    .where(eq(sql`LOWER(${schema.serverProjects.name})`, n.toLowerCase()))
+    .where(
+      and(
+        eq(schema.serverProjects.spaceId, spaceId),
+        eq(sql`LOWER(${schema.serverProjects.name})`, n.toLowerCase()),
+      ),
+    )
     .get()
 }
 
@@ -30,7 +37,15 @@ export function resolveOrCreateProject(
   const now = new Date().toISOString()
   getDb()
     .insert(schema.serverProjects)
-    .values({ id, name: n, color: null, sortOrder: 0, notes: null, createdAt: now })
+    .values({
+      id,
+      spaceId: getCurrentSpaceId(),
+      name: n,
+      color: null,
+      sortOrder: 0,
+      notes: null,
+      createdAt: now,
+    })
     .run()
   return { id, name: n }
 }
@@ -42,10 +57,12 @@ export function projectSuggestions(
   const term = normalizeProjectNameInput(q)
   const lim = Math.min(50, Math.max(1, Number(limit) || 20))
   const db = getDb()
+  const spaceId = getCurrentSpaceId()
   if (!term) {
     return db
       .select({ id: schema.serverProjects.id, name: schema.serverProjects.name })
       .from(schema.serverProjects)
+      .where(eq(schema.serverProjects.spaceId, spaceId))
       .orderBy(asc(schema.serverProjects.name))
       .limit(lim)
       .all()
@@ -55,7 +72,12 @@ export function projectSuggestions(
   return db
     .select({ id: schema.serverProjects.id, name: schema.serverProjects.name })
     .from(schema.serverProjects)
-    .where(like(sql`LOWER(${schema.serverProjects.name})`, pattern))
+    .where(
+      and(
+        eq(schema.serverProjects.spaceId, spaceId),
+        like(sql`LOWER(${schema.serverProjects.name})`, pattern),
+      ),
+    )
     .orderBy(asc(schema.serverProjects.name))
     .limit(lim)
     .all()
@@ -81,17 +103,22 @@ function countVpsByProjectId(projectId: string): number {
 
 export const projectsRepository = {
   list(): (typeof schema.serverProjects.$inferSelect)[] {
+    const spaceId = getCurrentSpaceId()
     return getDb()
       .select()
       .from(schema.serverProjects)
+      .where(eq(schema.serverProjects.spaceId, spaceId))
       .orderBy(asc(schema.serverProjects.name))
       .all()
   },
   get(id: string): (typeof schema.serverProjects.$inferSelect) | undefined {
+    const spaceId = getCurrentSpaceId()
     return getDb()
       .select()
       .from(schema.serverProjects)
-      .where(eq(schema.serverProjects.id, id))
+      .where(
+        and(eq(schema.serverProjects.id, id), eq(schema.serverProjects.spaceId, spaceId)),
+      )
       .get()
   },
   getDependencyCounts(id: string): { vps: number } {
@@ -104,6 +131,7 @@ export const projectsRepository = {
       .insert(schema.serverProjects)
       .values({
         id,
+        spaceId: getCurrentSpaceId(),
         name: input.name,
         color: input.color ?? null,
         sortOrder: 0,
@@ -142,7 +170,12 @@ export const projectsRepository = {
           color: input.color !== undefined ? input.color : existing.color,
           notes: input.notes !== undefined ? input.notes : existing.notes,
         })
-        .where(eq(schema.serverProjects.id, id))
+        .where(
+          and(
+            eq(schema.serverProjects.id, id),
+            eq(schema.serverProjects.spaceId, existing.spaceId),
+          ),
+        )
         .run()
       if (nextName !== existing.name) {
         db.update(schema.vps)
@@ -154,7 +187,17 @@ export const projectsRepository = {
     return this.get(id)
   },
   delete(id: string): boolean {
-    const r = getDb().delete(schema.serverProjects).where(eq(schema.serverProjects.id, id)).run()
+    const existing = this.get(id)
+    if (!existing) return false
+    const r = getDb()
+      .delete(schema.serverProjects)
+      .where(
+        and(
+          eq(schema.serverProjects.id, id),
+          eq(schema.serverProjects.spaceId, existing.spaceId),
+        ),
+      )
+      .run()
     return r.changes > 0
   },
 }

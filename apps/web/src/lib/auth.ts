@@ -199,7 +199,11 @@ export function permissionForPath(pathname: string): string | null {
     return 'vps:payments:read'
   }
   if (pathname.startsWith('/sync-journal')) return 'vps:sync:write'
-  if (pathname.startsWith('/settings') || pathname.startsWith('/audit')) {
+  if (
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/audit') ||
+    pathname.startsWith('/spaces')
+  ) {
     return 'vps:settings:admin'
   }
   return 'vps:dashboard:read'

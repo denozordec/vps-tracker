@@ -9,6 +9,7 @@ import type {
   BalanceLedgerRow,
 } from '@/types/entities'
 import { clearToken, ensureAuthConfig, getToken, isAuthEnabled, redirectToPortalLogin } from '@/lib/auth'
+import { getStoredSpaceId } from '@/lib/space'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -31,6 +32,10 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   const token = getToken()
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
+  }
+  const spaceId = getStoredSpaceId()
+  if (spaceId && !headers.has('X-Space-Id')) {
+    headers.set('X-Space-Id', spaceId)
   }
   const res = await fetch(url, {
     ...options,
@@ -161,6 +166,8 @@ export const api = {
     const headers = new Headers()
     const token = getToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)
+    const spaceId = getStoredSpaceId()
+    if (spaceId) headers.set('X-Space-Id', spaceId)
     const res = await fetch(`${API_BASE}/api/backup/json`, { headers })
     if (!res.ok) {
       if (res.status === 401) {
@@ -179,6 +186,8 @@ export const api = {
     const headers = new Headers()
     const token = getToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)
+    const spaceId = getStoredSpaceId()
+    if (spaceId) headers.set('X-Space-Id', spaceId)
     const res = await fetch(`${API_BASE}/api/backup/database`, { headers })
     if (!res.ok) {
       if (res.status === 401) {
@@ -192,6 +201,61 @@ export const api = {
     }
     return res.blob()
   },
+
+  fetchSpaces: () => fetchApi<import('@/lib/space').SpaceDto[]>('/api/spaces'),
+
+  createSpace: (body: { name: string; slug?: string }) =>
+    fetchApi<import('@/lib/space').SpaceDto>('/api/spaces', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  fetchSpaceMembers: (spaceId: string) =>
+    fetchApi<{ spaceId: string; userId: string; role: string; createdAt: string }[]>(
+      `/api/spaces/${encodeURIComponent(spaceId)}/members`,
+    ),
+
+  addSpaceMember: (spaceId: string, body: { userId: string; role?: string }) =>
+    fetchApi(`/api/spaces/${encodeURIComponent(spaceId)}/members`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  updateSpaceMember: (spaceId: string, userId: string, role: string) =>
+    fetchApi(`/api/spaces/${encodeURIComponent(spaceId)}/members/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+
+  removeSpaceMember: (spaceId: string, userId: string) =>
+    fetchApi(`/api/spaces/${encodeURIComponent(spaceId)}/members/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+    }),
+
+  shareVps: (
+    fromSpaceId: string,
+    vpsId: string,
+    body: { toSpaceId: string; permission: 'read' | 'write' },
+  ) =>
+    fetchApi(`/api/spaces/${encodeURIComponent(fromSpaceId)}/vps/${encodeURIComponent(vpsId)}/share`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  assignVps: (fromSpaceId: string, vpsId: string, toSpaceId: string) =>
+    fetchApi(
+      `/api/spaces/${encodeURIComponent(fromSpaceId)}/vps/${encodeURIComponent(vpsId)}/assign`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ toSpaceId }),
+      },
+    ),
+
+  fetchSpaceGrants: (spaceId: string) =>
+    fetchApi<{
+      incoming: unknown[]
+      outgoing: unknown[]
+    }>(`/api/spaces/${encodeURIComponent(spaceId)}/vps-grants`),
 
   importBackupJson: (payload: unknown) =>
     fetchApi('/api/backup/json', { method: 'POST', body: JSON.stringify(payload) }),

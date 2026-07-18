@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useMemo, useEffect } from 'react'
-import { PlusIcon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon, CalendarIcon, ActivityIcon } from 'lucide-react'
+import { PlusIcon, GlobeIcon, UserRoundIcon, FolderKanbanIcon, CpuIcon, CircleDotIcon, CreditCardIcon, MapPinIcon, CalendarIcon, ActivityIcon, Share2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -32,6 +32,7 @@ import { HealthModeBanner } from '@/components/health-mode-banner'
 import { ProjectColorDot } from '@/components/project-color-dot'
 import { VpsBulkToolbar } from '@/components/domain/vps-bulk-toolbar'
 import { VpsDomainsCell, UnmatchedDomainsBanner } from '@/components/integrations/vps-domains-cell'
+import { VpsAccessSheet } from '@/components/vps-access-sheet'
 
 import type { Vps } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
@@ -66,6 +67,8 @@ function VpsPage() {
   const [defaultValues, setDefaultValues] = useState<VpsFormValues>(EMPTY_FORM)
   const [filters, setFilters] = useState<VpsFiltersState>(buildDefaultVpsFilters())
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [accessVps, setAccessVps] = useState<Vps | null>(null)
+  const [accessOpen, setAccessOpen] = useState(false)
 
   useEffect(() => {
     if (!health) return
@@ -414,9 +417,14 @@ function VpsPage() {
       header: 'Статус',
       icon: CircleDotIcon,
       cell: (v) => (
-        <Badge variant={v.status === 'active' ? 'default' : v.status === 'archived' ? 'outline' : 'secondary'}>
-          {vpsStatusLabel(v.status)}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {v.access === 'shared' ? (
+            <Badge variant="outline">Общий</Badge>
+          ) : null}
+          <Badge variant={v.status === 'active' ? 'default' : v.status === 'archived' ? 'outline' : 'secondary'}>
+            {vpsStatusLabel(v.status)}
+          </Badge>
+        </div>
       ),
     },
     {
@@ -490,10 +498,25 @@ function VpsPage() {
       className: 'w-24 text-right',
       cell: (v) => (
         <RowActions
-          onEdit={() => openEdit(v)}
-          onDelete={() => deleteMutation.mutate(v.id)}
+          onEdit={v.access === 'shared' && v.grantPermission !== 'write' ? undefined : () => openEdit(v)}
+          onDelete={v.access === 'shared' ? undefined : () => deleteMutation.mutate(v.id)}
           deleteTitle="Удалить VPS?"
           deleteDescription={`IP ${v.ip} будет удалён безвозвратно.`}
+          extra={
+            v.access !== 'shared' ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Доступ"
+                onClick={() => {
+                  setAccessVps(v)
+                  setAccessOpen(true)
+                }}
+              >
+                <Share2Icon />
+              </Button>
+            ) : null
+          }
         />
       ),
     },
@@ -661,6 +684,11 @@ function VpsPage() {
           submitting={createMutation.isPending || updateMutation.isPending}
         />
       ) : null}
+      <VpsAccessSheet
+        vps={accessVps}
+        open={accessOpen}
+        onOpenChange={setAccessOpen}
+      />
     </PageShell>
   )
 }

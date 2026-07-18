@@ -2,13 +2,17 @@ import type { FastifyPluginAsync } from 'fastify'
 import { cfdmSyncBindingsBodySchema } from '@cfdm/shared/contracts/integration-cfdm'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { vpsDomainsRepository } from '@cfdm/db/repositories/vps-domains'
-import { requireIntegrationAuth } from '../plugins/integration-auth.js'
+import {
+  requireIntegrationAuth,
+  runInIntegrationSpace,
+} from '../plugins/integration-auth.js'
 
 export const integrationsCfdmRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/api/integrations/cfdm/ping',
     { onRequest: requireIntegrationAuth },
-    async () => ({ ok: true, service: 'vps-tracker' }),
+    async (req) =>
+      runInIntegrationSpace(req, () => ({ ok: true, service: 'vps-tracker' })),
   )
 
   app.post(
@@ -22,13 +26,14 @@ export const integrationsCfdmRoutes: FastifyPluginAsync = async (app) => {
         })
       }
 
-      const result = vpsDomainsRepository.syncBindings(parsed.data.bindings)
-      settingsRepository.touchIntegrationSync()
-
-      return {
-        ok: true,
-        ...result,
-      }
+      return runInIntegrationSpace(req, () => {
+        const result = vpsDomainsRepository.syncBindings(parsed.data.bindings)
+        settingsRepository.touchIntegrationSync()
+        return {
+          ok: true,
+          ...result,
+        }
+      })
     },
   )
 }

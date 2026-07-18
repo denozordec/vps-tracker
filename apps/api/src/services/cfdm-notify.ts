@@ -2,10 +2,8 @@ import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { vpsRepository } from '@cfdm/db/repositories/vps'
 import type { VpsTrackerEvent } from '@cfdm/shared/contracts/integration-cfdm'
 
-const SETTINGS_ID = 'settings-main'
-
 function resolveCfdmApiBase(): string | null {
-  const row = settingsRepository.getRow(SETTINGS_ID)
+  const row = settingsRepository.getBySpace()
   if (!row) return null
   const explicit = row.cfdmApiUrl?.trim()
   if (explicit) return explicit.replace(/\/$/, '')
@@ -19,7 +17,7 @@ export async function notifyCfdmVpsEvent(
 ): Promise<void> {
   if (vpsIds.length === 0) return
 
-  const row = settingsRepository.getRow(SETTINGS_ID)
+  const row = settingsRepository.getBySpace()
   if (!row?.integrationEnabled) return
 
   const token = settingsRepository.getIntegrationToken()

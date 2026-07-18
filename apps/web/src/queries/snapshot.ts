@@ -1,14 +1,27 @@
 import { queryClient } from '../lib/queryClient'
 import { api } from '../lib/api-client'
+import { getStoredSpaceId } from '../lib/space'
 
 export const snapshotKeys = {
   all: ['snapshot'] as const,
+  space: (spaceId: string | null) => ['snapshot', spaceId ?? 'default'] as const,
 }
 
 export const snapshotQueryOptions = () => ({
-  queryKey: snapshotKeys.all,
+  queryKey: snapshotKeys.space(getStoredSpaceId()),
   queryFn: () => api.fetchData(),
   staleTime: 30_000,
+})
+
+export const spacesKeys = {
+  all: ['spaces'] as const,
+  members: (spaceId: string) => ['spaces', spaceId, 'members'] as const,
+}
+
+export const spacesQueryOptions = () => ({
+  queryKey: spacesKeys.all,
+  queryFn: () => api.fetchSpaces(),
+  staleTime: 60_000,
 })
 
 export const ratesKeys = {

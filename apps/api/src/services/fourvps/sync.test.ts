@@ -22,6 +22,7 @@ import {
 
 const account: FourvpsSyncAccount = {
   id: 'acc-4vps',
+  spaceId: 'space-main',
   providerId: 'prov-4vps',
   name: '4VPS Account',
   panelUrl: '',

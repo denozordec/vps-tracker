@@ -1,6 +1,8 @@
-import { asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, eq, isNull } from 'drizzle-orm'
+// and used in markOrphaned / listUnmatched
 import type { CfdmBindingSyncItem } from '@cfdm/shared/contracts/integration-cfdm'
 import { getDb, schema } from '../index.js'
+import { getCurrentSpaceId } from '../space-context.js'
 import { generateId } from './utils.js'
 import { vpsRepository } from './vps.js'
 
@@ -45,9 +47,11 @@ function resolveMatchStatus(vpsId: string | null): 'matched' | 'unmatched' {
 
 export const vpsDomainsRepository = {
   list(): VpsDomainDto[] {
+    const spaceId = getCurrentSpaceId()
     return getDb()
       .select()
       .from(schema.vpsDomains)
+      .where(eq(schema.vpsDomains.spaceId, spaceId))
       .orderBy(asc(schema.vpsDomains.fqdn))
       .all()
   },
@@ -78,8 +82,13 @@ export const vpsDomainsRepository = {
 
   rematchAll(): { updated: number } {
     const db = getDb()
+    const spaceId = getCurrentSpaceId()
     const allVps = vpsRepository.list()
-    const rows = db.select().from(schema.vpsDomains).all()
+    const rows = db
+      .select()
+      .from(schema.vpsDomains)
+      .where(eq(schema.vpsDomains.spaceId, spaceId))
+      .all()
     let updated = 0
     const vpsIds = new Set(allVps.map((v) => v.id))
 
@@ -123,6 +132,7 @@ export const vpsDomainsRepository = {
     upserted: number
   } {
     const db = getDb()
+    const spaceId = getCurrentSpaceId()
     const allVps = vpsRepository.list()
     const now = new Date().toISOString()
     let matched = 0
@@ -143,6 +153,7 @@ export const vpsDomainsRepository = {
 
       const existing = this.getByCfdmBindingId(item.bindingId)
       const values = {
+        spaceId,
         vpsId,
         fqdn: item.fqdn,
         zoneName: item.zoneName,
@@ -170,10 +181,16 @@ export const vpsDomainsRepository = {
 
   markOrphanedForMissingBindings(serviceId: number, keptBindingIds: number[]): number {
     const db = getDb()
+    const spaceId = getCurrentSpaceId()
     const rows = db
       .select()
       .from(schema.vpsDomains)
-      .where(eq(schema.vpsDomains.cfdmServiceId, serviceId))
+      .where(
+        and(
+          eq(schema.vpsDomains.cfdmServiceId, serviceId),
+          eq(schema.vpsDomains.spaceId, spaceId),
+        ),
+      )
       .all()
     let removed = 0
     for (const row of rows) {
@@ -186,10 +203,13 @@ export const vpsDomainsRepository = {
   },
 
   listUnmatched(): VpsDomainDto[] {
+    const spaceId = getCurrentSpaceId()
     return getDb()
       .select()
       .from(schema.vpsDomains)
-      .where(isNull(schema.vpsDomains.vpsId))
+      .where(
+        and(eq(schema.vpsDomains.spaceId, spaceId), isNull(schema.vpsDomains.vpsId)),
+      )
       .orderBy(asc(schema.vpsDomains.fqdn))
       .all()
   },

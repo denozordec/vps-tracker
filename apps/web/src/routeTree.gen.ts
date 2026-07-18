@@ -15,6 +15,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthVpsRouteImport } from './routes/_auth/vps'
 import { Route as AuthTariffsRouteImport } from './routes/_auth/tariffs'
 import { Route as AuthSyncJournalRouteImport } from './routes/_auth/sync-journal'
+import { Route as AuthSpacesRouteImport } from './routes/_auth/spaces'
 import { Route as AuthResourcesRouteImport } from './routes/_auth/resources'
 import { Route as AuthReportsRouteImport } from './routes/_auth/reports'
 import { Route as AuthRenewalsRouteImport } from './routes/_auth/renewals'
@@ -58,6 +59,11 @@ const AuthTariffsRoute = AuthTariffsRouteImport.update({
 const AuthSyncJournalRoute = AuthSyncJournalRouteImport.update({
   id: '/sync-journal',
   path: '/sync-journal',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSpacesRoute = AuthSpacesRouteImport.update({
+  id: '/spaces',
+  path: '/spaces',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthResourcesRoute = AuthResourcesRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
   '/resources': typeof AuthResourcesRoute
+  '/spaces': typeof AuthSpacesRoute
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/vps': typeof AuthVpsRouteWithChildren
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
   '/resources': typeof AuthResourcesRoute
+  '/spaces': typeof AuthSpacesRoute
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/vps': typeof AuthVpsRouteWithChildren
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/_auth/renewals': typeof AuthRenewalsRoute
   '/_auth/reports': typeof AuthReportsRoute
   '/_auth/resources': typeof AuthResourcesRoute
+  '/_auth/spaces': typeof AuthSpacesRoute
   '/_auth/sync-journal': typeof AuthSyncJournalRoute
   '/_auth/tariffs': typeof AuthTariffsRoute
   '/_auth/vps': typeof AuthVpsRouteWithChildren
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/renewals'
     | '/reports'
     | '/resources'
+    | '/spaces'
     | '/sync-journal'
     | '/tariffs'
     | '/vps'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/renewals'
     | '/reports'
     | '/resources'
+    | '/spaces'
     | '/sync-journal'
     | '/tariffs'
     | '/vps'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/_auth/renewals'
     | '/_auth/reports'
     | '/_auth/resources'
+    | '/_auth/spaces'
     | '/_auth/sync-journal'
     | '/_auth/tariffs'
     | '/_auth/vps'
@@ -321,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/sync-journal'
       fullPath: '/sync-journal'
       preLoaderRoute: typeof AuthSyncJournalRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/spaces': {
+      id: '/_auth/spaces'
+      path: '/spaces'
+      fullPath: '/spaces'
+      preLoaderRoute: typeof AuthSpacesRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/resources': {
@@ -479,6 +498,7 @@ interface AuthRouteChildren {
   AuthRenewalsRoute: typeof AuthRenewalsRoute
   AuthReportsRoute: typeof AuthReportsRoute
   AuthResourcesRoute: typeof AuthResourcesRoute
+  AuthSpacesRoute: typeof AuthSpacesRoute
   AuthSyncJournalRoute: typeof AuthSyncJournalRoute
   AuthTariffsRoute: typeof AuthTariffsRoute
   AuthVpsRoute: typeof AuthVpsRouteWithChildren
@@ -496,6 +516,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthRenewalsRoute: AuthRenewalsRoute,
   AuthReportsRoute: AuthReportsRoute,
   AuthResourcesRoute: AuthResourcesRoute,
+  AuthSpacesRoute: AuthSpacesRoute,
   AuthSyncJournalRoute: AuthSyncJournalRoute,
   AuthTariffsRoute: AuthTariffsRoute,
   AuthVpsRoute: AuthVpsRouteWithChildren,

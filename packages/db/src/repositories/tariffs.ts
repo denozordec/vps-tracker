@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm'
 import { getDb, schema } from '../index.js'
+import { getCurrentSpaceId } from '../space-context.js'
 
 type Row = typeof schema.activeTariffs.$inferSelect
 
@@ -94,9 +95,11 @@ function toDto(row: Row | undefined): ActiveTariffDto | undefined {
 
 export const activeTariffsRepository = {
   list(): ActiveTariffDto[] {
+    const spaceId = getCurrentSpaceId()
     const rows = getDb()
       .select()
       .from(schema.activeTariffs)
+      .where(eq(schema.activeTariffs.spaceId, spaceId))
       .orderBy(asc(schema.activeTariffs.name))
       .all()
     return rows.map((r) => toDto(r)!) as ActiveTariffDto[]
@@ -111,16 +114,18 @@ export const activeTariffsRepository = {
   },
   upsertMany(rows: (typeof schema.activeTariffs.$inferInsert)[]): void {
     const db = getDb()
+    const spaceId = getCurrentSpaceId()
     for (const r of rows) {
+      const withSpace = { ...r, spaceId: r.spaceId ?? spaceId }
       const existing = db
         .select({ id: schema.activeTariffs.id })
         .from(schema.activeTariffs)
         .where(eq(schema.activeTariffs.id, r.id))
         .get()
       if (existing) {
-        db.update(schema.activeTariffs).set(r).where(eq(schema.activeTariffs.id, r.id)).run()
+        db.update(schema.activeTariffs).set(withSpace).where(eq(schema.activeTariffs.id, r.id)).run()
       } else {
-        db.insert(schema.activeTariffs).values(r).run()
+        db.insert(schema.activeTariffs).values(withSpace).run()
       }
     }
   },
@@ -160,7 +165,12 @@ export function toTariffSyncOptionsDto(
 
 export const tariffSyncOptionsRepository = {
   list(): TariffSyncOptionsDto[] {
-    const rows = getDb().select().from(schema.tariffSyncOptions).all()
+    const spaceId = getCurrentSpaceId()
+    const rows = getDb()
+      .select()
+      .from(schema.tariffSyncOptions)
+      .where(eq(schema.tariffSyncOptions.spaceId, spaceId))
+      .all()
     return rows.map((r) => toTariffSyncOptionsDto(r)!) as TariffSyncOptionsDto[]
   },
   byAccount(accountId: string): TariffSyncOptionsDto | undefined {
@@ -174,6 +184,7 @@ export const tariffSyncOptionsRepository = {
   },
   upsert(input: typeof schema.tariffSyncOptions.$inferInsert): void {
     const db = getDb()
+    const withSpace = { ...input, spaceId: input.spaceId ?? getCurrentSpaceId() }
     const existing = db
       .select({ providerAccountId: schema.tariffSyncOptions.providerAccountId })
       .from(schema.tariffSyncOptions)
@@ -181,11 +192,11 @@ export const tariffSyncOptionsRepository = {
       .get()
     if (existing) {
       db.update(schema.tariffSyncOptions)
-        .set(input)
+        .set(withSpace)
         .where(eq(schema.tariffSyncOptions.providerAccountId, input.providerAccountId))
         .run()
     } else {
-      db.insert(schema.tariffSyncOptions).values(input).run()
+      db.insert(schema.tariffSyncOptions).values(withSpace).run()
     }
   },
 }

@@ -1,8 +1,58 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
+
+export const spaces = sqliteTable('spaces', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  kind: text('kind').notNull().default('personal'),
+  ownerUserId: text('ownerUserId'),
+  createdAt: text('createdAt').notNull(),
+})
+
+export const spaceMembers = sqliteTable(
+  'space_members',
+  {
+    spaceId: text('spaceId')
+      .notNull()
+      .references(() => spaces.id),
+    userId: text('userId').notNull(),
+    role: text('role').notNull().default('member'),
+    createdAt: text('createdAt').notNull(),
+  },
+  (t) => ({
+    pk: uniqueIndex('space_members_pk').on(t.spaceId, t.userId),
+  }),
+)
+
+export const vpsGrants = sqliteTable(
+  'vps_grants',
+  {
+    id: text('id').primaryKey(),
+    vpsId: text('vpsId')
+      .notNull()
+      .references(() => vps.id),
+    fromSpaceId: text('fromSpaceId')
+      .notNull()
+      .references(() => spaces.id),
+    toSpaceId: text('toSpaceId')
+      .notNull()
+      .references(() => spaces.id),
+    permission: text('permission').notNull().default('read'),
+    grantedByUserId: text('grantedByUserId'),
+    createdAt: text('createdAt').notNull(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('vps_grants_vps_to').on(t.vpsId, t.toSpaceId),
+  }),
+)
 
 export const providers = sqliteTable('providers', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   name: text('name').notNull(),
   website: text('website'),
   contact: text('contact'),
@@ -16,6 +66,10 @@ export const providers = sqliteTable('providers', {
 
 export const providerAccounts = sqliteTable('provider_accounts', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   providerId: text('providerId')
     .notNull()
     .references(() => providers.id),
@@ -36,6 +90,10 @@ export const providerAccounts = sqliteTable('provider_accounts', {
 
 export const serverProjects = sqliteTable('server_projects', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   name: text('name').notNull(),
   color: text('color'),
   sortOrder: integer('sortOrder').default(0),
@@ -45,6 +103,10 @@ export const serverProjects = sqliteTable('server_projects', {
 
 export const vps = sqliteTable('vps', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   ip: text('ip'),
   ipv6: text('ipv6'),
   additionalIps: text('additionalIps'),
@@ -85,6 +147,10 @@ export const vps = sqliteTable('vps', {
 
 export const payments = sqliteTable('payments', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   type: text('type').notNull(),
   date: text('date').notNull(),
   amount: real('amount').notNull(),
@@ -96,6 +162,10 @@ export const payments = sqliteTable('payments', {
 
 export const balanceLedger = sqliteTable('balance_ledger', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   type: text('type').notNull(),
   date: text('date').notNull(),
   amount: real('amount').notNull(),
@@ -108,6 +178,10 @@ export const balanceLedger = sqliteTable('balance_ledger', {
 
 export const settings = sqliteTable('settings', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   baseCurrency: text('baseCurrency'),
   ratesUrl: text('ratesUrl'),
   autoConvert: integer('autoConvert'),
@@ -138,6 +212,10 @@ export const settings = sqliteTable('settings', {
 
 export const vpsDomains = sqliteTable('vps_domains', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   vpsId: text('vpsId').references(() => vps.id, { onDelete: 'set null' }),
   fqdn: text('fqdn').notNull(),
   zoneName: text('zoneName').notNull(),
@@ -154,6 +232,10 @@ export const vpsDomains = sqliteTable('vps_domains', {
 
 export const notificationLog = sqliteTable('notification_log', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   event: text('event').notNull(),
   channel: text('channel').notNull(),
   status: text('status').notNull(),
@@ -165,6 +247,10 @@ export const notificationLog = sqliteTable('notification_log', {
 
 export const notificationState = sqliteTable('notification_state', {
   key: text('key').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   lastFingerprint: text('lastFingerprint'),
   lastSentAt: text('lastSentAt'),
   lastStatus: text('lastStatus'),
@@ -172,6 +258,10 @@ export const notificationState = sqliteTable('notification_state', {
 
 export const vpsHealthChecks = sqliteTable('vps_health_checks', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   vpsId: text('vpsId')
     .notNull()
     .references(() => vps.id),
@@ -183,15 +273,24 @@ export const vpsHealthChecks = sqliteTable('vps_health_checks', {
 
 export const auditLog = sqliteTable('audit_log', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   entity: text('entity').notNull(),
   entityId: text('entityId').notNull(),
   action: text('action').notNull(),
   diff: text('diff'),
+  actorUserId: text('actorUserId'),
   createdAt: text('createdAt').notNull(),
 })
 
 export const syncLog = sqliteTable('sync_log', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   accountId: text('accountId')
     .notNull()
     .references(() => providerAccounts.id),
@@ -206,6 +305,10 @@ export const syncLog = sqliteTable('sync_log', {
 
 export const activeTariffs = sqliteTable('active_tariffs', {
   id: text('id').primaryKey(),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   providerAccountId: text('providerAccountId')
     .notNull()
     .references(() => providerAccounts.id),
@@ -235,6 +338,10 @@ export const tariffSyncOptions = sqliteTable('tariff_sync_options', {
   providerAccountId: text('providerAccountId')
     .primaryKey()
     .references(() => providerAccounts.id),
+  spaceId: text('spaceId')
+    .notNull()
+    .default('space-main')
+    .references(() => spaces.id),
   datacenters: text('datacenters'),
   periods: text('periods'),
   syncedAt: text('syncedAt'),

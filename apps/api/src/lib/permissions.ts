@@ -95,6 +95,11 @@ const RULES: Rule[] = [
   },
   {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    match: (p) => p.startsWith('/api/spaces'),
+    permission: 'vps:dashboard:read',
+  },
+  {
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     match: (p) =>
       p.startsWith('/api/settings') ||
       p.startsWith('/api/backup') ||

@@ -83,6 +83,9 @@ export interface Vps {
   paidUntil?: string
   notes?: string
   customData?: string | Record<string, string | number | boolean>
+  access?: 'owned' | 'shared'
+  grantPermission?: 'read' | 'write'
+  spaceId?: string
 }
 
 export interface Payment {

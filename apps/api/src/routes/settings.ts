@@ -1,31 +1,44 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { settingsIdForSpace, getCurrentSpaceId } from '@cfdm/db'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { settingsSchema, telegramTestBodySchema } from '@cfdm/shared/contracts/settings'
 
 import { restartScheduler } from '../services/scheduler.js'
 import { sendTelegramMessage } from '../services/telegram.js'
 import { deliverWebhook } from '../services/notifications/channels.js'
+import { requireSpaceRole } from '../plugins/space.js'
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.get('/api/settings', async () => settingsRepository.list())
 
   app.post('/api/settings', async (req, reply) => {
+    if (!requireSpaceRole(req, reply, 'admin')) return
     const parsed = settingsSchema.safeParse(req.body)
     if (!parsed.success) {
       return reply.code(400).send({ error: { code: 'VALIDATION', message: parsed.error.message } })
     }
-    const id = (req.body as { id?: string })?.id ?? 'settings-main'
-    const result = settingsRepository.upsert(id, parsed.data)
+    const spaceId = getCurrentSpaceId()
+    const id =
+      (req.body as { id?: string })?.id ?? settingsIdForSpace(spaceId)
+    const result = settingsRepository.upsertForSpace(spaceId, {
+      ...parsed.data,
+    })
+    // Keep id stable
+    if (result.id !== id) {
+      /* upsertForSpace picks correct id */
+    }
     restartScheduler()
     return reply.code(201).send(result)
   })
 
   app.put<{ Params: { id: string } }>('/api/settings/:id', async (req, reply) => {
+    if (!requireSpaceRole(req, reply, 'admin')) return
     const parsed = settingsSchema.partial().safeParse(req.body)
     if (!parsed.success) {
       return reply.code(400).send({ error: { code: 'VALIDATION', message: parsed.error.message } })
     }
-    const result = settingsRepository.upsert(req.params.id, parsed.data)
+    const spaceId = getCurrentSpaceId()
+    const result = settingsRepository.upsertForSpace(spaceId, parsed.data)
     restartScheduler()
     return result
   })
@@ -33,7 +46,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.post('/api/settings/telegram/test', async (req) => {
     const parsed = telegramTestBodySchema.safeParse(req.body ?? {})
     const body = parsed.success ? parsed.data : {}
-    const settings = settingsRepository.getRow('settings-main')
+    const settings = settingsRepository.getBySpace(getCurrentSpaceId())
 
     const token = body.telegramBotToken?.trim() || settings?.telegramBotToken?.trim() || ''
     const chatId = body.telegramChatId?.trim() || settings?.telegramChatId?.trim() || ''
@@ -55,7 +68,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/api/settings/webhook/test', async () => {
-    const settings = settingsRepository.getRow('settings-main')
+    const settings = settingsRepository.getBySpace(getCurrentSpaceId())
     if (!settings?.webhookEnabled) {
       return { ok: false, error: 'Включите webhook в настройках' }
     }

@@ -4,6 +4,10 @@ import {
   type AppSwitcherConfig,
 } from '@cfdm/shared/contracts/app-switcher'
 import { getDb, schema } from '../index.js'
+import {
+  getCurrentSpaceId,
+  settingsIdForSpace,
+} from '../space-context.js'
 
 type Row = typeof schema.settings.$inferSelect
 
@@ -150,9 +154,10 @@ interface SettingsInput {
   showQuickActions?: boolean
 }
 
-function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
+function buildValues(id: string, spaceId: string, existing: Row | undefined, r: SettingsInput) {
   return {
     id,
+    spaceId,
     baseCurrency: r.baseCurrency ?? existing?.baseCurrency ?? 'RUB',
     ratesUrl: r.ratesUrl ?? existing?.ratesUrl ?? '',
     autoConvert:
@@ -266,8 +271,17 @@ function buildValues(id: string, existing: Row | undefined, r: SettingsInput) {
 
 export const settingsRepository = {
   list(): SettingsDto[] {
-    const rows = getDb().select().from(schema.settings).orderBy(asc(schema.settings.id)).all()
+    const spaceId = getCurrentSpaceId()
+    const rows = getDb()
+      .select()
+      .from(schema.settings)
+      .where(eq(schema.settings.spaceId, spaceId))
+      .orderBy(asc(schema.settings.id))
+      .all()
     return rows.map((r) => toDto(r)!) as SettingsDto[]
+  },
+  listAllSpaces(): Row[] {
+    return getDb().select().from(schema.settings).all()
   },
   get(id: string): SettingsDto | undefined {
     return toDto(getDb().select().from(schema.settings).where(eq(schema.settings.id, id)).get())
@@ -275,33 +289,68 @@ export const settingsRepository = {
   getRow(id: string): Row | undefined {
     return getDb().select().from(schema.settings).where(eq(schema.settings.id, id)).get()
   },
-  getIntegrationToken(id = 'settings-main'): string {
-    return this.getRow(id)?.integrationToken?.trim() ?? ''
+  getBySpace(spaceId = getCurrentSpaceId()): Row | undefined {
+    return getDb()
+      .select()
+      .from(schema.settings)
+      .where(eq(schema.settings.spaceId, spaceId))
+      .get()
   },
-  getAppSwitcher(id = 'settings-main'): AppSwitcherConfig {
-    const row = this.getRow(id)
+  getDtoBySpace(spaceId = getCurrentSpaceId()): SettingsDto | undefined {
+    return toDto(this.getBySpace(spaceId))
+  },
+  findByIntegrationToken(token: string): Row | undefined {
+    const t = token.trim()
+    if (!t) return undefined
+    const rows = getDb().select().from(schema.settings).all()
+    return rows.find((r) => r.integrationEnabled && r.integrationToken?.trim() === t)
+  },
+  getIntegrationToken(id?: string): string {
+    const row = id
+      ? this.getRow(id)
+      : this.getBySpace(getCurrentSpaceId())
+    return row?.integrationToken?.trim() ?? ''
+  },
+  getAppSwitcher(id?: string): AppSwitcherConfig {
+    const row = id
+      ? this.getRow(id)
+      : this.getBySpace(getCurrentSpaceId()) ?? this.getRow('settings-main')
     return parseAppSwitcher(row?.appSwitcherJson)
   },
-  touchIntegrationSync(id = 'settings-main'): void {
+  touchIntegrationSync(id?: string): void {
     const db = getDb()
     const at = new Date().toISOString()
-    const existing = this.getRow(id)
+    const existing = id ? this.getRow(id) : this.getBySpace(getCurrentSpaceId())
     if (existing) {
       db.update(schema.settings)
         .set({ integrationLastSyncAt: at })
-        .where(eq(schema.settings.id, id))
+        .where(eq(schema.settings.id, existing.id))
         .run()
     }
   },
   upsert(id: string, input: SettingsInput): SettingsDto {
     const db = getDb()
     const existing = this.getRow(id)
-    const values = buildValues(id, existing, input)
+    const spaceId = existing?.spaceId ?? getCurrentSpaceId()
+    const values = buildValues(id, spaceId, existing, input)
     if (existing) {
       db.update(schema.settings).set(values).where(eq(schema.settings.id, id)).run()
     } else {
       db.insert(schema.settings).values(values).run()
     }
     return this.get(id)!
+  },
+  upsertForSpace(spaceId: string, input: SettingsInput): SettingsDto {
+    const id = settingsIdForSpace(spaceId)
+    const existing = this.getRow(id) ?? this.getBySpace(spaceId)
+    const finalId = existing?.id ?? id
+    const db = getDb()
+    const values = buildValues(finalId, spaceId, existing, input)
+    if (existing) {
+      db.update(schema.settings).set(values).where(eq(schema.settings.id, existing.id)).run()
+      return this.get(existing.id)!
+    }
+    db.insert(schema.settings).values(values).run()
+    return this.get(finalId)!
   },
 }

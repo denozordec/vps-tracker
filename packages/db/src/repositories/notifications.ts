@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { getDb, schema } from '../index.js'
+import { getCurrentSpaceId } from '../space-context.js'
 
 export type NotificationChannel = 'telegram' | 'webhook'
 export type NotificationLogStatus = 'sent' | 'failed' | 'skipped'
@@ -43,9 +44,11 @@ function toLogDto(row: typeof schema.notificationLog.$inferSelect): Notification
 
 export const notificationRepository = {
   listRecent(limit = 50): NotificationLogRow[] {
+    const spaceId = getCurrentSpaceId()
     const rows = getDb()
       .select()
       .from(schema.notificationLog)
+      .where(eq(schema.notificationLog.spaceId, spaceId))
       .orderBy(desc(schema.notificationLog.createdAt))
       .limit(Math.min(200, Math.max(1, limit)))
       .all()
@@ -64,6 +67,7 @@ export const notificationRepository = {
       .insert(schema.notificationLog)
       .values({
         id: `nlog-${randomUUID()}`,
+        spaceId: getCurrentSpaceId(),
         event: entry.event,
         channel: entry.channel,
         status: entry.status,
@@ -76,20 +80,40 @@ export const notificationRepository = {
   },
 
   getState(key: string) {
-    return getDb().select().from(schema.notificationState).where(eq(schema.notificationState.key, key)).get()
+    const spaceId = getCurrentSpaceId()
+    return getDb()
+      .select()
+      .from(schema.notificationState)
+      .where(
+        and(
+          eq(schema.notificationState.key, key),
+          eq(schema.notificationState.spaceId, spaceId),
+        ),
+      )
+      .get()
   },
 
   upsertState(key: string, patch: { lastFingerprint?: string; lastSentAt?: string; lastStatus?: string }) {
     const db = getDb()
+    const spaceId = getCurrentSpaceId()
     const existing = this.getState(key)
     const values = {
       key,
+      spaceId,
       lastFingerprint: patch.lastFingerprint ?? existing?.lastFingerprint ?? null,
       lastSentAt: patch.lastSentAt ?? existing?.lastSentAt ?? null,
       lastStatus: patch.lastStatus ?? existing?.lastStatus ?? null,
     }
     if (existing) {
-      db.update(schema.notificationState).set(values).where(eq(schema.notificationState.key, key)).run()
+      db.update(schema.notificationState)
+        .set(values)
+        .where(
+          and(
+            eq(schema.notificationState.key, key),
+            eq(schema.notificationState.spaceId, spaceId),
+          ),
+        )
+        .run()
     } else {
       db.insert(schema.notificationState).values(values).run()
     }

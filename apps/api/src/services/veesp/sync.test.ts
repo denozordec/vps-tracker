@@ -22,6 +22,7 @@ import { fetchBalance, fetchInvoices, fetchTariffList, fetchVpsRecords } from '.
 function makeAccount(): VeespSyncAccount {
   return {
     id: 'acc-veesp',
+    spaceId: 'space-main',
     providerId: 'prov-veesp',
     name: 'Veesp',
     panelUrl: '',

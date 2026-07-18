@@ -12,6 +12,7 @@ import {
   RefreshCwIcon,
   FolderKanbanIcon,
   HistoryIcon,
+  UsersIcon,
 } from 'lucide-react'
 
 import {
@@ -48,6 +49,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react'
 import { ModeToggle } from '@/components/mode-toggle'
 import { SystemMonitorPopover } from '@/components/layout/system-monitor-popover'
 import { AppsMenu } from '@/components/layout/apps-menu'
+import { SpaceSwitcher } from '@/components/layout/space-switcher'
 import { AppSwitcher } from '@/components/app-switcher'
 import { GlobalSearch, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
@@ -101,6 +103,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Система',
     items: [
+      { to: '/spaces', label: 'Пространство', icon: UsersIcon },
       { to: '/sync-journal', label: 'Журнал синка', icon: HistoryIcon },
       { to: '/audit', label: 'Журнал изменений', icon: HistoryIcon },
       { to: '/settings', label: 'Настройки', icon: Settings },
@@ -127,6 +130,7 @@ const PARENT_ROUTE: Record<string, string> = {
   '/renewals': '/dashboard',
   '/sync-journal': '/settings',
   '/audit': '/settings',
+  '/spaces': '/settings',
 }
 
 /** Shared ops chrome — etalon EvoBGP. @see docs/ui-design-contract.md */
@@ -169,6 +173,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <AppSwitcher />
+            <SpaceSwitcher />
           </SidebarHeader>
           <SidebarContent>
             {navGroups.map((group) => (

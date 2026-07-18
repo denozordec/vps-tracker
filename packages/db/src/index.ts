@@ -55,6 +55,13 @@ export function reloadDatabaseFromBuffer(buffer: Buffer): void {
 
 export { schema }
 export {
+  MAIN_SPACE_ID,
+  getCurrentSpaceId,
+  runWithSpace,
+  runWithSpaceAsync,
+  settingsIdForSpace,
+} from './space-context.js'
+export {
   consolidateAllProviderApiSources,
   consolidateProviderApiFromAccounts,
   heuristicBillmanagerProviderApi,

@@ -1,5 +1,6 @@
-import { desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { getDb, schema } from '../index.js'
+import { getCurrentSpaceId } from '../space-context.js'
 
 export interface SyncLogDto {
   id: string
@@ -38,9 +39,11 @@ function toDto(row: typeof schema.syncLog.$inferSelect): SyncLogDto {
 
 export const syncLogRepository = {
   listRecent(limit = 50): SyncLogDto[] {
+    const spaceId = getCurrentSpaceId()
     const rows = getDb()
       .select()
       .from(schema.syncLog)
+      .where(eq(schema.syncLog.spaceId, spaceId))
       .orderBy(desc(schema.syncLog.startedAt))
       .limit(limit)
       .all()

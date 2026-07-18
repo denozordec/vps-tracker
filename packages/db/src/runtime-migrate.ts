@@ -1,5 +1,7 @@
 import type Database from 'better-sqlite3'
 
+const MAIN_SPACE_ID = 'space-main'
+
 const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE vps ADD COLUMN customData TEXT`,
   `ALTER TABLE vps ADD COLUMN last_health_status TEXT`,
@@ -16,9 +18,40 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE settings ADD COLUMN cfdmApiUrl TEXT`,
   `ALTER TABLE settings ADD COLUMN showQuickActions INTEGER`,
   `ALTER TABLE vps_domains ADD COLUMN targetIps TEXT`,
+  `ALTER TABLE providers ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE provider_accounts ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE server_projects ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE vps ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE payments ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE balance_ledger ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE settings ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE vps_domains ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE notification_log ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE notification_state ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE vps_health_checks ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE audit_log ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE audit_log ADD COLUMN actorUserId TEXT`,
+  `ALTER TABLE sync_log ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE active_tariffs ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE tariff_sync_options ADD COLUMN spaceId TEXT`,
 ]
 
 const TABLE_MIGRATIONS: string[] = [
+  `CREATE TABLE IF NOT EXISTS spaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'personal',
+    ownerUserId TEXT,
+    createdAt TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS space_members (
+    spaceId TEXT NOT NULL REFERENCES spaces(id),
+    userId TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'member',
+    createdAt TEXT NOT NULL,
+    UNIQUE(spaceId, userId)
+  )`,
   `CREATE TABLE IF NOT EXISTS vps_health_checks (
     id TEXT PRIMARY KEY,
     vpsId TEXT NOT NULL REFERENCES vps(id),
@@ -74,7 +107,69 @@ const TABLE_MIGRATIONS: string[] = [
     targetIps TEXT,
     syncedAt TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS vps_grants (
+    id TEXT PRIMARY KEY,
+    vpsId TEXT NOT NULL REFERENCES vps(id),
+    fromSpaceId TEXT NOT NULL REFERENCES spaces(id),
+    toSpaceId TEXT NOT NULL REFERENCES spaces(id),
+    permission TEXT NOT NULL DEFAULT 'read',
+    grantedByUserId TEXT,
+    createdAt TEXT NOT NULL,
+    UNIQUE(vpsId, toSpaceId)
+  )`,
 ]
+
+const SPACE_BACKFILL_TABLES = [
+  'providers',
+  'provider_accounts',
+  'server_projects',
+  'vps',
+  'payments',
+  'balance_ledger',
+  'settings',
+  'vps_domains',
+  'notification_log',
+  'notification_state',
+  'vps_health_checks',
+  'audit_log',
+  'sync_log',
+  'active_tariffs',
+  'tariff_sync_options',
+] as const
+
+function ensureMainSpace(sqlite: Database.Database): void {
+  const now = new Date().toISOString()
+  const owner = process.env.VPS_MAIN_SPACE_OWNER_USER_ID?.trim() || null
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO spaces (id, name, slug, kind, ownerUserId, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(MAIN_SPACE_ID, 'Основное', 'main', 'main', owner, now)
+
+  if (owner) {
+    sqlite
+      .prepare(
+        `INSERT OR IGNORE INTO space_members (spaceId, userId, role, createdAt)
+         VALUES (?, ?, 'owner', ?)`,
+      )
+      .run(MAIN_SPACE_ID, owner, now)
+  }
+}
+
+function backfillSpaceIds(sqlite: Database.Database): void {
+  for (const table of SPACE_BACKFILL_TABLES) {
+    try {
+      sqlite
+        .prepare(
+          `UPDATE ${table} SET spaceId = ? WHERE spaceId IS NULL OR spaceId = ''`,
+        )
+        .run(MAIN_SPACE_ID)
+    } catch {
+      /* table may not exist yet */
+    }
+  }
+}
 
 let migrated = false
 
@@ -94,5 +189,7 @@ export function ensureRuntimeSchema(sqlite: Database.Database): void {
       /* column exists */
     }
   }
+  ensureMainSpace(sqlite)
+  backfillSpaceIds(sqlite)
   migrated = true
 }
