@@ -201,6 +201,7 @@ function TopologyEditorInner({
 
   function onDrop(e: DragEvent) {
     e.preventDefault()
+    e.stopPropagation()
     if (locked) return
     const item = parsePaletteDrag(e.dataTransfer)
     if (!item) return
@@ -220,6 +221,16 @@ function TopologyEditorInner({
       data: { vpsId },
     }))
     setNodes((ns) => [...ns, ...created])
+  }
+
+  function placeItemAtCenter(item: PaletteItem) {
+    if (locked) return
+    const rect = wrapperRef.current?.getBoundingClientRect()
+    const position = screenToFlowPosition({
+      x: (rect?.left ?? 0) + (rect?.width ?? 400) / 2,
+      y: (rect?.top ?? 0) + (rect?.height ?? 300) / 2,
+    })
+    placeNode(item, position)
   }
 
   function onNodeClick(_e: ReactMouseEvent, node: FlowNode) {
@@ -265,6 +276,8 @@ function TopologyEditorInner({
     <div
       ref={wrapperRef}
       className={cn('relative h-full min-h-[480px] w-full overflow-hidden rounded-lg', className)}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
     >
       <ReactFlow
         nodes={nodes}
@@ -294,30 +307,29 @@ function TopologyEditorInner({
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
         }}
         proOptions={{ hideAttribution: true }}
-        className="bg-muted/30"
+        className="bg-muted/30 h-full"
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
       </ReactFlow>
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="pointer-events-auto absolute top-3 left-3">
-          <TopologyPalette
-            disabled={locked}
-            onPickVps={() => setAddVpsOpen(true)}
-          />
-        </div>
-        <div className="pointer-events-auto absolute bottom-3 left-3">
-          <TopologyToolbar
-            zoomPercent={zoomPercent}
-            locked={locked}
-            onZoomIn={() => void zoomIn()}
-            onZoomOut={() => void zoomOut()}
-            onFitView={() => void fitView({ padding: 0.2 })}
-            onToggleLock={() => onLockedChange(!locked)}
-            onFullscreen={() => void handleFullscreen()}
-            onExport={() => void handleExport()}
-          />
-        </div>
+      <div className="pointer-events-auto absolute top-3 left-3 z-10">
+        <TopologyPalette
+          disabled={locked}
+          onPickVps={() => setAddVpsOpen(true)}
+          onPlaceItem={placeItemAtCenter}
+        />
+      </div>
+      <div className="pointer-events-auto absolute bottom-3 left-3 z-10">
+        <TopologyToolbar
+          zoomPercent={zoomPercent}
+          locked={locked}
+          onZoomIn={() => void zoomIn()}
+          onZoomOut={() => void zoomOut()}
+          onFitView={() => void fitView({ padding: 0.2 })}
+          onToggleLock={() => onLockedChange(!locked)}
+          onFullscreen={() => void handleFullscreen()}
+          onExport={() => void handleExport()}
+        />
       </div>
 
       <AddVpsSheet

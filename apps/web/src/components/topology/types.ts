@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { Vps } from '@/types/entities'
+import { uid } from '@/lib/format'
 
 export type TopologyNodeType = 'vps' | 'shape' | 'note' | 'group'
 
@@ -48,5 +49,6 @@ export function vpsSpecsLine(vps: Pick<Vps, 'vcpu' | 'ramGb' | 'diskGb' | 'diskT
 }
 
 export function newNodeId(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
+  // uid() falls back when crypto.randomUUID unavailable (HTTP non-localhost)
+  return `${prefix}-${uid()}`
 }

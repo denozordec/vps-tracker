@@ -7,13 +7,6 @@ import {
   StickyNoteIcon,
   ServerIcon,
 } from 'lucide-react'
-import { Button } from '@cfdm/ui/components/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@cfdm/ui/components/tooltip'
 import { cn } from '@cfdm/ui/lib/utils'
 import type { PaletteItem, ShapeKind } from './types'
 
@@ -50,14 +43,13 @@ const ITEMS: { item: PaletteItem; icon: typeof SquareIcon; title: string }[] = [
   },
 ]
 
-const DND_TYPE = 'application/topology-palette'
-
-export function topologyDnDType(): string {
-  return DND_TYPE
-}
+/** MIME used by React Flow drag-and-drop examples */
+export const TOPOLOGY_DND_MIME = 'application/reactflow'
 
 export function parsePaletteDrag(dataTransfer: DataTransfer): PaletteItem | null {
-  const raw = dataTransfer.getData(DND_TYPE)
+  const raw =
+    dataTransfer.getData(TOPOLOGY_DND_MIME) ||
+    dataTransfer.getData('text/plain')
   if (!raw) return null
   try {
     return JSON.parse(raw) as PaletteItem
@@ -69,63 +61,82 @@ export function parsePaletteDrag(dataTransfer: DataTransfer): PaletteItem | null
 interface TopologyPaletteProps {
   className?: string
   onPickVps: () => void
+  onPlaceItem?: (item: PaletteItem) => void
   disabled?: boolean
 }
 
-export function TopologyPalette({ className, onPickVps, disabled }: TopologyPaletteProps) {
+export function TopologyPalette({
+  className,
+  onPickVps,
+  onPlaceItem,
+  disabled,
+}: TopologyPaletteProps) {
+  function handlePick(item: PaletteItem) {
+    if (disabled) return
+    if (item.kind === 'vps-picker') {
+      onPickVps()
+      return
+    }
+    onPlaceItem?.(item)
+  }
+
   return (
-    <TooltipProvider>
+    <div
+      className={cn(
+        'flex flex-col gap-1 rounded-lg border border-border bg-background/95 p-1.5 shadow-sm backdrop-blur',
+        className,
+      )}
+    >
       <div
-        className={cn(
-          'flex flex-col gap-1 rounded-lg border border-border bg-background/95 p-1.5 shadow-sm backdrop-blur',
-          className,
-        )}
+        className="flex size-7 items-center justify-center rounded-md opacity-50"
+        title="Выделение (по умолчанию)"
+        aria-hidden
       >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="pointer-events-none opacity-60"
-              aria-label="Выделение"
-            />
-          }
-        >
-          <MousePointer2Icon />
-        </TooltipTrigger>
-        <TooltipContent side="right">Выделение</TooltipContent>
-      </Tooltip>
-      {ITEMS.map(({ item, icon: Icon, title }) => (
-        <Tooltip key={title}>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled={disabled}
-                draggable={!disabled && item.kind !== 'vps-picker'}
-                onDragStart={(e) => {
-                  if (item.kind === 'vps-picker') return
-                  e.dataTransfer.setData(DND_TYPE, JSON.stringify(item))
-                  e.dataTransfer.effectAllowed = 'move'
-                }}
-                onClick={() => {
-                  if (item.kind === 'vps-picker') onPickVps()
-                }}
-                aria-label={title}
-              />
-            }
-          >
-            <Icon />
-          </TooltipTrigger>
-          <TooltipContent side="right">{title}</TooltipContent>
-        </Tooltip>
-      ))}
+        <MousePointer2Icon className="size-4" />
       </div>
-    </TooltipProvider>
+      {ITEMS.map(({ item, icon: Icon, title }) => {
+        const canDrag = !disabled && item.kind !== 'vps-picker'
+        return (
+          <div
+            key={title}
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            aria-label={title}
+            title={
+              item.kind === 'vps-picker'
+                ? title
+                : `${title} — клик или перетащите на схему`
+            }
+            className={cn(
+              'flex size-7 cursor-grab items-center justify-center rounded-md text-foreground',
+              'hover:bg-muted active:cursor-grabbing',
+              disabled && 'pointer-events-none opacity-50',
+              item.kind === 'vps-picker' && 'cursor-pointer',
+            )}
+            draggable={canDrag}
+            onDragStart={(e) => {
+              if (!canDrag) {
+                e.preventDefault()
+                return
+              }
+              const payload = JSON.stringify(item)
+              e.dataTransfer.setData(TOPOLOGY_DND_MIME, payload)
+              e.dataTransfer.setData('text/plain', payload)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+            onClick={() => handlePick(item)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handlePick(item)
+              }
+            }}
+          >
+            <Icon className="size-4" />
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
