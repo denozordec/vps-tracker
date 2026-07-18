@@ -43,7 +43,9 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   getDb()
 
   const app = Fastify({
-    logger: process.env.NODE_ENV !== 'production',
+    logger: {
+      level: process.env.LOG_LEVEL ?? 'info',
+    },
   })
 
   await app.register(cors, { origin: true })

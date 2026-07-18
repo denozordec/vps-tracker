@@ -196,13 +196,17 @@ docker run --rm -v vps_tracker_traefik_letsencrypt:/data -v "$PWD:/backup" alpin
 | ACME / браузер ругается на сертификат | `CF_DNS_API_TOKEN`, Zone:DNS:Edit, DNS only (не orange cloud), логи Traefik |
 | `invalid credentials` | Не Global Key; зона в scope токена; нет пробелов/кавычек в `.env` |
 | Gateway Timeout / 404 | `docker compose ps`; labels; сеть `vps-tracker`; `VPS_DOMAIN` |
+| `/health` OK, `/api/data` 500 | Старые образы без bootstrap схемы — `docker compose pull && up -d`; смотрите `docker compose logs app` (`no such table`) |
 | `/health` OK, UI пустой | образ / кэш CDN; смотрите `docker compose logs app` |
 | SSO 401 / issuer mismatch | `AUTH_JWT_SECRET` = `JWT_SECRET` портала; `AUTH_ISSUER` |
 
 ```bash
 docker compose logs traefik 2>&1 | grep -iE 'acme|certificate|cloudflare|error'
 docker compose logs app --tail=80
+docker compose logs -f app   # follow
 ```
+
+Логи контейнеров: драйвер `json-file`, ротация `max-size=10m`, `max-file=3`. Уровень приложения — `LOG_LEVEL` (по умолчанию `info`).
 
 ---
 

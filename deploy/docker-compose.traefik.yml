@@ -47,6 +47,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+        tag: "{{.Name}}"
 
   app:
     image: ${VPS_TRACKER_IMAGE:-ghcr.io/denozordec/vps-tracker}:${VPS_TRACKER_IMAGE_TAG:-latest}
@@ -60,6 +61,7 @@ services:
       PORT: "3001"
       RUNTIME: "fastify"
       NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       AUTH_REQUIRED: ${AUTH_REQUIRED:-false}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
       AUTH_ISSUER: ${AUTH_ISSUER:-https://auth.shnt.top}
@@ -93,6 +95,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+        tag: "{{.Name}}"
 
 volumes:
   traefik_letsencrypt:

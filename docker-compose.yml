@@ -8,12 +8,20 @@ services:
     environment:
       PORT: "3001"
       RUNTIME: "fastify"
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       AUTH_REQUIRED: ${AUTH_REQUIRED:-false}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-secret-change-me}
       AUTH_ISSUER: ${AUTH_ISSUER:-https://auth.shnt.top}
       AUTH_PORTAL_URL: ${AUTH_PORTAL_URL:-http://localhost:8080}
     volumes:
       - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
 
   # Раскомментируйте для локальной сборки вместо pull образа:
   # app-build:
@@ -27,3 +35,8 @@ services:
   #     RUNTIME: "express"
   #   volumes:
   #     - ./data:/app/data
+  #   logging:
+  #     driver: json-file
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
