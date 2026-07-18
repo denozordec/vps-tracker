@@ -38,9 +38,13 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   })
   if (!res.ok) {
     if (res.status === 401) {
+      // Avoid redirect storms: only hand off once per page load
+      const handoffKey = 'vps_auth_401_handoff'
+      const already = sessionStorage.getItem(handoffKey)
       clearToken()
       const cfg = await ensureAuthConfig()
-      if (cfg.required || isAuthEnabled()) {
+      if ((cfg.required || isAuthEnabled()) && !already) {
+        sessionStorage.setItem(handoffKey, '1')
         redirectToPortalLogin(`${window.location.origin}/auth/callback`)
       }
     }
