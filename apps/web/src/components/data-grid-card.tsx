@@ -370,7 +370,7 @@ export function DataGridCard<TData extends object>({
         {hasHeader ? (
           <DataGridSectionHeader title={title} description={description} actions={headerActions} />
         ) : null}
-        <FramePanel>
+        <FramePanel className="flex min-h-72 w-full flex-col items-center justify-center">
           <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
         </FramePanel>
       </Frame>

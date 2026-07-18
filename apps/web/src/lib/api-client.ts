@@ -268,6 +268,8 @@ export const api = {
     const headers = new Headers({ 'Content-Type': 'application/octet-stream' })
     const token = getToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)
+    const spaceId = getStoredSpaceId()
+    if (spaceId) headers.set('X-Space-Id', spaceId)
     const res = await fetch(`${API_BASE}/api/backup/database`, {
       method: 'POST',
       headers,
@@ -277,7 +279,25 @@ export const api = {
       if (res.status === 401) {
         await handoffOnUnauthorized()
       }
-      throw new ApiError(res.statusText || 'Ошибка восстановления', res.status)
+      let message = res.statusText || 'Ошибка восстановления'
+      if (res.status === 413) {
+        message =
+          'Файл слишком большой для импорта (лимит тела запроса). Увеличьте BACKUP_BODY_LIMIT_BYTES на API или используйте копирование data/*.db на сервере.'
+      } else {
+        try {
+          const data = (await res.json()) as {
+            error?: string | { message?: string }
+            message?: string
+          }
+          if (typeof data?.error === 'string') message = data.error
+          else if (data?.error && typeof data.error === 'object' && data.error.message) {
+            message = data.error.message
+          } else if (typeof data?.message === 'string') message = data.message
+        } catch {
+          /* ignore */
+        }
+      }
+      throw new ApiError(message, res.status)
     }
     return res.json()
   },

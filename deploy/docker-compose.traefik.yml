@@ -66,6 +66,8 @@ services:
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
       AUTH_ISSUER: ${AUTH_ISSUER:-https://auth.shnt.top}
       AUTH_PORTAL_URL: ${AUTH_PORTAL_URL:-https://auth.shnt.top}
+      # Import SQLite/JSON via UI (default in app: 100 MiB). Raise if DB is larger.
+      BACKUP_BODY_LIMIT_BYTES: ${BACKUP_BODY_LIMIT_BYTES:-104857600}
     volumes:
       - ./data:/app/data
     networks:

@@ -177,13 +177,31 @@ docker compose down
 ## Бэкап
 
 ```bash
-# SQLite
+# SQLite (на хосте; контейнер лучше остановить на время копии)
+docker compose stop app
 cp /opt/vps-tracker/data/vps-tracker.db \
   /opt/vps-tracker/data/vps-tracker.db.bak-$(date +%F)
+# при WAL также можно скопировать *-wal / *-shm или делать бэкап через UI (там checkpoint)
+docker compose start app
 
 # ACME (Let's Encrypt)
 docker run --rm -v vps_tracker_traefik_letsencrypt:/data -v "$PWD:/backup" alpine \
   tar czf /backup/traefik-acme-$(date +%F).tgz -C /data .
+```
+
+### Импорт SQLite через UI
+
+`POST /api/backup/database` принимает файл до **100 MiB** (`BACKUP_BODY_LIMIT_BYTES`, см. `env.traefik.example`).  
+Раньше лимит Fastify был **1 MiB** → браузерный **413 Content Too Large**.
+
+Офлайн на новый сервер (без UI):
+
+```bash
+docker compose stop app
+cp ./vps-tracker.db /opt/vps-tracker/data/vps-tracker.db
+rm -f /opt/vps-tracker/data/vps-tracker.db-wal \
+      /opt/vps-tracker/data/vps-tracker.db-shm
+docker compose start app
 ```
 
 ---
@@ -199,6 +217,7 @@ docker run --rm -v vps_tracker_traefik_letsencrypt:/data -v "$PWD:/backup" alpin
 | `/health` OK, `/api/data` 500 | Старые образы без bootstrap схемы — `docker compose pull && up -d`; смотрите `docker compose logs app` (`no such table`) |
 | `/health` OK, UI пустой | образ / кэш CDN; смотрите `docker compose logs app` |
 | SSO 401 / issuer mismatch | `AUTH_JWT_SECRET` = `JWT_SECRET` портала; `AUTH_ISSUER` |
+| `POST /api/backup/database` **413** | Обновить образ (лимит 100 MiB) или `BACKUP_BODY_LIMIT_BYTES`; либо копировать `data/*.db` на сервере как выше |
 
 ```bash
 docker compose logs traefik 2>&1 | grep -iE 'acme|certificate|cloudflare|error'

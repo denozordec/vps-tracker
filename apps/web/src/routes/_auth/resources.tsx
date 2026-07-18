@@ -97,14 +97,14 @@ function ResourcesPage() {
               ]}
             />
 
-            <Card>
+            <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle>Ресурсы по хостерам</CardTitle>
                 <CardDescription>Только активные VPS</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex min-h-80 flex-1 flex-col items-center justify-center">
                 {chartData.length === 0 ? (
-                  <EmptyState title="Нет данных для графика" />
+                  <EmptyState title="Нет данных для графика" className="min-h-80 w-full flex-1 py-0" />
                 ) : (
                 <ChartContainer config={RESOURCE_CONFIG} className="h-80 w-full" aria-label="Ресурсы по хостерам">
                   <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>

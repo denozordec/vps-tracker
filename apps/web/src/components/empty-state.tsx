@@ -1,3 +1,8 @@
+/**
+ * ReUI Empty + IconStack — adapted from empty-state-12.
+ * Preview: https://reui.io/preview/base/empty-state-12
+ * Docs: https://reui.io/blocks
+ */
 import { InboxIcon, type LucideIcon } from 'lucide-react'
 import { IconStack } from '@/components/reui/icon-stack'
 import {
@@ -20,6 +25,11 @@ interface EmptyStateProps {
   className?: string
   /** Use IconStack media (empty-state-12). Default true. */
   stackedIcon?: boolean
+  /**
+   * Center in available width/height (empty-state-12).
+   * Set false for tight panels/sheets where the parent already centers.
+   */
+  centered?: boolean
 }
 
 function isLucideIcon(icon: LucideIcon | ReactNode): icon is LucideIcon {
@@ -33,7 +43,6 @@ function isLucideIcon(icon: LucideIcon | ReactNode): icon is LucideIcon {
   return false
 }
 
-/** Empty state — ReUI empty-state-12. Preview: https://reui.io/preview/base/empty-state-12 */
 export function EmptyState({
   icon,
   title,
@@ -41,18 +50,24 @@ export function EmptyState({
   action,
   className,
   stackedIcon = true,
+  centered = true,
 }: EmptyStateProps) {
   const Icon = isLucideIcon(icon) ? icon : InboxIcon
   const customIcon = icon && !isLucideIcon(icon) ? icon : null
 
-  return (
-    <Empty className={cn('max-w-md flex-none border-0 bg-transparent p-0', className)}>
+  const body = (
+    <Empty
+      className={cn(
+        'max-w-md flex-none border-0 bg-transparent p-0',
+        !centered && className,
+      )}
+    >
       <EmptyHeader className="gap-5 text-center">
         <EmptyMedia className="mb-0">
           {customIcon ? (
             <div className="text-muted-foreground">{customIcon}</div>
           ) : stackedIcon ? (
-            <IconStack aria-hidden="true" className="h-14 w-12">
+            <IconStack aria-hidden="true" className="h-14 w-12 shrink-0">
               <Icon strokeWidth={1.9} aria-hidden="true" className="size-5" />
             </IconStack>
           ) : (
@@ -72,7 +87,25 @@ export function EmptyState({
           ) : null}
         </div>
       </EmptyHeader>
-      {action ? <EmptyContent>{action}</EmptyContent> : null}
+      {action ? (
+        <EmptyContent className="mt-1 items-center justify-center">
+          {action}
+        </EmptyContent>
+      ) : null}
     </Empty>
+  )
+
+  if (!centered) return body
+
+  // empty-state-12: center in available height (parent must be flex column / stretch)
+  return (
+    <div
+      className={cn(
+        'flex w-full flex-1 items-center justify-center self-stretch py-14 sm:py-16',
+        className,
+      )}
+    >
+      {body}
+    </div>
   )
 }

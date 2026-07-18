@@ -242,11 +242,15 @@ export function ResourcePage<T extends object>({
 
   if (data.length === 0 && emptyState) {
     return (
-      <EmptyState
-        title={emptyState.title}
-        description={emptyState.description}
-        action={emptyState.action}
-      />
+      <Frame dense spacing="sm" className="w-full">
+        <FramePanel className="flex min-h-[min(28rem,55svh)] w-full flex-col items-center justify-center p-0">
+          <EmptyState
+            title={emptyState.title}
+            description={emptyState.description}
+            action={emptyState.action}
+          />
+        </FramePanel>
+      </Frame>
     )
   }
 
