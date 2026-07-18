@@ -1,0 +1,103 @@
+# VPS Tracker + Traefik in one Compose stack (production, Linux).
+# Docs: docs/deploy-traefik.md
+#
+# On server:
+#   mkdir -p /opt/vps-tracker/data
+#   cp deploy/docker-compose.traefik.yml /opt/vps-tracker/docker-compose.yml
+#   cp deploy/env.traefik.example /opt/vps-tracker/.env   # fill secrets
+#   docker login ghcr.io   # or git.shts.su if using private registry
+#   cd /opt/vps-tracker && docker compose pull && docker compose up -d
+
+services:
+  traefik:
+    image: traefik:${TRAEFIK_IMAGE_TAG:-v3.7}
+    container_name: vps-tracker-traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?set CF_DNS_API_TOKEN in .env}
+      # Optional if DNS token lacks Zone:Read:
+      # CF_ZONE_API_TOKEN: ${CF_ZONE_API_TOKEN:-}
+    command:
+      - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
+      - --api.dashboard=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=vps-tracker
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL:?set LETSENCRYPT_EMAIL in .env}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.delaybeforecheck=15
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - vps-tracker
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    image: ${VPS_TRACKER_IMAGE:-ghcr.io/denozordec/vps-tracker}:${VPS_TRACKER_IMAGE_TAG:-latest}
+    pull_policy: always
+    container_name: vps-tracker
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    # No host ports — only Traefik publishes 80/443.
+    environment:
+      PORT: "3001"
+      RUNTIME: "fastify"
+      NODE_ENV: production
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-false}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
+      AUTH_ISSUER: ${AUTH_ISSUER:-https://auth.shnt.top}
+      AUTH_PORTAL_URL: ${AUTH_PORTAL_URL:-https://auth.shnt.top}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - vps-tracker
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=vps-tracker
+      - traefik.http.routers.vps-tracker.rule=Host(`${VPS_DOMAIN:-vps.shnt.top}`)
+      - traefik.http.routers.vps-tracker.entrypoints=websecure
+      - traefik.http.routers.vps-tracker.tls=true
+      - traefik.http.routers.vps-tracker.tls.certresolver=letsencrypt
+      - traefik.http.services.vps-tracker.loadbalancer.server.port=3001
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  traefik_letsencrypt:
+    name: vps_tracker_traefik_letsencrypt
+
+networks:
+  vps-tracker:
+    name: vps-tracker

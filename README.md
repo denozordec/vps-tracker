@@ -30,11 +30,12 @@
 2. [Что понадобится](#req)
 3. [Самый простой способ: готовый образ](#quick)
 4. [Запуск через Docker Compose](#compose)
-5. [Сборка образа у себя](#build-local)
-6. [Сохранение данных и резервная копия](#data)
-7. [Другой порт и доступ по сети](#port)
-8. [Обновление программы](#update)
-9. [Для разработчиков](#dev)
+5. [Production: Traefik + Cloudflare HTTPS](#traefik)
+6. [Сборка образа у себя](#build-local)
+7. [Сохранение данных и резервная копия](#data)
+8. [Другой порт и доступ по сети](#port)
+9. [Обновление программы](#update)
+10. [Для разработчиков](#dev)
 
 ---
 
@@ -162,6 +163,30 @@ docker run -d \
 
 ```bash
 docker compose down
+```
+
+---
+
+<span id="traefik"></span>
+
+## Production: Traefik + Cloudflare HTTPS (Linux)
+
+На VPS с доменом в Cloudflare: Traefik (Let's Encrypt **DNS-01**) + контейнер VPS Tracker за HTTPS, без публикации порта `3001` наружу.
+
+Пошаговая инструкция, compose и `.env`: **[docs/deploy-traefik.md](docs/deploy-traefik.md)**  
+Файлы: [`deploy/docker-compose.traefik.yml`](deploy/docker-compose.traefik.yml), [`deploy/env.traefik.example`](deploy/env.traefik.example).
+
+Кратко:
+
+```bash
+mkdir -p /opt/vps-tracker/data && cd /opt/vps-tracker
+curl -fsSL -o docker-compose.yml \
+  https://raw.githubusercontent.com/denozordec/vps-tracker/main/deploy/docker-compose.traefik.yml
+curl -fsSL -o .env \
+  https://raw.githubusercontent.com/denozordec/vps-tracker/main/deploy/env.traefik.example
+nano .env   # CF_DNS_API_TOKEN, LETSENCRYPT_EMAIL, VPS_DOMAIN
+docker compose pull && docker compose up -d
+curl -fsS https://ВАШ_ДОМЕН/health
 ```
 
 ---
