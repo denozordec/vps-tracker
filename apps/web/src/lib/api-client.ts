@@ -8,7 +8,15 @@ import type {
   Payment,
   BalanceLedgerRow,
 } from '@/types/entities'
-import { clearToken, ensureAuthConfig, getToken, isAuthEnabled, redirectToPortalLogin } from '@/lib/auth'
+import {
+  clearToken,
+  ensureAuthConfig,
+  getToken,
+  hasPortalHandoffFlag,
+  isAuthEnabled,
+  isPortalHandoffCoolingDown,
+  redirectToPortalLogin,
+} from '@/lib/auth'
 import { getStoredSpaceId } from '@/lib/space'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
@@ -19,6 +27,18 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
     this.status = status
+  }
+}
+
+async function handoffOnUnauthorized(): Promise<void> {
+  clearToken()
+  const cfg = await ensureAuthConfig()
+  if (
+    (cfg.required || isAuthEnabled()) &&
+    !hasPortalHandoffFlag() &&
+    !isPortalHandoffCoolingDown()
+  ) {
+    redirectToPortalLogin(`${window.location.origin}/auth/callback`)
   }
 }
 
@@ -43,15 +63,7 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   })
   if (!res.ok) {
     if (res.status === 401) {
-      // Avoid redirect storms: only hand off once per page load
-      const handoffKey = 'vps_auth_401_handoff'
-      const already = sessionStorage.getItem(handoffKey)
-      clearToken()
-      const cfg = await ensureAuthConfig()
-      if ((cfg.required || isAuthEnabled()) && !already) {
-        sessionStorage.setItem(handoffKey, '1')
-        redirectToPortalLogin(`${window.location.origin}/auth/callback`)
-      }
+      await handoffOnUnauthorized()
     }
     let message = res.statusText || 'API error'
     try {
@@ -171,11 +183,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/backup/json`, { headers })
     if (!res.ok) {
       if (res.status === 401) {
-        clearToken()
-        const cfg = await ensureAuthConfig()
-        if (cfg.required || isAuthEnabled()) {
-          redirectToPortalLogin(`${window.location.origin}/auth/callback`)
-        }
+        await handoffOnUnauthorized()
       }
       throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
     }
@@ -191,11 +199,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/api/backup/database`, { headers })
     if (!res.ok) {
       if (res.status === 401) {
-        clearToken()
-        const cfg = await ensureAuthConfig()
-        if (cfg.required || isAuthEnabled()) {
-          redirectToPortalLogin(`${window.location.origin}/auth/callback`)
-        }
+        await handoffOnUnauthorized()
       }
       throw new ApiError(res.statusText || 'Ошибка выгрузки', res.status)
     }
@@ -271,11 +275,7 @@ export const api = {
     })
     if (!res.ok) {
       if (res.status === 401) {
-        clearToken()
-        const cfg = await ensureAuthConfig()
-        if (cfg.required || isAuthEnabled()) {
-          redirectToPortalLogin(`${window.location.origin}/auth/callback`)
-        }
+        await handoffOnUnauthorized()
       }
       throw new ApiError(res.statusText || 'Ошибка восстановления', res.status)
     }

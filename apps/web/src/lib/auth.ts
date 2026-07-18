@@ -1,6 +1,10 @@
 /** Portal JWT storage + claims helpers for VPS Tracker UI. */
 
 const TOKEN_KEY = 'vps_auth_token'
+const HANDOFF_KEY = 'vps_auth_401_handoff'
+const HANDOFF_AT_KEY = 'vps_portal_handoff_at'
+/** Min gap between portal handoffs — breaks SSO↔401 redirect storms. */
+const HANDOFF_COOLDOWN_MS = 12_000
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export type AccessClaims = {
@@ -96,12 +100,50 @@ export function authPortalUrl(): string {
   return vitePortalUrl()
 }
 
-export function redirectToPortalLogin(returnTo?: string) {
+/** True when another portal handoff happened too recently (SSO loop guard). */
+export function isPortalHandoffCoolingDown(): boolean {
+  const raw = sessionStorage.getItem(HANDOFF_AT_KEY)
+  if (!raw) return false
+  const at = Number(raw)
+  if (!Number.isFinite(at)) return false
+  return Date.now() - at < HANDOFF_COOLDOWN_MS
+}
+
+export function markPortalHandoff(): void {
+  sessionStorage.setItem(HANDOFF_KEY, '1')
+  sessionStorage.setItem(HANDOFF_AT_KEY, String(Date.now()))
+}
+
+export function clearPortalHandoffFlag(): void {
+  sessionStorage.removeItem(HANDOFF_KEY)
+}
+
+/** Clear cooldown too — use on intentional logout so next login is allowed. */
+export function resetPortalHandoff(): void {
+  sessionStorage.removeItem(HANDOFF_KEY)
+  sessionStorage.removeItem(HANDOFF_AT_KEY)
+}
+
+export function hasPortalHandoffFlag(): boolean {
+  return sessionStorage.getItem(HANDOFF_KEY) === '1'
+}
+
+/**
+ * Redirect to auth-portal SSO. Returns false if cooldown blocks the handoff
+ * (clears local token) — prevents infinite SSO when API rejects JWT.
+ */
+export function redirectToPortalLogin(returnTo?: string): boolean {
+  if (isPortalHandoffCoolingDown()) {
+    clearToken()
+    return false
+  }
+  markPortalHandoff()
   const callback =
     returnTo ?? `${window.location.origin}/auth/callback`
   const url = new URL(authPortalUrl())
   url.searchParams.set('return_to', callback)
   window.location.assign(url.toString())
+  return true
 }
 
 export function parseHashToken(hash: string): {

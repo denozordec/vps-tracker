@@ -40,6 +40,7 @@ import {
   getClaims,
   isAuthEnabled,
   redirectToPortalLogin,
+  resetPortalHandoff,
 } from '@/lib/auth'
 
 /** Sidebar footer account menu — ReUI app-shell-1 NavUser. @see https://reui.io/preview/base/app-shell-1 */
@@ -128,6 +129,7 @@ export function NavUser() {
 
   function handleSignOut() {
     clearToken()
+    resetPortalHandoff()
     redirectToPortalLogin()
   }
 

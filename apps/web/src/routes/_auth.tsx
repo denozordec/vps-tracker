@@ -18,7 +18,15 @@ export const Route = createFileRoute('/_auth')({
     const token = getToken()
     const claims = getClaims()
     if (!token || !claims) {
-      redirectToPortalLogin(`${window.location.origin}/auth/callback`)
+      const ok = redirectToPortalLogin(
+        `${window.location.origin}/auth/callback`,
+      )
+      if (!ok) {
+        throw redirect({
+          to: '/auth/callback',
+          search: { error: 'sso_loop' },
+        })
+      }
       // Abort route load while browser navigates away
       await new Promise(() => {})
       return
