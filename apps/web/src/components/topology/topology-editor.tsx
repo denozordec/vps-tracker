@@ -35,15 +35,27 @@ import { TopologyPalette, parsePaletteDrag, shapeLabel } from './palette'
 import { TopologyToolbar } from './toolbar'
 import { AddVpsSheet } from './add-vps-sheet'
 import { VpsDetailSheet } from './vps-detail-sheet'
+import { ElementEditSheet, type EditableElement } from './element-edit-sheet'
+import { EdgeEditSheet } from './edge-edit-sheet'
+import { applyEdgeVisuals, createConnectedEdge } from './edge-utils'
 import {
+  defaultEdgeData,
+  isGroupNodeData,
+  isNoteNodeData,
+  isShapeNodeData,
   isVpsNodeData,
   newNodeId,
+  type GroupNodeData,
+  type NoteNodeData,
   type PaletteItem,
+  type ShapeNodeData,
+  type TopologyEdgeData,
   type TopologyNodeData,
   type TopologyNodeType,
 } from './types'
 
 type FlowNode = Node<TopologyNodeData, TopologyNodeType>
+type FlowEdge = Edge<TopologyEdgeData>
 
 interface TopologyEditorProps {
   diagramId: string
@@ -77,11 +89,18 @@ function TopologyEditorInner({
     useReactFlow()
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<FlowNode>(initialNodes)
-  const [edges, setEdges, onEdgesChangeBase] = useEdgesState(initialEdges)
+  const [edges, setEdges, onEdgesChangeBase] = useEdgesState<FlowEdge>(
+    normalizeEdges(initialEdges),
+  )
   const [zoomPercent, setZoomPercent] = useState(100)
   const [addVpsOpen, setAddVpsOpen] = useState(false)
   const [detailVpsId, setDetailVpsId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [editElement, setEditElement] = useState<EditableElement | null>(null)
+  const [elementOpen, setElementOpen] = useState(false)
+  const [editEdgeId, setEditEdgeId] = useState<string | null>(null)
+  const [editEdgeData, setEditEdgeData] = useState<TopologyEdgeData | null>(null)
+  const [edgeOpen, setEdgeOpen] = useState(false)
   const skipSave = useRef(false)
   const hydrated = useRef(false)
 
@@ -89,7 +108,12 @@ function TopologyEditorInner({
     skipSave.current = true
     hydrated.current = false
     setNodes(initialNodes)
-    setEdges(initialEdges)
+    setEdges(normalizeEdges(initialEdges))
+    setEditElement(null)
+    setElementOpen(false)
+    setEditEdgeId(null)
+    setEditEdgeData(null)
+    setEdgeOpen(false)
     if (initialViewport) {
       void setViewport(initialViewport)
       setZoomPercent(Math.round((initialViewport.zoom || 1) * 100))
@@ -124,7 +148,7 @@ function TopologyEditorInner({
     [locked, onNodesChangeBase],
   )
 
-  const onEdgesChange: OnEdgesChange = useCallback(
+  const onEdgesChange: OnEdgesChange<FlowEdge> = useCallback(
     (changes) => {
       if (locked) return
       onEdgesChangeBase(changes)
@@ -135,13 +159,15 @@ function TopologyEditorInner({
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       if (locked) return
+      if (!connection.source || !connection.target) return
       setEdges((eds) =>
         addEdge(
-          {
-            ...connection,
-            type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-          },
+          createConnectedEdge({
+            source: connection.source,
+            target: connection.target,
+            sourceHandle: connection.sourceHandle,
+            targetHandle: connection.targetHandle,
+          }),
           eds,
         ),
       )
@@ -237,7 +263,45 @@ function TopologyEditorInner({
     if (node.type === 'vps' && isVpsNodeData(node.data)) {
       setDetailVpsId(node.data.vpsId)
       setDetailOpen(true)
+      return
     }
+    if (node.type === 'shape' && isShapeNodeData(node.data)) {
+      setEditElement({ kind: 'shape', id: node.id, data: node.data })
+      setElementOpen(true)
+      return
+    }
+    if (node.type === 'note' && isNoteNodeData(node.data)) {
+      setEditElement({ kind: 'note', id: node.id, data: node.data })
+      setElementOpen(true)
+      return
+    }
+    if (node.type === 'group' && isGroupNodeData(node.data)) {
+      setEditElement({ kind: 'group', id: node.id, data: node.data })
+      setElementOpen(true)
+    }
+  }
+
+  function onEdgeClick(_e: ReactMouseEvent, edge: FlowEdge) {
+    const data = edge.data ?? defaultEdgeData()
+    setEditEdgeId(edge.id)
+    setEditEdgeData(data)
+    setEdgeOpen(true)
+  }
+
+  function handleSaveElement(
+    id: string,
+    type: TopologyNodeType,
+    data: ShapeNodeData | NoteNodeData | GroupNodeData,
+  ) {
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id && n.type === type ? { ...n, data } : n)),
+    )
+  }
+
+  function handleSaveEdge(edgeId: string, data: TopologyEdgeData) {
+    setEdges((eds) =>
+      eds.map((e) => (e.id === edgeId ? applyEdgeVisuals(e, data) : e)),
+    )
   }
 
   async function handleExport() {
@@ -286,6 +350,7 @@ function TopologyEditorInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onMoveEnd={(_, vp) => {
@@ -343,8 +408,30 @@ function TopologyEditorInner({
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />
+      <ElementEditSheet
+        element={editElement}
+        open={elementOpen}
+        locked={locked}
+        onOpenChange={setElementOpen}
+        onSave={handleSaveElement}
+      />
+      <EdgeEditSheet
+        edgeId={editEdgeId}
+        data={editEdgeData}
+        open={edgeOpen}
+        locked={locked}
+        onOpenChange={setEdgeOpen}
+        onSave={handleSaveEdge}
+      />
     </div>
   )
+}
+
+function normalizeEdges(edges: Edge[]): FlowEdge[] {
+  return edges.map((edge) => {
+    const data = { ...defaultEdgeData(), ...(edge.data as TopologyEdgeData | undefined) }
+    return applyEdgeVisuals({ ...edge, data }, data)
+  })
 }
 
 export function TopologyEditor(props: TopologyEditorProps) {

@@ -12,8 +12,15 @@ function GroupNodeComponent({ data, selected }: NodeProps & { data: GroupNodeDat
       )}
     >
       <NodeResizer minWidth={200} minHeight={120} isVisible={selected} />
-      <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
-        {data.label || 'Группа'}
+      <div className="flex flex-col gap-0.5 px-3 py-2">
+        <div className="text-xs font-medium text-foreground">
+          {data.label || 'Группа'}
+        </div>
+        {data.notes ? (
+          <div className="text-[10px] text-muted-foreground whitespace-pre-wrap">
+            {data.notes}
+          </div>
+        ) : null}
       </div>
     </div>
   )
