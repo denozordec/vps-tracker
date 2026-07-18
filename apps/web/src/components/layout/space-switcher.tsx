@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronsUpDownIcon, PlusIcon } from 'lucide-react'
+import { CheckIcon, ChevronsUpDownIcon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -7,6 +7,7 @@ import { Button } from '@cfdm/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -25,6 +26,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@cfdm/ui/components/sidebar'
 
 import { api } from '@/lib/api-client'
@@ -32,6 +34,7 @@ import { getStoredSpaceId, setStoredSpaceId, type SpaceDto } from '@/lib/space'
 import { spacesKeys, spacesQueryOptions, snapshotKeys } from '@/queries/snapshot'
 
 export function SpaceSwitcher() {
+  const { isMobile } = useSidebar()
   const qc = useQueryClient()
   const { data: spaces = [] } = useQuery(spacesQueryOptions())
   const currentId = getStoredSpaceId() ?? spaces[0]?.id
@@ -50,6 +53,10 @@ export function SpaceSwitcher() {
     void qc.invalidateQueries({ queryKey: snapshotKeys.all })
     void qc.invalidateQueries({ queryKey: spacesKeys.all })
     toast.success(`Пространство: ${space.name}`)
+  }
+
+  function openCreateDialog() {
+    queueMicrotask(() => setCreateOpen(true))
   }
 
   async function handleCreate() {
@@ -80,10 +87,23 @@ export function SpaceSwitcher() {
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}
+              render={
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-popup-open:bg-muted"
+                />
+              }
             >
+              <div
+                className="flex aspect-square size-8 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                aria-hidden
+              >
+                <UsersIcon className="size-4" />
+              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{current?.name ?? 'Пространство'}</span>
+                <span className="truncate font-semibold">
+                  {current?.name ?? 'Пространство'}
+                </span>
                 <span className="truncate text-xs text-muted-foreground">
                   {current?.kind === 'main' ? 'Основное' : 'Личное'}
                   {current?.role ? ` · ${current.role}` : ''}
@@ -91,22 +111,34 @@ export function SpaceSwitcher() {
               </div>
               <ChevronsUpDownIcon className="ml-auto size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="min-w-56 rounded-lg" align="start" sideOffset={4}>
-              <DropdownMenuLabel>Пространства</DropdownMenuLabel>
-              {spaces.map((s) => (
-                <DropdownMenuItem
-                  key={s.id}
-                  onClick={() => selectSpace(s)}
-                  className={s.id === current?.id ? 'bg-accent' : undefined}
-                >
-                  <span className="truncate">{s.name}</span>
-                </DropdownMenuItem>
-              ))}
+            <DropdownMenuContent
+              className="min-w-56 rounded-lg"
+              side={isMobile ? 'bottom' : 'right'}
+              align="start"
+              sideOffset={4}
+            >
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Пространства</DropdownMenuLabel>
+                {spaces.map((s) => (
+                  <DropdownMenuItem
+                    key={s.id}
+                    onClick={() => selectSpace(s)}
+                  >
+                    <UsersIcon className="size-4" />
+                    <span className="truncate">{s.name}</span>
+                    {s.id === current?.id ? (
+                      <CheckIcon className="ml-auto size-4" />
+                    ) : null}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setCreateOpen(true)}>
-                <PlusIcon className="size-4" />
-                Создать пространство
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={openCreateDialog}>
+                  <PlusIcon className="size-4" />
+                  Создать пространство
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>

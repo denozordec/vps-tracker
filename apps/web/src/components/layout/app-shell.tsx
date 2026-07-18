@@ -46,10 +46,10 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 
-import { ModeToggle } from '@/components/mode-toggle'
 import { SystemMonitorPopover } from '@/components/layout/system-monitor-popover'
 import { AppsMenu } from '@/components/layout/apps-menu'
 import { SpaceSwitcher } from '@/components/layout/space-switcher'
+import { NavUser } from '@/components/layout/nav-user'
 import { AppSwitcher } from '@/components/app-switcher'
 import { GlobalSearch, useGlobalSearchHotkey } from '@/components/global-search'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
@@ -211,7 +211,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </SidebarGroup>
             ))}
           </SidebarContent>
-          <SidebarFooter />
+          <SidebarFooter>
+            <NavUser />
+          </SidebarFooter>
         </Sidebar>
         <SidebarInset>
           <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-4 md:px-6">
@@ -242,7 +244,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="ml-auto flex items-center gap-2">
               <AppsMenu />
               <SystemMonitorPopover />
-              <ModeToggle />
             </div>
           </header>
           <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">

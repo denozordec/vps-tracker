@@ -59,12 +59,13 @@ Gating: DB preference `showQuickActions` / `show_quick_actions` / `ui_show_quick
 | Sidebar / hover colors | theme `--sidebar` / `--sidebar-accent` из `globals.css` — **без** AppShell `color-mix` override |
 | Header | `h-12`, `sticky`, `border-b`, `px-4 md:px-6` |
 | Header left | `SidebarTrigger` + `Separator` + Breadcrumb |
-| Header right | **AppsMenu** → **SystemMonitorPopover** → **ModeToggle** (без Search в chrome) |
-| Sidebar | AppSwitcher → groups (`SidebarGroupContent`) → icons `size-4` → **пустой** `SidebarFooter` |
+| Header right | **AppsMenu** → **SystemMonitorPopover** (без Search / ModeToggle в chrome) |
+| Sidebar | AppSwitcher → SpaceSwitcher → groups (`SidebarGroupContent`) → icons `size-4` → **NavUser** в `SidebarFooter` ([app-shell-1](https://reui.io/preview/base/app-shell-1)) |
+| Theme | segmented toggle **внутри NavUser** (не ModeToggle в header) |
 | `main` | `gap-4 md:gap-6`, `px-4 py-4 md:px-6 md:py-5` |
 | Search | hotkey ⌘K / Ctrl+K only (не кнопка в header) |
 
-Запрещено в chrome: `SidebarRail`, `NavUser` footer, sync-row footer, Search/Ctrl+K pill в header, issues Badge в header, muted/hover cascade на right-cluster, Provider `color-mix` для `--sidebar*`.
+Запрещено в chrome: `SidebarRail`, sync-row footer, Search/Ctrl+K pill в header, issues Badge в header, muted/hover cascade на right-cluster, Provider `color-mix` для `--sidebar*`, ModeToggle в header (тема только в NavUser).
 
 App Switcher ids: `vps-tracker` · `cfdm` · `evobgp`. Override: `VITE_APP_SWITCHER` JSON.
 
