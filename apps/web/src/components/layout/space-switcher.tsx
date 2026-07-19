@@ -50,6 +50,7 @@ export function SpaceSwitcher() {
   const currentId = spaceId ?? spaces[0]?.id
   const current = spaces.find((s) => s.id === currentId) ?? spaces[0]
   const [createOpen, setCreateOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [name, setName] = useState('')
 
   useEffect(() => {
@@ -75,7 +76,12 @@ export function SpaceSwitcher() {
   }
 
   function openCreateDialog() {
+    // After DropdownMenu unmounts — same tick would lose focus/state
     queueMicrotask(() => setCreateOpen(true))
+  }
+
+  function openDeleteDialog() {
+    queueMicrotask(() => setDeleteOpen(true))
   }
 
   async function handleCreate() {
@@ -173,22 +179,13 @@ export function SpaceSwitcher() {
                   Создать пространство
                 </DropdownMenuItem>
                 {current && current.kind !== MAIN_KIND ? (
-                  <ConfirmDialog
-                    title="В корзину?"
-                    description="Пространство скроется из списка. Данные сохранятся — можно восстановить на странице «Пространство»."
-                    confirmLabel="В корзину"
-                    destructive
-                    onConfirm={() => void handleSoftDelete(current)}
-                    trigger={
-                      <DropdownMenuItem
-                        onClick={(e) => e.preventDefault()}
-                        className="text-destructive"
-                      >
-                        <Trash2Icon className="size-4" />
-                        Удалить «{current.name}»
-                      </DropdownMenuItem>
-                    }
-                  />
+                  <DropdownMenuItem
+                    onClick={openDeleteDialog}
+                    className="text-destructive"
+                  >
+                    <Trash2Icon className="size-4" />
+                    Удалить «{current.name}»
+                  </DropdownMenuItem>
                 ) : null}
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -218,6 +215,19 @@ export function SpaceSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Outside DropdownMenu — иначе AlertDialog размонтируется вместе с меню */}
+      {current && current.kind !== MAIN_KIND ? (
+        <ConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title="В корзину?"
+          description="Пространство скроется из списка. Данные сохранятся — можно восстановить на странице «Пространство»."
+          confirmLabel="В корзину"
+          destructive
+          onConfirm={() => void handleSoftDelete(current)}
+        />
+      ) : null}
     </>
   )
 }

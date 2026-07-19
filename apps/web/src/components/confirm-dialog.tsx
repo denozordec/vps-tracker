@@ -13,7 +13,8 @@ import {
 } from '@cfdm/ui/components/alert-dialog'
 
 interface ConfirmDialogProps {
-  trigger: ReactElement
+  /** Optional when using controlled `open` (e.g. open from DropdownMenu) */
+  trigger?: ReactElement
   title: string
   description?: ReactNode
   confirmLabel?: string
@@ -55,7 +56,7 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={trigger} />
+      {trigger ? <AlertDialogTrigger render={trigger} /> : null}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
