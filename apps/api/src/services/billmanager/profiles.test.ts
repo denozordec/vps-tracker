@@ -38,6 +38,22 @@ const WAICORE_VDS_FIXTURE = {
       item_status_orig: '2',
       item_status: 'Активен',
     },
+    {
+      id: '50642',
+      ip: '193.233.134.103',
+      domain: 'denode.ivx.su',
+      expiredate: '2027-05-01',
+      real_expiredate: '2027-05-01',
+      ostempl: 'Ubuntu 24.04',
+      datacentername: 'Германия, Франкфурт-на-Майне',
+      pricelist: '[DE] RX-VPN',
+      cost: '0.80 € / Месяц',
+      item_cost: '9.6000',
+      currency_str: '€',
+      createdate: '2025-04-25',
+      item_status_orig: '2',
+      item_status: 'Активен',
+    },
   ],
 }
 
@@ -127,18 +143,37 @@ describe('billmanager profiles', () => {
     })
   })
 
-  it('Waicore fixture elem → MappedVps fields', () => {
+  it('Waicore fixture elem → MappedVps fields + geo from datacentername', () => {
     const profile = resolveBillmanagerProfile('https://my.waicore.com/')
     const elems = extractList(WAICORE_VDS_FIXTURE, profile.extract.listVdsKey)
-    expect(elems).toHaveLength(1)
-    const item = elemToObject(elems[0]!)
-    const vps = mapVdsWithProfile(profile, item, 'prov-1', 'acc-1')
-    expect(vps.externalId).toBe('87173')
-    expect(vps.ip).toBe('212.192.246.214')
-    expect(vps.dns).toBe('instance87173.waicore.network')
-    expect(vps.paidUntil).toBe('2027-01-21')
-    expect(vps.os).toBe('Ubuntu 24.04')
-    expect(vps.status).toBe('active')
+    expect(elems).toHaveLength(2)
+
+    const promo = mapVdsWithProfile(
+      profile,
+      elemToObject(elems[0]!),
+      'prov-1',
+      'acc-1',
+    )
+    expect(promo.externalId).toBe('87173')
+    expect(promo.ip).toBe('212.192.246.214')
+    expect(promo.dns).toBe('instance87173.waicore.network')
+    expect(promo.paidUntil).toBe('2027-01-21')
+    expect(promo.os).toBe('Ubuntu 24.04')
+    expect(promo.status).toBe('active')
+    expect(promo.country).toBe('Германия')
+    expect(promo.city).toBe('Франкфурт')
+    expect(promo.datacenter).toBe('[DE] Франкфурт | Промо')
+
+    const fullName = mapVdsWithProfile(
+      profile,
+      elemToObject(elems[1]!),
+      'prov-1',
+      'acc-1',
+    )
+    expect(fullName.externalId).toBe('50642')
+    expect(fullName.country).toBe('Германия')
+    expect(fullName.city).toBe('Франкфурт-на-Майне')
+    expect(fullName.datacenter).toBe('Германия, Франкфурт-на-Майне')
   })
 
   it('FirstByte: country/city + paidUntil for monthly and daily', () => {
@@ -287,8 +322,9 @@ describe('billmanager profiles', () => {
     const items = await fetchVds('https://my.waicore.com/', 'user:pass')
     expect(calls).toHaveLength(1)
     expect(calls[0]).toContain('func=vds.vps')
-    expect(items).toHaveLength(1)
+    expect(items).toHaveLength(2)
     expect(items[0]?.id).toBe('87173')
+    expect(items[1]?.id).toBe('50642')
   })
 
   it('fetchVds for default URL uses func=vds', async () => {

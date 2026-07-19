@@ -49,5 +49,5 @@ Sync и operations **не** содержат `if (hoster)` — только пр
 
 | id | Match | Что переопределяет |
 |----|-------|-------------------|
-| `waicore` | `waicore.com` / keyword | `funcs.listVds = vds.vps` |
+| `waicore` | `waicore.com` / keyword | `funcs.listVds = vds.vps`; geo из `datacentername` (`[DE] Город \| …` / `Страна, Город`) |
 | `firstbyte` | `firstbyte.ru`, `firstbyte.club`, `1byte.ru` | `enrichVds`: страна/город, daily из `billdaily`/`Ежедневное списание`, `dailyRate=cost/30`; `enrichVdsBatch`: общий баланс ÷ сумма daily → один `paidUntil`; specs из `vds.order` / `vds.edit` |
