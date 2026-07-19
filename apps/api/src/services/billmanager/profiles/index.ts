@@ -11,4 +11,9 @@ export type {
   BillmanagerProfileOverrides,
   BillmanagerRequestParams,
 } from './types.js'
+export { enrichCloudrixVds, cloudrixOverrides } from './cloudrix.js'
+export { enrichDatacheapVds, datacheapOverrides } from './datacheap.js'
+export { enrichIhorVds, ihorOverrides } from './ihor.js'
+export { enrichLandvpsVds, landvpsOverrides } from './landvps.js'
+export { enrichServhostVds, servhostOverrides } from './servhost.js'
 export { waicoreOverrides } from './waicore.js'

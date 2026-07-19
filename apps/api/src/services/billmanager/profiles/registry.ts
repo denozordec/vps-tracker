@@ -1,6 +1,11 @@
 import { DEFAULT_PROFILE } from './default.js'
+import { cloudrixOverrides } from './cloudrix.js'
+import { datacheapOverrides } from './datacheap.js'
 import { firstbyteOverrides } from './firstbyte.js'
+import { ihorOverrides } from './ihor.js'
+import { landvpsOverrides } from './landvps.js'
 import { mergeProfile } from './merge.js'
+import { servhostOverrides } from './servhost.js'
 import type { BillmanagerProfile, BillmanagerProfileOverrides } from './types.js'
 import { waicoreOverrides } from './waicore.js'
 
@@ -11,6 +16,11 @@ import { waicoreOverrides } from './waicore.js'
 export const PROFILE_OVERRIDES: BillmanagerProfileOverrides[] = [
   waicoreOverrides,
   firstbyteOverrides,
+  ihorOverrides,
+  cloudrixOverrides,
+  servhostOverrides,
+  landvpsOverrides,
+  datacheapOverrides,
 ]
 
 function matchesUrl(url: string, override: BillmanagerProfileOverrides): boolean {

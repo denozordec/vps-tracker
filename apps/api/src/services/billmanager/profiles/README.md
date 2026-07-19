@@ -51,3 +51,8 @@ Sync и operations **не** содержат `if (hoster)` — только пр
 |----|-------|-------------------|
 | `waicore` | `waicore.com` / keyword | `funcs.listVds = vds.vps`; geo из `datacentername` (`[DE] Город \| …` / `Страна, Город`) |
 | `firstbyte` | `firstbyte.ru`, `firstbyte.club`, `1byte.ru` | `enrichVds`: страна/город, daily из `billdaily`/`Ежедневное списание`, `dailyRate=cost/30`; `enrichVdsBatch`: общий баланс ÷ сумма daily → один `paidUntil`; specs из `vds.order` / `vds.edit` |
+| `ihor` | `my-ihor.ru`, `ihor.ru` / keyword | `enrichVds`: geo из `datacentername` (`Москва DC3` → Россия / Москва) |
+| `cloudrix` | `cloudrix.ru` / keyword | `enrichVds`: geo (`Россия, Москва`) + `ipv6_subnet`; specs через `vds.order` / `vds.edit` (`fetchVdsEditForSpecs`) |
+| `servhost` | `serv.host` | `enrichVds`: geo (`Новосибирск Xeon` → Россия / Новосибирск); specs через `vds.order` / `vds.edit` |
+| `landvps` | `landvps.online` / keyword | `enrichVds`: geo (`ДЦ Москва` → Россия / Москва) + `ipv6_subnet`; specs через `vds.order` / `vds.edit` |
+| `datacheap` | `datacheap.ru` / keyword | `enrichVds`: geo (`Россия`); specs через `vds.order` / `vds.edit` |

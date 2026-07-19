@@ -207,7 +207,28 @@ export function parseDatacenterName(dcName: unknown): { country: string; locatio
     }
   }
 
-  if (/ММТС|Adman|Москва/i.test(s)) {
+  // «Москва DC3», «ДЦ Москва», «Новосибирск Xeon» — город РФ (+ опц. префикс ДЦ / суффикс)
+  // Без \b: в JS word-boundary не срабатывает на кириллице без флага u.
+  const RU_CITY_CANON: Record<string, string> = {
+    москва: 'Москва',
+    'санкт-петербург': 'Санкт-Петербург',
+    спб: 'Санкт-Петербург',
+    новосибирск: 'Новосибирск',
+    екатеринбург: 'Екатеринбург',
+    казань: 'Казань',
+    самара: 'Самара',
+    краснодар: 'Краснодар',
+  }
+  const cityHaystack = s.replace(/^ДЦ\s+/i, '').trim()
+  const ruCityMatch = cityHaystack.match(
+    /^(Москва|Санкт-Петербург|СПб|Новосибирск|Екатеринбург|Казань|Самара|Краснодар)(?:\s|$)/i,
+  )
+  if (ruCityMatch) {
+    const key = ruCityMatch[1]!.toLowerCase()
+    return { country: 'Россия', location: RU_CITY_CANON[key] || ruCityMatch[1]! }
+  }
+
+  if (/ММТС|Adman/i.test(s)) {
     return { country: 'Россия', location: s }
   }
   if (/Европа/i.test(s)) {
