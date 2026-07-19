@@ -1,4 +1,5 @@
 import { DEFAULT_PROFILE } from './default.js'
+import { firstbyteOverrides } from './firstbyte.js'
 import { mergeProfile } from './merge.js'
 import type { BillmanagerProfile, BillmanagerProfileOverrides } from './types.js'
 import { waicoreOverrides } from './waicore.js'
@@ -7,7 +8,10 @@ import { waicoreOverrides } from './waicore.js'
  * Hoster override list — first match wins.
  * Add new hosters here after creating profiles/<id>.ts.
  */
-export const PROFILE_OVERRIDES: BillmanagerProfileOverrides[] = [waicoreOverrides]
+export const PROFILE_OVERRIDES: BillmanagerProfileOverrides[] = [
+  waicoreOverrides,
+  firstbyteOverrides,
+]
 
 function matchesUrl(url: string, override: BillmanagerProfileOverrides): boolean {
   const match = override.match

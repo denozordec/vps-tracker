@@ -48,6 +48,14 @@ export type BillmanagerRequestParams = {
   orderPricelist?: Record<string, string | number>
 }
 
+export type BillmanagerProfileOptions = {
+  /**
+   * When list `func=vds` has no CPU/RAM/disk — after tariff match,
+   * call `func=vds.edit&elid=` per VPS (FirstByte and similar).
+   */
+  fetchVdsEditForSpecs?: boolean
+}
+
 export type BillmanagerProfile = {
   id: string
   match: BillmanagerMatch
@@ -55,6 +63,7 @@ export type BillmanagerProfile = {
   extract: BillmanagerExtract
   map: BillmanagerMap
   requestParams?: BillmanagerRequestParams
+  options?: BillmanagerProfileOptions
 }
 
 /** Deep-partial for hoster override files (only divergences). */
@@ -65,4 +74,5 @@ export type BillmanagerProfileOverrides = {
   extract?: Partial<BillmanagerExtract>
   map?: Partial<BillmanagerMap>
   requestParams?: BillmanagerRequestParams
+  options?: BillmanagerProfileOptions
 }

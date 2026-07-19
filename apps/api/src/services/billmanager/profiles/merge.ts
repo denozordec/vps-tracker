@@ -46,5 +46,9 @@ export function mergeProfile(
         ...overrides.requestParams?.orderPricelist,
       },
     },
+    options: {
+      ...defaults.options,
+      ...overrides.options,
+    },
   }
 }

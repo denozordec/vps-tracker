@@ -44,3 +44,10 @@ export const myHosterOverrides: BillmanagerProfileOverrides = {
 `resolveBillmanagerProfile(apiBaseUrl)` → `merge(DEFAULT, override)` или `DEFAULT`.
 
 Sync и operations **не** содержат `if (hoster)` — только профиль.
+
+## Готовые профили
+
+| id | Match | Что переопределяет |
+|----|-------|-------------------|
+| `waicore` | `waicore.com` / keyword | `funcs.listVds = vds.vps` |
+| `firstbyte` | `firstbyte.ru`, `firstbyte.club`, `1byte.ru` | `enrichVds`: страна/город, `paidUntil` ISO, `billdaily`→daily, diskType/KVM из имени; `options.fetchVdsEditForSpecs`; sync: specs из `vds.order` по `pricelist_id`, иначе `vds.edit` |

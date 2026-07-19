@@ -18,6 +18,12 @@ import {
   type TariffItem,
 } from './operations.js'
 import { resolveBillmanagerProfile } from './profiles/index.js'
+import {
+  applyEditSpecs,
+  enrichMappedVpsFromTariffs,
+  fetchVdsEditSpecs,
+  needsHardwareSpecs,
+} from './vds-specs.js'
 
 export interface SyncFromBillmanagerOptions {
   skipTariffs?: boolean
@@ -54,10 +60,31 @@ const SYNC_UPDATE_FIELDS = [
   'paidUntil',
 ] as const
 
+const SYNC_HARDWARE_FIELDS = ['vcpu', 'ramGb', 'diskGb', 'diskType', 'virtualization'] as const
+
 function normVal(v: unknown): string {
   if (v == null || v === '') return ''
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : ''
   return String(v)
+}
+
+async function mapVdsWithSpecs(
+  profile: ReturnType<typeof resolveBillmanagerProfile>,
+  item: Record<string, string>,
+  providerId: string,
+  accountId: string,
+  tariffItems: TariffItem[],
+  apiBaseUrl: string,
+  authinfo: string,
+) {
+  let vps = mapVdsWithProfile(profile, item, providerId, accountId)
+  vps = enrichMappedVpsFromTariffs(item, vps, tariffItems)
+  if (needsHardwareSpecs(vps) && profile.options?.fetchVdsEditForSpecs) {
+    const elid = String(item.id || vps.externalId || '').trim()
+    const specs = await fetchVdsEditSpecs(apiBaseUrl, authinfo, elid)
+    if (specs) vps = applyEditSpecs(vps, specs)
+  }
+  return vps
 }
 
 export async function syncFromBillmanager(
@@ -111,7 +138,15 @@ export async function syncFromBillmanager(
 
   if (fetchVpsPayments) {
     for (const item of vdsItems) {
-      const vps = mapVdsWithProfile(profile, item, providerId, accountId)
+      const vps = await mapVdsWithSpecs(
+        profile,
+        item,
+        providerId,
+        accountId,
+        tariffItems,
+        apiBaseUrl,
+        authinfo,
+      )
       const id = `vps-bm-${accountId}-${vps.externalId}`
       const additionalIps = JSON.stringify(vps.additionalIps || [])
       const dailyRate = vps.dailyRate
@@ -153,13 +188,41 @@ export async function syncFromBillmanager(
           monthlyRate,
           paidUntil,
           notes,
+          vcpu: vps.vcpu,
+          ramGb: vps.ramGb,
+          diskGb: vps.diskGb,
+          diskType: vps.diskType,
+          virtualization: vps.virtualization,
         }
         for (const f of SYNC_UPDATE_FIELDS) {
           if (userOverrides.includes(f)) {
             merged[f] = existing[f as keyof typeof existing] as never
           }
         }
-        const compareFields = ['ip', 'ipv6', 'dns', ...SYNC_UPDATE_FIELDS] as const
+        for (const f of SYNC_HARDWARE_FIELDS) {
+          if (userOverrides.includes(f)) {
+            merged[f] = existing[f as keyof typeof existing] as never
+          } else {
+            // Keep previous non-zero hardware if API still returns empty
+            const next = merged[f]
+            const prev = existing[f as keyof typeof existing]
+            if (
+              (next == null || next === 0 || next === '') &&
+              prev != null &&
+              prev !== 0 &&
+              prev !== ''
+            ) {
+              merged[f] = prev as never
+            }
+          }
+        }
+        const compareFields = [
+          'ip',
+          'ipv6',
+          'dns',
+          ...SYNC_UPDATE_FIELDS,
+          ...SYNC_HARDWARE_FIELDS,
+        ] as const
         const changedFields = compareFields.filter(
           (f) => normVal(merged[f as keyof typeof merged]) !== normVal(existing[f as keyof typeof existing]),
         )
@@ -184,6 +247,11 @@ export async function syncFromBillmanager(
             monthlyRate: merged.monthlyRate,
             paidUntil: merged.paidUntil,
             notes: merged.notes,
+            vcpu: merged.vcpu,
+            ramGb: merged.ramGb,
+            diskGb: merged.diskGb,
+            diskType: merged.diskType,
+            virtualization: merged.virtualization,
           })
           .where(eq(schema.vps.id, existing.id))
           .run()
