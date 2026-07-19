@@ -137,16 +137,27 @@ export async function syncFromBillmanager(
   const syncSummary: SyncSummary = { added: [], updated: [], paymentsAdded: 0 }
 
   if (fetchVpsPayments) {
+    const mappedRaw: Awaited<ReturnType<typeof mapVdsWithSpecs>>[] = []
     for (const item of vdsItems) {
-      const vps = await mapVdsWithSpecs(
-        profile,
-        item,
-        providerId,
-        accountId,
-        tariffItems,
-        apiBaseUrl,
-        authinfo,
+      mappedRaw.push(
+        await mapVdsWithSpecs(
+          profile,
+          item,
+          providerId,
+          accountId,
+          tariffItems,
+          apiBaseUrl,
+          authinfo,
+        ),
       )
+    }
+    const mappedList = profile.map.enrichVdsBatch
+      ? profile.map.enrichVdsBatch(mappedRaw, {
+          balance: dashboardInfo?.balance ?? null,
+        })
+      : mappedRaw
+
+    for (const vps of mappedList) {
       const id = `vps-bm-${accountId}-${vps.externalId}`
       const additionalIps = JSON.stringify(vps.additionalIps || [])
       const dailyRate = vps.dailyRate

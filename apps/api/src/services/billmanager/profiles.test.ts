@@ -13,6 +13,10 @@ import {
   enrichMappedVpsFromTariffs,
   parseSpecsFromVdsEdit,
 } from './vds-specs.js'
+import {
+  applyFirstbyteSharedDailyPaidUntil,
+  monthlyToDailyRate,
+} from './profiles/firstbyte.js'
 
 /** Minimal Waicore-style bjson (no credentials / addon noise). */
 const WAICORE_VDS_FIXTURE = {
@@ -156,6 +160,7 @@ describe('billmanager profiles', () => {
     expect(monthly.diskType).toBe('SSD')
     expect(monthly.virtualization).toBe('KVM')
     expect(monthly.vcpu).toBe(0)
+    expect(monthly.dailyRate).toBeNull()
 
     const daily = mapVdsWithProfile(
       profile,
@@ -165,9 +170,61 @@ describe('billmanager profiles', () => {
     )
     expect(daily.country).toBe('Россия')
     expect(daily.city).toBe('Москва')
-    expect(daily.paidUntil).toBe('2026-07-20')
+    expect(daily.paidUntil).toBe('')
     expect(daily.tariffType).toBe('daily')
     expect(daily.diskType).toBe('SAS')
+    expect(daily.monthlyRate).toBe(129)
+    expect(daily.dailyRate).toBe(monthlyToDailyRate(129))
+  })
+
+  it('FirstByte: shared balance → same paidUntil for all daily VPS', () => {
+    const profile = resolveBillmanagerProfile('https://my.firstbyte.ru/')
+    expect(profile.map.enrichVdsBatch).toBeTypeOf('function')
+
+    const a = mapVdsWithProfile(
+      profile,
+      elemToObject({
+        id: '1',
+        billdaily: 'on',
+        expiredate: 'Ежедневное списание',
+        cost: '129.00 RUB / Месяц',
+        currency_str: 'RUB',
+        item_status_orig: '2',
+        ip: '1.1.1.1',
+        datacentername: '1 Датацентр Россия, Москва',
+      }),
+      'p',
+      'a',
+    )
+    const b = mapVdsWithProfile(
+      profile,
+      elemToObject({
+        id: '2',
+        billdaily: 'on',
+        expiredate: 'Ежедневное списание',
+        cost: '129.00 RUB / Месяц',
+        currency_str: 'RUB',
+        item_status_orig: '2',
+        ip: '2.2.2.2',
+        datacentername: '1 Датацентр Россия, Москва',
+      }),
+      'p',
+      'a',
+    )
+    const monthly = mapVdsWithProfile(
+      profile,
+      elemToObject(FIRSTBYTE_VDS_FIXTURE.elem[0]!),
+      'p',
+      'a',
+    )
+
+    // 2 × (129/30) = 8.6/day; balance 86 → 10 days
+    const asOf = new Date(Date.UTC(2026, 6, 19))
+    const out = applyFirstbyteSharedDailyPaidUntil([a, b, monthly], 86, asOf)
+    expect(out[0]!.paidUntil).toBe('2026-07-29')
+    expect(out[1]!.paidUntil).toBe('2026-07-29')
+    expect(out[2]!.paidUntil).toBe(monthly.paidUntil)
+    expect(out[0]!.dailyRate).toBe(monthlyToDailyRate(129))
   })
 
   it('FirstByte: specs from vds.order by pricelist_id', () => {

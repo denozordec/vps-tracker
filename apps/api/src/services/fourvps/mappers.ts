@@ -3,6 +3,7 @@
  */
 
 import type { FourVpsDatacenter, FourVpsServer } from './operations.js'
+import { parseFourVpsDcLocation } from './location.js'
 
 const STATUS_MAP: Record<string, string> = {
   active: 'active',
@@ -14,6 +15,14 @@ const STATUS_MAP: Record<string, string> = {
 function unixToIso(ts: number | null | undefined): string {
   if (ts == null || !Number.isFinite(ts) || ts <= 0) return ''
   return new Date(ts * 1000).toISOString().slice(0, 10)
+}
+
+/** Fallback when getDcList miss: «USA-cx01» / «AE-cx01» → flag-like prefix. */
+function locationFromTariffName(tname: unknown): { country: string; city: string } {
+  const raw = String(tname || '').trim()
+  const m = raw.match(/^([A-Za-z]{2,3})-/)
+  if (!m) return { country: '', city: '' }
+  return parseFourVpsDcLocation(m[1], m[1])
 }
 
 export interface MappedVps {
@@ -59,7 +68,12 @@ export function mapServerToVps(
 ): MappedVps {
   const dc = dcMap.get(server.dc)
   const datacenter = dc?.dc_name ?? String(server.dc)
-  const country = (dc?.flag ?? '').toUpperCase()
+  let { country, city } = parseFourVpsDcLocation(dc?.dc_name, dc?.flag)
+  if (!country) {
+    const fromTariff = locationFromTariffName(server.tname)
+    country = fromTariff.country
+    city = city || fromTariff.city
+  }
   const status = STATUS_MAP[String(server.status).toLowerCase()] ?? 'active'
   const monthlyRate = Number.isFinite(server.price) ? server.price : null
   const name = String(server.name || '').trim()
@@ -73,7 +87,7 @@ export function mapServerToVps(
     providerId,
     providerAccountId,
     country,
-    city: '',
+    city,
     datacenter,
     os: String(server.image || '').trim(),
     vcpu: server.cpu ?? 0,

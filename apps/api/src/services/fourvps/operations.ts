@@ -5,6 +5,7 @@
 import { parseFourVpsCredentials } from '@cfdm/shared/utils/api-credentials'
 
 import { fourvpsRequest } from './client.js'
+import { countryFromFourVpsFlag, parseFourVpsDcLocation } from './location.js'
 
 export interface FourVpsServer {
   id: number
@@ -126,6 +127,7 @@ function mapPresetToTariffItem(
   dcName: string,
   country: string,
   cpuModel: string,
+  location = dcName,
 ): FourVpsTariffItem {
   const diskMib = preset.disks?.[0]?.size_mib ?? (preset.rom ?? 0)
   const diskGb = diskMib > 0 ? Math.round(diskMib / 1024) : preset.rom ?? 0
@@ -145,7 +147,7 @@ function mapPresetToTariffItem(
     diskType: diskTag.toUpperCase(),
     virtualization: 'KVM',
     channel: preset.commentParsed?.eth ?? '',
-    location: dcName,
+    location,
     country,
     cpuModel,
     orderAvailable: true,
@@ -187,13 +189,16 @@ export async function fetchTarifList(
     const dcId = String(clusterInfo.id ?? dcKey)
     const dcFromList = dcMap.get(Number(clusterInfo.id ?? dcKey))
     const dcName = clusterInfo.dc_name ?? dcFromList?.dc_name ?? ''
-    const country = (clusterInfo.flag ?? dcFromList?.flag ?? '').toUpperCase()
+    const flag = clusterInfo.flag ?? dcFromList?.flag ?? ''
+    const { country: parsedCountry, city } = parseFourVpsDcLocation(dcName, flag)
+    const country = parsedCountry || countryFromFourVpsFlag(flag)
+    const location = city || dcName
     const cpuModel = clusterInfo.cpu_name ?? dcFromList?.cpu_name ?? ''
     const presets = cluster.presets ?? {}
 
     for (const preset of Object.values(presets)) {
       if (!preset?.id) continue
-      items.push(mapPresetToTariffItem(preset, dcId, dcName, country, cpuModel))
+      items.push(mapPresetToTariffItem(preset, dcId, dcName, country, cpuModel, location))
     }
   }
 

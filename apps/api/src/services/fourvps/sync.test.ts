@@ -113,10 +113,19 @@ describe('syncFromFourvps', () => {
     expect(result.balance?.balance).toBe(77825)
 
     const vps = getSqlite()
-      .prepare(`SELECT id, ip FROM vps WHERE providerAccountId = ?`)
-      .get('acc-4vps') as { id: string; ip: string }
+      .prepare(`SELECT id, ip, country, city, datacenter FROM vps WHERE providerAccountId = ?`)
+      .get('acc-4vps') as {
+      id: string
+      ip: string
+      country: string
+      city: string
+      datacenter: string
+    }
     expect(vps.id).toBe('vps-4vps-acc-4vps-100')
     expect(vps.ip).toBe('1.2.3.4')
+    expect(vps.country).toBe('ОАЭ')
+    expect(vps.city).toBe('')
+    expect(vps.datacenter).toBe('AE DC1')
 
     const tariffs = getSqlite()
       .prepare(`SELECT COUNT(*) as c FROM active_tariffs WHERE providerAccountId = ?`)

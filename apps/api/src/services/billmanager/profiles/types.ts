@@ -24,6 +24,16 @@ export type BillmanagerExtract = {
   paymentsKey: string
 }
 
+export type EnrichVdsFn = (
+  item: Record<string, string>,
+  mapped: MappedVps,
+) => MappedVps
+
+export type EnrichVdsBatchFn = (
+  list: MappedVps[],
+  ctx: { balance: number | null },
+) => MappedVps[]
+
 export type BillmanagerMap = {
   vds: (
     item: Record<string, string>,
@@ -35,10 +45,20 @@ export type BillmanagerMap = {
     accountId: string,
   ) => MappedPayment | null
   /** Optional post-process after map.vds (specs / geo / etc.) */
-  enrichVds?: (
-    item: Record<string, string>,
-    mapped: MappedVps,
-  ) => MappedVps
+  enrichVds?: EnrichVdsFn
+  /**
+   * Optional post-process after all VDS mapped (e.g. shared balance → paidUntil).
+   * Receives list in same order as sync will upsert.
+   */
+  enrichVdsBatch?: EnrichVdsBatchFn
+}
+
+/** Partial map for hoster overrides — lists every hook explicitly (IDE/Partial safe). */
+export type BillmanagerMapOverrides = {
+  vds?: BillmanagerMap['vds']
+  payment?: BillmanagerMap['payment']
+  enrichVds?: EnrichVdsFn
+  enrichVdsBatch?: EnrichVdsBatchFn
 }
 
 export type BillmanagerRequestParams = {
@@ -72,7 +92,7 @@ export type BillmanagerProfileOverrides = {
   match?: BillmanagerMatch
   funcs?: Partial<BillmanagerFuncs>
   extract?: Partial<BillmanagerExtract>
-  map?: Partial<BillmanagerMap>
+  map?: BillmanagerMapOverrides
   requestParams?: BillmanagerRequestParams
   options?: BillmanagerProfileOptions
 }

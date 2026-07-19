@@ -40,7 +40,7 @@ export interface MappedVps {
   status: string
   tariffType: string
   currency: string
-  dailyRate: null
+  dailyRate: number | null
   monthlyRate: number | null
   createdAt: string
   paidUntil: string
