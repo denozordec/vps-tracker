@@ -168,6 +168,14 @@ export function aggregateEstimatedVpsBurnByMonthYear(
   ratesData: RatesData | null,
 ): { month: string; amount: number }[] {
   const providerById = providerByIdMap(providers)
+  const now = new Date()
+  const byMonth = Array.from({ length: 12 }, () => 0)
+
+  // Без факта списаний не выдумываем историю: оценка = текущий burn только в текущем месяце.
+  if (year !== now.getFullYear()) {
+    return bucketsToRows(byMonth)
+  }
+
   const monthlyBurn = vps
     .filter((item) => item.status === 'active')
     .reduce(
@@ -177,13 +185,8 @@ export function aggregateEstimatedVpsBurnByMonthYear(
       0,
     )
 
-  const now = new Date()
-  const rounded = Math.round(monthlyBurn)
-
-  return Array.from({ length: 12 }, (_, index) => ({
-    month: formatMonthShortRu(index),
-    amount: year === now.getFullYear() && index <= now.getMonth() ? rounded : 0,
-  }))
+  byMonth[now.getMonth()] = monthlyBurn
+  return bucketsToRows(byMonth)
 }
 
 export function aggregateDashboardExpensesByMonthYear(

@@ -361,7 +361,9 @@ export function DashboardExpensesChart({
 
   const hasData = data.some((row) => row.amount > 0)
   const description =
-    mode === 'estimate' ? 'Оценка по активным VPS за текущий год' : 'Последние 12 мес'
+    mode === 'estimate'
+      ? 'Нет списаний в учёте — оценка тарифов за текущий месяц'
+      : 'Списания и платежи за VPS по месяцам'
 
   return (
     <Card className={className}>

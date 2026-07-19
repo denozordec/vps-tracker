@@ -52,7 +52,7 @@ describe('chart-analytics', () => {
     expect(expenseOnly[2]?.amount).toBe(0)
   })
 
-  it('falls back to VPS burn estimate when no expense records exist', () => {
+  it('falls back to VPS burn estimate for current month only when no expense records', () => {
     const payments: Payment[] = [
       {
         id: 'p1',
@@ -71,12 +71,46 @@ describe('chart-analytics', () => {
       [],
       [activeVps],
       [],
-      2026,
+      new Date().getFullYear(),
       settings,
       null,
     )
 
     expect(mode).toBe('estimate')
-    expect(rows[2]?.amount).toBe(1500)
+    const currentMonth = new Date().getMonth()
+    expect(rows[currentMonth]?.amount).toBe(1500)
+    for (let i = 0; i < 12; i++) {
+      if (i === currentMonth) continue
+      expect(rows[i]?.amount).toBe(0)
+    }
+  })
+
+  it('uses actual expense payments when present', () => {
+    const payments: Payment[] = [
+      {
+        id: 'p1',
+        type: 'direct_vps_payment',
+        date: '2026-02-10',
+        amount: 2000,
+        currency: 'RUB',
+        providerAccountId: 'a1',
+        vpsId: 'v1',
+        note: '',
+      },
+    ]
+
+    const { rows, mode } = aggregateDashboardExpensesByMonthYear(
+      payments,
+      [],
+      [activeVps],
+      [],
+      2026,
+      settings,
+      null,
+    )
+
+    expect(mode).toBe('actual')
+    expect(rows[1]?.amount).toBe(2000)
+    expect(rows[2]?.amount).toBe(0)
   })
 })

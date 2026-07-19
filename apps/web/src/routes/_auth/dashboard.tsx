@@ -35,7 +35,8 @@ import { cn } from '@cfdm/ui/lib/utils'
 
 import { computeInventoryHealth } from '@/lib/inventory-health'
 import { buildAtRiskAccounts, type AtRiskAccount } from '@/lib/account-health'
-import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel } from '@/lib/format'
+import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel, convertVpsMonthlyBurnToBase, formatCurrency } from '@/lib/format'
+import { providerByIdMap } from '@/lib/billmanager'
 import { exportActiveVpsCsv } from '@/lib/export-csv'
 import {
   ChartsGrid,
@@ -246,6 +247,18 @@ function DashboardPage() {
           const totalCount = stats?.totalVpsCount ?? snap.vps.length
           const expiringCount = stats?.expiringWithin7Days ?? 0
           const issuesCount = issues.length
+          const providerById = providerByIdMap(snap.providers)
+          const monthlyBurnBase = activeVps.reduce(
+            (sum, item) =>
+              sum +
+              convertVpsMonthlyBurnToBase(
+                item,
+                providerById.get(item.providerId),
+                snap.settings,
+                ratesData,
+              ),
+            0,
+          )
 
           const handleGoToIssues = () => {
             setActiveTab('issues')
@@ -272,12 +285,7 @@ function DashboardPage() {
             {
               id: 'burn',
               label: 'Расход в месяц',
-              value: formatInBaseCurrency(
-                stats?.monthlyBurnEstimate ?? 0,
-                baseCur,
-                snap.settings,
-                ratesData,
-              ),
+              value: formatCurrency(monthlyBurnBase, baseCur),
               icon: <TrendingUpIcon className="size-4" />,
               iconClassName: 'text-info',
               to: '/reports',
