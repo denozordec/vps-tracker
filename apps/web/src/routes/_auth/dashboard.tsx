@@ -307,7 +307,7 @@ function DashboardPage() {
             },
             {
               id: 'runway',
-              label: 'Runway',
+              label: 'Запас дней',
               value: runwayDays != null ? `${runwayDays} дн` : '—',
               icon: <ClockIcon className="size-4" />,
               iconClassName: runwayLow ? 'text-warning' : 'text-muted-foreground',

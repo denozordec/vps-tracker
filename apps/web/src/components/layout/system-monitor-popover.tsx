@@ -142,7 +142,7 @@ export function SystemMonitorPopover() {
       },
       {
         id: 'runway',
-        label: 'Runway',
+        label: 'Запас дней',
         value: runwayDays != null ? String(runwayDays) : '—',
         unit: runwayDays != null ? 'дн' : '',
         percent:

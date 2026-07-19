@@ -2,6 +2,12 @@ import { getSnapshot } from '@cfdm/db/repositories/snapshot'
 import { countExpiringWithin7Days, countInventoryIssues } from '@cfdm/shared/utils/inventory-health'
 import { accountBalanceApi } from '@cfdm/shared/utils/account-balance'
 import { isSyncApiType } from '@cfdm/shared/contracts/provider'
+import {
+  getPaidUntilDate,
+  type PaidUntilAccount,
+  type PaidUntilContext,
+  type PaidUntilVps,
+} from '@cfdm/shared/utils/paid-until'
 
 const STALE_SYNC_HOURS = 48
 
@@ -26,6 +32,32 @@ function lastOkSyncAt(accountId: string, syncLog: { accountId: string; status: s
     if (!Number.isNaN(t) && (best == null || t > best)) best = t
   }
   return best
+}
+
+/**
+ * Минимальный остаток дней до оплаты среди активных VPS.
+ * Prepaid: по `paidUntil`; daily / «завтра»: через `getPaidUntilDate` (баланс).
+ * Не путать с balance/burn — у prepaid баланс часто ≈0 при уже оплаченном периоде.
+ */
+export function computeMinRunwayDays(
+  vps: PaidUntilVps[],
+  ctx: Omit<PaidUntilContext, 'vps' | 'now'> & { providerAccounts: PaidUntilAccount[] },
+  now = new Date(),
+): number | null {
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const fullCtx: PaidUntilContext = { ...ctx, vps, now }
+  let minDays: number | null = null
+
+  for (const item of vps) {
+    if (item.status !== 'active') continue
+    const until = getPaidUntilDate(item, fullCtx)
+    if (until == null) continue
+    const days = Math.floor((until.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000))
+    const remaining = Math.max(0, days)
+    if (minDays == null || remaining < minDays) minDays = remaining
+  }
+
+  return minDays
 }
 
 export interface DashboardStats {
@@ -54,22 +86,12 @@ export function computeDashboardStats(): DashboardStats {
     0,
   )
 
-  const burnByAccount = new Map<string, number>()
-  for (const v of activeVps) {
-    const burn = vpsBurnRate(v)
-    const accountId = v.providerAccountId
-    if (!accountId) continue
-    burnByAccount.set(accountId, (burnByAccount.get(accountId) ?? 0) + burn)
+  const paidUntilCtx = {
+    providerAccounts: snap.providerAccounts,
+    payments: snap.payments,
+    balanceLedger: snap.balanceLedger,
   }
-
-  let minRunwayDays: number | null = null
-  for (const account of snap.providerAccounts) {
-    const balance = Number(account.balanceApi ?? 0)
-    const burn = burnByAccount.get(account.id) ?? 0
-    if (balance <= 0 || burn <= 0) continue
-    const days = Math.floor((balance / burn) * 30)
-    if (minRunwayDays == null || days < minRunwayDays) minRunwayDays = days
-  }
+  const minRunwayDays = computeMinRunwayDays(snap.vps, paidUntilCtx, now)
 
   const expiringWithin7Days = countExpiringWithin7Days(
     {
