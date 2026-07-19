@@ -38,21 +38,26 @@ export function FormSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {trigger ? <SheetTrigger render={trigger} /> : null}
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader>
+      <SheetContent
+        side="right"
+        className="w-full gap-0 overflow-hidden p-0 sm:max-w-md"
+      >
+        <SheetHeader className="shrink-0 border-b border-border/50">
           <SheetTitle>{title}</SheetTitle>
           {description ? <SheetDescription>{description}</SheetDescription> : null}
         </SheetHeader>
         <form
-          className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={(e) => {
             e.preventDefault()
             onSubmit?.()
           }}
         >
-          {children}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+            {children}
+          </div>
           {onSubmit ? (
-            <SheetFooter className="mt-auto pt-4">
+            <SheetFooter className="shrink-0 border-t border-border/50">
               <LoadingButton type="submit" loading={submitting} disabled={submitDisabled}>
                 {submitLabel}
               </LoadingButton>
