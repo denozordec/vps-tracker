@@ -13,7 +13,8 @@ const CORE_TABLE_MIGRATIONS: string[] = [
     slug TEXT NOT NULL,
     kind TEXT NOT NULL DEFAULT 'personal',
     ownerUserId TEXT,
-    createdAt TEXT NOT NULL
+    createdAt TEXT NOT NULL,
+    deletedAt TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS space_members (
     spaceId TEXT NOT NULL REFERENCES spaces(id),
@@ -324,6 +325,7 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE vps_health_checks ADD COLUMN spaceId TEXT`,
   `ALTER TABLE audit_log ADD COLUMN spaceId TEXT`,
   `ALTER TABLE audit_log ADD COLUMN actorUserId TEXT`,
+  `ALTER TABLE spaces ADD COLUMN deletedAt TEXT`,
   `ALTER TABLE sync_log ADD COLUMN spaceId TEXT`,
   `ALTER TABLE sync_log ADD COLUMN summary TEXT`,
   `ALTER TABLE active_tariffs ADD COLUMN spaceId TEXT`,

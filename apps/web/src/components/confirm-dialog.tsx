@@ -1,3 +1,5 @@
+import { useState, type ReactElement, type ReactNode } from 'react'
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,7 +11,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@cfdm/ui/components/alert-dialog'
-import type { ReactElement, ReactNode } from 'react'
 
 interface ConfirmDialogProps {
   trigger: ReactElement
@@ -18,7 +19,10 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   destructive?: boolean
+  /** Called after dialog closes (next tick) — safe for file pickers */
   onConfirm: () => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function ConfirmDialog({
@@ -29,9 +33,28 @@ export function ConfirmDialog({
   cancelLabel = 'Отмена',
   destructive,
   onConfirm,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
 }: ConfirmDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : uncontrolledOpen
+
+  function setOpen(next: boolean) {
+    if (!isControlled) setUncontrolledOpen(next)
+    onOpenChangeProp?.(next)
+  }
+
+  function handleConfirm() {
+    setOpen(false)
+    // Close AlertDialog before opening native file picker / async work
+    queueMicrotask(() => {
+      onConfirm()
+    })
+  }
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger render={trigger} />
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -42,7 +65,7 @@ export function ConfirmDialog({
           <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             variant={destructive ? 'destructive' : 'default'}
-            onClick={onConfirm}
+            onClick={handleConfirm}
           >
             {confirmLabel}
           </AlertDialogAction>

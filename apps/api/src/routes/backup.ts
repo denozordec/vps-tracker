@@ -1,19 +1,20 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { desc } from 'drizzle-orm'
 import { existsSync } from 'node:fs'
 import {
-  getDb,
   getDbPath,
   readDatabaseFileBuffer,
   reloadDatabaseFromBuffer,
-  schema,
 } from '@cfdm/db'
-import { getSnapshot } from '@cfdm/db/repositories/snapshot'
+import { spacesRepository } from '@cfdm/db/repositories/spaces'
 
 import { importJsonSnapshot, type BackupPayload } from '../services/backup-import.js'
+import {
+  FULL_BACKUP_VERSION,
+  getFullBackupSnapshot,
+  importFullBackup,
+  type FullBackupPayload,
+} from '../services/backup-full.js'
 import { restartScheduler } from '../services/scheduler.js'
-
-const BACKUP_VERSION = 1
 
 /** Лимит тела для импорта бэкапа (Fastify default = 1 MiB → 413). */
 function backupBodyLimitBytes(): number {
@@ -37,18 +38,7 @@ export const backupRoutes: FastifyPluginAsync = async (app) => {
   )
 
   app.get('/api/backup/json', async (_req, reply) => {
-    const syncLog = getDb()
-      .select()
-      .from(schema.syncLog)
-      .orderBy(desc(schema.syncLog.startedAt))
-      .limit(500)
-      .all()
-    const snapshot = {
-      backupVersion: BACKUP_VERSION,
-      exportedAt: new Date().toISOString(),
-      ...getSnapshot(),
-      syncLog,
-    }
+    const snapshot = getFullBackupSnapshot()
     reply.header('Content-Type', 'application/json; charset=utf-8')
     reply.header('Content-Disposition', 'attachment; filename="vps-tracker-backup.json"')
     return reply.send(JSON.stringify(snapshot, null, 2))
@@ -74,7 +64,14 @@ export const backupRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: { code: 'VALIDATION', message: 'Неверное тело запроса' } })
       }
       try {
-        importJsonSnapshot(payload as BackupPayload)
+        const data = payload as FullBackupPayload
+        if (data.tables && typeof data.tables === 'object') {
+          importFullBackup(data)
+        } else {
+          importJsonSnapshot(payload as BackupPayload)
+        }
+        void FULL_BACKUP_VERSION
+        spacesRepository.getMain()
         restartScheduler()
         return { ok: true }
       } catch (err) {
@@ -95,6 +92,7 @@ export const backupRoutes: FastifyPluginAsync = async (app) => {
       }
       try {
         reloadDatabaseFromBuffer(buf)
+        spacesRepository.getMain()
         restartScheduler()
         return { ok: true }
       } catch (err) {

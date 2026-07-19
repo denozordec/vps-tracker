@@ -206,13 +206,47 @@ export const api = {
     return res.blob()
   },
 
-  fetchSpaces: () => fetchApi<import('@/lib/space').SpaceDto[]>('/api/spaces'),
+  fetchSpaces: (opts?: { deleted?: boolean }) =>
+    fetchApi<import('@/lib/space').SpaceDto[]>(
+      opts?.deleted ? '/api/spaces?deleted=1' : '/api/spaces',
+    ),
 
   createSpace: (body: { name: string; slug?: string }) =>
     fetchApi<import('@/lib/space').SpaceDto>('/api/spaces', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  softDeleteSpace: (spaceId: string) =>
+    fetchApi<import('@/lib/space').SpaceDto>(
+      `/api/spaces/${encodeURIComponent(spaceId)}`,
+      { method: 'DELETE' },
+    ),
+
+  restoreSpace: (spaceId: string) =>
+    fetchApi<import('@/lib/space').SpaceDto>(
+      `/api/spaces/${encodeURIComponent(spaceId)}/restore`,
+      { method: 'POST', body: '{}' },
+    ),
+
+  purgeSpace: (spaceId: string) =>
+    fetchApi(`/api/spaces/${encodeURIComponent(spaceId)}/purge`, {
+      method: 'DELETE',
+    }),
+
+  transferSpaceOwnership: (spaceId: string, newOwnerUserId: string) =>
+    fetchApi<import('@/lib/space').SpaceDto>(
+      `/api/spaces/${encodeURIComponent(spaceId)}/transfer-ownership`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ newOwnerUserId }),
+      },
+    ),
+
+  searchPortalUsers: (q: string) =>
+    fetchApi<{ id: string; email: string; name: string }[]>(
+      `/api/portal-users?q=${encodeURIComponent(q)}`,
+    ),
 
   fetchSpaceMembers: (spaceId: string) =>
     fetchApi<{ spaceId: string; userId: string; role: string; createdAt: string }[]>(

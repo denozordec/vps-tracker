@@ -8,6 +8,8 @@ export const spaces = sqliteTable('spaces', {
   kind: text('kind').notNull().default('personal'),
   ownerUserId: text('ownerUserId'),
   createdAt: text('createdAt').notNull(),
+  /** Soft-delete (корзина); null = active */
+  deletedAt: text('deletedAt'),
 })
 
 export const spaceMembers = sqliteTable(

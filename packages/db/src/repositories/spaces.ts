@@ -1,5 +1,5 @@
-import { and, asc, eq } from 'drizzle-orm'
-import { getDb, schema } from '../index.js'
+import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm'
+import { getDb, getSqlite, schema } from '../index.js'
 import { generateId } from './utils.js'
 import {
   MAIN_SPACE_ID,
@@ -22,8 +22,34 @@ const ROLE_RANK: Record<SpaceRole, number> = {
   owner: 4,
 }
 
+/** Tables with spaceId column — purge order (children first). */
+const SPACE_DATA_TABLES = [
+  'vps_grants',
+  'notification_log',
+  'notification_state',
+  'vps_health_checks',
+  'audit_log',
+  'sync_log',
+  'active_tariffs',
+  'tariff_sync_options',
+  'topology_diagrams',
+  'vps_domains',
+  'balance_ledger',
+  'payments',
+  'vps',
+  'provider_accounts',
+  'server_projects',
+  'providers',
+  'settings',
+  'space_members',
+] as const
+
 export function roleAtLeast(role: string, min: SpaceRole): boolean {
   return (ROLE_RANK[role as SpaceRole] ?? 0) >= ROLE_RANK[min]
+}
+
+export function isSpaceActive(space: Pick<SpaceRow, 'deletedAt'>): boolean {
+  return space.deletedAt == null || space.deletedAt === ''
 }
 
 function nowIso(): string {
@@ -31,11 +57,46 @@ function nowIso(): string {
 }
 
 export const spacesRepository = {
-  listAll(): SpaceRow[] {
-    return getDb().select().from(schema.spaces).orderBy(asc(schema.spaces.name)).all()
+  listAll(opts?: { includeDeleted?: boolean }): SpaceRow[] {
+    const db = getDb()
+    if (opts?.includeDeleted) {
+      return db.select().from(schema.spaces).orderBy(asc(schema.spaces.name)).all()
+    }
+    return db
+      .select()
+      .from(schema.spaces)
+      .where(isNull(schema.spaces.deletedAt))
+      .orderBy(asc(schema.spaces.name))
+      .all()
   },
 
-  listForUser(userId: string, isAdmin = false): (SpaceRow & { role: string })[] {
+  listDeleted(): SpaceRow[] {
+    return getDb()
+      .select()
+      .from(schema.spaces)
+      .where(isNotNull(schema.spaces.deletedAt))
+      .orderBy(asc(schema.spaces.name))
+      .all()
+  },
+
+  listForUser(
+    userId: string,
+    isAdmin = false,
+    opts?: { deletedOnly?: boolean },
+  ): (SpaceRow & { role: string })[] {
+    if (opts?.deletedOnly) {
+      const deleted = this.listDeleted()
+      return deleted
+        .filter((s) => {
+          if (isAdmin) return true
+          return Boolean(this.getMember(s.id, userId))
+        })
+        .map((s) => {
+          const m = this.getMember(s.id, userId)
+          return { ...s, role: m?.role ?? (isAdmin ? 'admin' : 'viewer') }
+        })
+    }
+
     if (isAdmin) {
       return this.listAll().map((s) => {
         const m = this.getMember(s.id, userId)
@@ -51,17 +112,25 @@ export const spacesRepository = {
     const out: (SpaceRow & { role: string })[] = []
     for (const m of members) {
       const space = this.get(m.spaceId)
-      if (space) out.push({ ...space, role: m.role })
+      if (space && isSpaceActive(space)) out.push({ ...space, role: m.role })
     }
     return out.sort((a, b) => a.name.localeCompare(b.name))
   },
 
-  get(id: string): SpaceRow | undefined {
+  /** Includes soft-deleted */
+  getAny(id: string): SpaceRow | undefined {
     return getDb().select().from(schema.spaces).where(eq(schema.spaces.id, id)).get()
   },
 
+  /** Active only */
+  get(id: string): SpaceRow | undefined {
+    const row = this.getAny(id)
+    if (!row || !isSpaceActive(row)) return undefined
+    return row
+  },
+
   getMain(): SpaceRow {
-    let row = this.get(MAIN_SPACE_ID)
+    let row = this.getAny(MAIN_SPACE_ID)
     if (!row) {
       row = this.create({
         id: MAIN_SPACE_ID,
@@ -70,6 +139,10 @@ export const spacesRepository = {
         kind: 'main',
         ownerUserId: process.env.VPS_MAIN_SPACE_OWNER_USER_ID?.trim() || null,
       })
+    } else if (!isSpaceActive(row)) {
+      // Main must never stay soft-deleted
+      this.restore(MAIN_SPACE_ID)
+      row = this.getAny(MAIN_SPACE_ID)!
     }
     return row
   },
@@ -92,6 +165,7 @@ export const spacesRepository = {
         kind: input.kind ?? 'personal',
         ownerUserId: input.ownerUserId ?? null,
         createdAt,
+        deletedAt: null,
       })
       .run()
 
@@ -106,7 +180,6 @@ export const spacesRepository = {
         .run()
     }
 
-    // Seed settings for the space
     const settingsId = settingsIdForSpace(id)
     const existingSettings = db
       .select()
@@ -125,15 +198,15 @@ export const spacesRepository = {
         .run()
     }
 
-    return this.get(id)!
+    return this.getAny(id)!
   },
 
   update(
     id: string,
     input: Partial<{ name: string; slug: string; ownerUserId: string | null }>,
   ): SpaceRow | undefined {
-    const existing = this.get(id)
-    if (!existing) return undefined
+    const existing = this.getAny(id)
+    if (!existing || !isSpaceActive(existing)) return undefined
     getDb()
       .update(schema.spaces)
       .set({
@@ -147,10 +220,98 @@ export const spacesRepository = {
     return this.get(id)
   },
 
+  softDelete(id: string): SpaceRow | undefined {
+    const existing = this.getAny(id)
+    if (!existing) return undefined
+    if (existing.kind === 'main' || id === MAIN_SPACE_ID) return undefined
+    if (!isSpaceActive(existing)) return existing
+    getDb()
+      .update(schema.spaces)
+      .set({ deletedAt: nowIso() })
+      .where(eq(schema.spaces.id, id))
+      .run()
+    return this.getAny(id)
+  },
+
+  restore(id: string): SpaceRow | undefined {
+    const existing = this.getAny(id)
+    if (!existing) return undefined
+    if (isSpaceActive(existing)) return existing
+    getDb()
+      .update(schema.spaces)
+      .set({ deletedAt: null })
+      .where(eq(schema.spaces.id, id))
+      .run()
+    return this.get(id)
+  },
+
+  /**
+   * Hard purge — only soft-deleted non-main spaces.
+   * Cascade deletes all space-scoped rows.
+   */
+  purge(id: string): boolean {
+    const existing = this.getAny(id)
+    if (!existing) return false
+    if (existing.kind === 'main' || id === MAIN_SPACE_ID) return false
+    if (isSpaceActive(existing)) return false
+
+    const sqlite = getSqlite()
+    sqlite.exec('BEGIN')
+    try {
+      // Grants referencing this space (from or to)
+      sqlite
+        .prepare(
+          `DELETE FROM vps_grants WHERE fromSpaceId = ? OR toSpaceId = ?`,
+        )
+        .run(id, id)
+
+      for (const table of SPACE_DATA_TABLES) {
+        if (table === 'vps_grants' || table === 'space_members') continue
+        try {
+          sqlite.prepare(`DELETE FROM ${table} WHERE spaceId = ?`).run(id)
+        } catch {
+          /* table may not exist in older DBs */
+        }
+      }
+
+      sqlite.prepare(`DELETE FROM space_members WHERE spaceId = ?`).run(id)
+      sqlite.prepare(`DELETE FROM spaces WHERE id = ?`).run(id)
+      sqlite.exec('COMMIT')
+      return true
+    } catch (err) {
+      sqlite.exec('ROLLBACK')
+      throw err
+    }
+  },
+
+  transferOwnership(
+    spaceId: string,
+    newOwnerUserId: string,
+  ): SpaceRow | undefined {
+    const space = this.get(spaceId)
+    if (!space) return undefined
+    const oldOwnerId = space.ownerUserId
+
+    if (oldOwnerId && oldOwnerId !== newOwnerUserId) {
+      this.updateMember(spaceId, oldOwnerId, 'admin')
+    }
+    this.addMember(spaceId, newOwnerUserId, 'owner')
+    getDb()
+      .update(schema.spaces)
+      .set({ ownerUserId: newOwnerUserId })
+      .where(eq(schema.spaces.id, spaceId))
+      .run()
+    return this.get(spaceId)
+  },
+
   ensurePersonalSpace(userId: string, name?: string): SpaceRow {
     const id = `space-user-${userId}`
-    const existing = this.get(id)
+    const existing = this.getAny(id)
     if (existing) {
+      if (!isSpaceActive(existing)) {
+        // Soft-deleted personal — do not recreate same id; fall back to main
+        return this.getMain()
+      }
       const member = this.getMember(id, userId)
       if (!member) {
         this.addMember(id, userId, 'owner')
@@ -251,6 +412,8 @@ export const spacesRepository = {
   },
 
   canAccess(spaceId: string, userId: string, isAdmin = false): boolean {
+    const space = this.get(spaceId)
+    if (!space) return false
     if (isAdmin) return true
     return Boolean(this.getMember(spaceId, userId))
   },
@@ -261,6 +424,7 @@ export const spacesRepository = {
     min: SpaceRole,
     isAdmin = false,
   ): SpaceMemberRow | null {
+    if (!this.get(spaceId) && !isAdmin) return null
     if (isAdmin) {
       return (
         this.getMember(spaceId, userId) ?? {
@@ -292,6 +456,10 @@ export const vpsGrantsRepository = {
       .from(schema.vpsGrants)
       .where(eq(schema.vpsGrants.fromSpaceId, fromSpaceId))
       .all()
+  },
+
+  listAll(): VpsGrantRow[] {
+    return getDb().select().from(schema.vpsGrants).all()
   },
 
   get(id: string): VpsGrantRow | undefined {
@@ -359,7 +527,6 @@ export const vpsGrantsRepository = {
     return r.changes
   },
 
-  /** Effective grant for current space context on a VPS owned elsewhere. */
   getGrantInCurrentSpace(vpsId: string): VpsGrantRow | undefined {
     return this.getForVpsToSpace(vpsId, getCurrentSpaceId())
   },

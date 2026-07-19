@@ -1,5 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckIcon, ChevronsUpDownIcon, PlusIcon, UsersIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  PlusIcon,
+  Trash2Icon,
+  UsersIcon,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -29,9 +35,12 @@ import {
   useSidebar,
 } from '@cfdm/ui/components/sidebar'
 
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { api } from '@/lib/api-client'
 import { useSpaceId, type SpaceDto } from '@/lib/space'
 import { spacesKeys, spacesQueryOptions, snapshotKeys } from '@/queries/snapshot'
+
+const MAIN_KIND = 'main'
 
 export function SpaceSwitcher() {
   const { isMobile } = useSidebar()
@@ -46,6 +55,14 @@ export function SpaceSwitcher() {
   useEffect(() => {
     if (!spaceId && spaces[0]?.id) {
       setSpaceId(spaces[0].id)
+    }
+  }, [spaceId, spaces, setSpaceId])
+
+  // If current space disappeared (soft-deleted), fall back to first active
+  useEffect(() => {
+    if (spaceId && spaces.length > 0 && !spaces.some((s) => s.id === spaceId)) {
+      const next = spaces.find((s) => s.kind === MAIN_KIND) ?? spaces[0]
+      if (next) setSpaceId(next.id)
     }
   }, [spaceId, spaces, setSpaceId])
 
@@ -77,9 +94,27 @@ export function SpaceSwitcher() {
     }
   }
 
+  async function handleSoftDelete(space: SpaceDto) {
+    try {
+      await api.softDeleteSpace(space.id)
+      if (spaceId === space.id) {
+        const next =
+          spaces.find((s) => s.id !== space.id && s.kind === MAIN_KIND) ??
+          spaces.find((s) => s.id !== space.id)
+        if (next) setSpaceId(next.id)
+      }
+      await qc.invalidateQueries({ queryKey: spacesKeys.all })
+      await qc.invalidateQueries({ queryKey: spacesKeys.deleted })
+      await qc.invalidateQueries({ queryKey: snapshotKeys.all })
+      toast.success('Пространство перемещено в корзину')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не удалось удалить')
+    }
+  }
+
   if (spaces.length === 0) {
     return (
-      <div className="px-2 py-1.5 text-xs text-muted-foreground">Пространства…</div>
+      <div className="text-muted-foreground px-2 py-1.5 text-xs">Пространства…</div>
     )
   }
 
@@ -97,7 +132,7 @@ export function SpaceSwitcher() {
               }
             >
               <div
-                className="flex aspect-square size-8 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                className="bg-muted text-muted-foreground flex aspect-square size-8 items-center justify-center rounded-md"
                 aria-hidden
               >
                 <UsersIcon className="size-4" />
@@ -106,7 +141,7 @@ export function SpaceSwitcher() {
                 <span className="truncate font-semibold">
                   {current?.name ?? 'Пространство'}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="text-muted-foreground truncate text-xs">
                   {current?.kind === 'main' ? 'Основное' : 'Личное'}
                   {current?.role ? ` · ${current.role}` : ''}
                 </span>
@@ -122,10 +157,7 @@ export function SpaceSwitcher() {
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Пространства</DropdownMenuLabel>
                 {spaces.map((s) => (
-                  <DropdownMenuItem
-                    key={s.id}
-                    onClick={() => selectSpace(s)}
-                  >
+                  <DropdownMenuItem key={s.id} onClick={() => selectSpace(s)}>
                     <UsersIcon className="size-4" />
                     <span className="truncate">{s.name}</span>
                     {s.id === current?.id ? (
@@ -140,6 +172,24 @@ export function SpaceSwitcher() {
                   <PlusIcon className="size-4" />
                   Создать пространство
                 </DropdownMenuItem>
+                {current && current.kind !== MAIN_KIND ? (
+                  <ConfirmDialog
+                    title="В корзину?"
+                    description="Пространство скроется из списка. Данные сохранятся — можно восстановить на странице «Пространство»."
+                    confirmLabel="В корзину"
+                    destructive
+                    onConfirm={() => void handleSoftDelete(current)}
+                    trigger={
+                      <DropdownMenuItem
+                        onClick={(e) => e.preventDefault()}
+                        className="text-destructive"
+                      >
+                        <Trash2Icon className="size-4" />
+                        Удалить «{current.name}»
+                      </DropdownMenuItem>
+                    }
+                  />
+                ) : null}
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

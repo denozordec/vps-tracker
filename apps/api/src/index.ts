@@ -30,6 +30,7 @@ import { startScheduler } from './services/scheduler.js'
 import { authPlugin } from './plugins/auth.js'
 import { spacePlugin } from './plugins/space.js'
 import { spacesRoutes } from './routes/spaces.js'
+import { portalUsersRoutes } from './routes/portal-users.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -56,6 +57,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   app.get('/health', async () => ({ ok: true }))
 
   await app.register(spacesRoutes)
+  await app.register(portalUsersRoutes)
   await app.register(dataRoutes)
   await app.register(vpsRoutes)
   await app.register(providersRoutes)

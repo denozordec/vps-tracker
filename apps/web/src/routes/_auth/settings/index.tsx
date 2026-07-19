@@ -5,8 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { DownloadIcon, UploadIcon } from 'lucide-react'
 import { useCallback } from 'react'
-import { snapshotQueryOptions } from '@/queries/snapshot'
+import { snapshotQueryOptions, spacesKeys } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
+import { useSpaceId } from '@/lib/space'
+
+const MAIN_SPACE_ID = 'space-main'
 import { QueryState } from '@/components/query-state'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { LoadingButton } from '@/components/loading-button'
@@ -47,6 +50,7 @@ function SettingsSkeleton() {
 
 function SettingsGeneralPage() {
   const queryClient = useQueryClient()
+  const { setSpaceId } = useSpaceId()
   const { data: snapshot, current, isLoading, isError, error, refetch } =
     useSettingsSnapshot()
   const patchMut = useSettingsPatch({ successMessage: 'Настройки интерфейса сохранены' })
@@ -59,10 +63,17 @@ function SettingsGeneralPage() {
     values: formValues,
   })
 
+  async function afterBackupImport() {
+    setSpaceId(MAIN_SPACE_ID)
+    await queryClient.invalidateQueries({ queryKey: spacesKeys.all })
+    await queryClient.invalidateQueries({ queryKey: spacesKeys.deleted })
+    await queryClient.invalidateQueries({ queryKey: snapshotQueryOptions().queryKey })
+  }
+
   const importJsonMut = useMutation({
     mutationFn: (text: string) => api.importBackupJson(JSON.parse(text)),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: snapshotQueryOptions().queryKey })
+    onSuccess: async () => {
+      await afterBackupImport()
       toast.success('Импорт JSON выполнен')
     },
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта'),
@@ -70,8 +81,8 @@ function SettingsGeneralPage() {
 
   const importDbMut = useMutation({
     mutationFn: (buffer: ArrayBuffer) => api.importBackupDatabase(buffer),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: snapshotQueryOptions().queryKey })
+    onSuccess: async () => {
+      await afterBackupImport()
       toast.success('Импорт SQLite выполнен')
     },
     onError: (e: unknown) => toast.error(e instanceof ApiError ? e.message : 'Ошибка импорта'),

@@ -18,6 +18,7 @@ export type SpaceDto = {
   kind: string
   ownerUserId: string | null
   createdAt: string
+  deletedAt?: string | null
   role?: string
 }
 

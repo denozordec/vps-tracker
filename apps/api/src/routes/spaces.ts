@@ -18,13 +18,29 @@ function isSpacesAdmin(request: { authUser?: { isAdmin?: boolean; permissions: s
   return Boolean(u.isAdmin) || hasPermission(u.permissions, 'vps:spaces:admin')
 }
 
+function canManageDeletedSpace(
+  space: { ownerUserId: string | null; id: string },
+  userId: string | undefined,
+  admin: boolean,
+): boolean {
+  if (admin) return true
+  if (!userId) return true
+  if (space.ownerUserId === userId) return true
+  const member = spacesRepository.getMember(space.id, userId)
+  return member?.role === 'owner'
+}
+
 export const spacesRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/api/spaces', async (req) => {
+  app.get<{ Querystring: { deleted?: string } }>('/api/spaces', async (req) => {
     const user = req.authUser
+    const deletedOnly = req.query.deleted === '1' || req.query.deleted === 'true'
     if (!user) {
+      if (deletedOnly) {
+        return spacesRepository.listDeleted().map((s) => ({ ...s, role: 'owner' }))
+      }
       return spacesRepository.listAll().map((s) => ({ ...s, role: 'owner' }))
     }
-    return spacesRepository.listForUser(user.id, isSpacesAdmin(req))
+    return spacesRepository.listForUser(user.id, isSpacesAdmin(req), { deletedOnly })
   })
 
   app.post('/api/spaces', async (req, reply) => {
@@ -65,8 +81,114 @@ export const spacesRoutes: FastifyPluginAsync = async (app) => {
     return { ...space, role: member?.role ?? 'viewer' }
   })
 
+  /** Soft-delete → корзина */
+  app.delete<{ Params: { id: string } }>('/api/spaces/:id', async (req, reply) => {
+    const space = spacesRepository.getAny(req.params.id)
+    if (!space) {
+      return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
+    }
+    if (space.kind === 'main' || space.id === MAIN_SPACE_ID) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION', message: 'Нельзя удалить основное пространство' },
+      })
+    }
+    if (!canManageDeletedSpace(space, req.authUser?.id, isSpacesAdmin(req))) {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: 'Только владелец' } })
+    }
+    const updated = spacesRepository.softDelete(req.params.id)
+    if (!updated) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION', message: 'Не удалось удалить' },
+      })
+    }
+    return updated
+  })
+
+  app.post<{ Params: { id: string } }>('/api/spaces/:id/restore', async (req, reply) => {
+    const space = spacesRepository.getAny(req.params.id)
+    if (!space) {
+      return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
+    }
+    if (!space.deletedAt) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION', message: 'Пространство не в корзине' },
+      })
+    }
+    if (!canManageDeletedSpace(space, req.authUser?.id, isSpacesAdmin(req))) {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: 'Нет доступа' } })
+    }
+    return spacesRepository.restore(req.params.id)
+  })
+
+  /** Hard purge — only soft-deleted */
+  app.delete<{ Params: { id: string } }>('/api/spaces/:id/purge', async (req, reply) => {
+    const space = spacesRepository.getAny(req.params.id)
+    if (!space) {
+      return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
+    }
+    if (space.kind === 'main' || space.id === MAIN_SPACE_ID) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION', message: 'Нельзя удалить основное пространство' },
+      })
+    }
+    if (!space.deletedAt) {
+      return reply.code(400).send({
+        error: {
+          code: 'VALIDATION',
+          message: 'Сначала переместите пространство в корзину',
+        },
+      })
+    }
+    if (!canManageDeletedSpace(space, req.authUser?.id, isSpacesAdmin(req))) {
+      return reply.code(403).send({ error: { code: 'FORBIDDEN', message: 'Нет доступа' } })
+    }
+    const ok = spacesRepository.purge(req.params.id)
+    if (!ok) {
+      return reply.code(400).send({
+        error: { code: 'VALIDATION', message: 'Не удалось удалить навсегда' },
+      })
+    }
+    return reply.code(204).send()
+  })
+
+  app.post<{ Params: { id: string } }>(
+    '/api/spaces/:id/transfer-ownership',
+    async (req, reply) => {
+      const space = spacesRepository.get(req.params.id)
+      if (!space) {
+        return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
+      }
+      const user = req.authUser
+      const admin = isSpacesAdmin(req)
+      if (user) {
+        const member = spacesRepository.getMember(space.id, user.id)
+        if (!admin && member?.role !== 'owner') {
+          return reply.code(403).send({
+            error: {
+              code: 'FORBIDDEN',
+              message: 'Только владелец может передать владение',
+            },
+          })
+        }
+      }
+      const body = req.body as { newOwnerUserId?: string }
+      const newOwnerUserId = String(body.newOwnerUserId ?? '').trim()
+      if (!newOwnerUserId) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION', message: 'newOwnerUserId обязателен' },
+        })
+      }
+      const updated = spacesRepository.transferOwnership(req.params.id, newOwnerUserId)
+      if (!updated) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION', message: 'Не удалось передать владение' },
+        })
+      }
+      return updated
+    },
+  )
+
   app.patch<{ Params: { id: string } }>('/api/spaces/:id', async (req, reply) => {
-    // Temporarily set space for role check
     req.spaceId = req.params.id
     if (!requireSpaceRole(req, reply, 'admin')) return
     const body = req.body as { name?: string; slug?: string }
@@ -159,7 +281,6 @@ export const spacesRoutes: FastifyPluginAsync = async (app) => {
     },
   )
 
-  /** Share VPS from current ownership space to target space */
   app.post<{ Params: { id: string; vpsId: string } }>(
     '/api/spaces/:id/vps/:vpsId/share',
     async (req, reply) => {
@@ -202,7 +323,10 @@ export const spacesRoutes: FastifyPluginAsync = async (app) => {
       req.spaceId = req.params.id
       if (!requireSpaceRole(req, reply, 'admin')) return
       const grant = vpsGrantsRepository.get(req.params.grantId)
-      if (!grant || (grant.fromSpaceId !== req.params.id && grant.toSpaceId !== req.params.id)) {
+      if (
+        !grant ||
+        (grant.fromSpaceId !== req.params.id && grant.toSpaceId !== req.params.id)
+      ) {
         return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
       }
       vpsGrantsRepository.delete(req.params.grantId)
@@ -210,7 +334,6 @@ export const spacesRoutes: FastifyPluginAsync = async (app) => {
     },
   )
 
-  /** Assign (move) VPS to target space */
   app.post<{ Params: { id: string; vpsId: string } }>(
     '/api/spaces/:id/vps/:vpsId/assign',
     async (req, reply) => {
@@ -235,8 +358,7 @@ export const spacesRoutes: FastifyPluginAsync = async (app) => {
         })
       }
       vpsGrantsRepository.deleteByVps(req.params.vpsId)
-      const moved = vpsRepository.assignToSpace(req.params.vpsId, toSpaceId)
-      return moved
+      return vpsRepository.assignToSpace(req.params.vpsId, toSpaceId)
     },
   )
 

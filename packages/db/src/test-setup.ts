@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS spaces (
   slug TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT 'personal',
   ownerUserId TEXT,
-  createdAt TEXT NOT NULL
+  createdAt TEXT NOT NULL,
+  deletedAt TEXT
 );
 
 CREATE TABLE IF NOT EXISTS space_members (

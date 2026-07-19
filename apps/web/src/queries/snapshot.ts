@@ -19,6 +19,7 @@ export const snapshotQueryOptions = (spaceId?: string | null) => {
 
 export const spacesKeys = {
   all: ['spaces'] as const,
+  deleted: ['spaces', 'deleted'] as const,
   members: (spaceId: string) => ['spaces', spaceId, 'members'] as const,
 }
 
@@ -26,6 +27,12 @@ export const spacesQueryOptions = () => ({
   queryKey: spacesKeys.all,
   queryFn: () => api.fetchSpaces(),
   staleTime: 60_000,
+})
+
+export const deletedSpacesQueryOptions = () => ({
+  queryKey: spacesKeys.deleted,
+  queryFn: () => api.fetchSpaces({ deleted: true }),
+  staleTime: 30_000,
 })
 
 export const ratesKeys = {

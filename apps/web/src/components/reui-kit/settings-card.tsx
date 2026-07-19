@@ -34,8 +34,10 @@ export function SettingsCard({
 }: SettingsCardProps) {
   return (
     <Frame dense spacing="sm" className={cn('w-full gap-0 p-0', className)}>
-      <FramePanel className="flex flex-col gap-0 p-0 shadow-xs">
-        <FrameHeader className={cn('gap-0 border-b px-5 py-3', headerClassName)}>
+      <FramePanel className="flex flex-col gap-0 p-0">
+        <FrameHeader
+          className={cn('gap-0.5 border-b border-border/50 px-5 py-3', headerClassName)}
+        >
           <FrameTitle>{title}</FrameTitle>
           {description ? <FrameDescription>{description}</FrameDescription> : null}
         </FrameHeader>
@@ -44,7 +46,10 @@ export function SettingsCard({
 
         {footer ? (
           <FrameFooter
-            className={cn('justify-end gap-2 border-t px-5 py-3', footerClassName)}
+            className={cn(
+              'justify-end gap-2 border-t border-border/50 px-5 py-3',
+              footerClassName,
+            )}
           >
             {footer}
           </FrameFooter>
