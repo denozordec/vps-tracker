@@ -7,15 +7,17 @@ import { getDb, schema } from '@cfdm/db'
 
 import type { BillmanagerSyncAccount } from './context.js'
 import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
-import { mapPaymentToPayment, mapVdsToVps } from './mappers.js'
 import {
   fetchDashboardInfo,
   fetchPayments,
   fetchVds,
   fetchVdsOrderPricelistAllDatacenters,
+  mapPaymentWithProfile,
+  mapVdsWithProfile,
   type DashboardInfo,
   type TariffItem,
 } from './operations.js'
+import { resolveBillmanagerProfile } from './profiles/index.js'
 
 export interface SyncFromBillmanagerOptions {
   skipTariffs?: boolean
@@ -69,6 +71,7 @@ export async function syncFromBillmanager(
   }
   const authinfo = apiCredentials.trim()
   const db = getDb()
+  const profile = resolveBillmanagerProfile(apiBaseUrl)
 
   const fetchVpsPayments = !skipVpsPayments
   const fetchTariffs = !skipTariffs
@@ -76,16 +79,29 @@ export async function syncFromBillmanager(
   const fallbackCurrency = syncFallbackCurrency(account)
 
   const [vdsItems, paymentItems, dashboardInfo, tariffResult] = await Promise.all([
-    fetchVpsPayments ? fetchVds(apiBaseUrl, authinfo) : [],
-    fetchVpsPayments ? fetchPayments(apiBaseUrl, authinfo, {}) : [],
+    fetchVpsPayments ? fetchVds(apiBaseUrl, authinfo, profile) : [],
     fetchVpsPayments
-      ? fetchDashboardInfo(apiBaseUrl, authinfo, { fallbackCurrency }).catch(() => null)
+      ? fetchPayments(apiBaseUrl, authinfo, { profile })
+      : [],
+    fetchVpsPayments
+      ? fetchDashboardInfo(apiBaseUrl, authinfo, {
+          fallbackCurrency,
+          profile,
+        }).catch(() => null)
       : null,
     fetchTariffs
-      ? fetchVdsOrderPricelistAllDatacenters(apiBaseUrl, authinfo).catch((err) => {
-          console.warn('fetchVdsOrderPricelistAllDatacenters failed:', err instanceof Error ? err.message : err)
-          return { tariffItems: [] as TariffItem[], slist: {} as Record<string, unknown> }
-        })
+      ? fetchVdsOrderPricelistAllDatacenters(apiBaseUrl, authinfo, profile).catch(
+          (err) => {
+            console.warn(
+              'fetchVdsOrderPricelistAllDatacenters failed:',
+              err instanceof Error ? err.message : err,
+            )
+            return {
+              tariffItems: [] as TariffItem[],
+              slist: {} as Record<string, unknown>,
+            }
+          },
+        )
       : { tariffItems: [] as TariffItem[], slist: {} as Record<string, unknown> },
   ])
   const { tariffItems = [], slist = {} } = tariffResult || {}
@@ -95,7 +111,7 @@ export async function syncFromBillmanager(
 
   if (fetchVpsPayments) {
     for (const item of vdsItems) {
-      const vps = mapVdsToVps(item, providerId, accountId)
+      const vps = mapVdsWithProfile(profile, item, providerId, accountId)
       const id = `vps-bm-${accountId}-${vps.externalId}`
       const additionalIps = JSON.stringify(vps.additionalIps || [])
       const dailyRate = vps.dailyRate
@@ -229,7 +245,7 @@ export async function syncFromBillmanager(
     )
 
     for (const item of paymentItems) {
-      const payment = mapPaymentToPayment(item, accountId)
+      const payment = mapPaymentWithProfile(profile, item, accountId)
       if (!payment || payment.amount <= 0) continue
       const note = payment.note
       if (existingPayments.has(note)) continue

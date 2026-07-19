@@ -1,5 +1,6 @@
 /**
  * BILLmanager API operations — fetch VDS, payments, dashboard, tariffs
+ * All funcs / extract keys come from resolveBillmanagerProfile(baseUrl).
  */
 
 import { billmanagerRequest } from './client.js'
@@ -10,6 +11,11 @@ import {
   parseDatacenterName,
   parseTariffDesc,
 } from './parsers.js'
+import {
+  resolveBillmanagerProfile,
+  type BillmanagerProfile,
+} from './profiles/index.js'
+import type { MappedPayment, MappedVps } from './mappers.js'
 
 export interface DashboardInfo {
   balance: number
@@ -37,21 +43,60 @@ export interface TariffItem {
   country?: string
 }
 
-export async function fetchVds(baseUrl: string, authinfo: string): Promise<Record<string, string>[]> {
-  const data = await billmanagerRequest(baseUrl, authinfo, 'vds')
-  const elems = extractList(data, 'vds')
+function profileFor(baseUrl: string): BillmanagerProfile {
+  return resolveBillmanagerProfile(baseUrl)
+}
+
+/** Map raw VDS elem through profile.map.vds (+ optional enrichVds). */
+export function mapVdsWithProfile(
+  profile: BillmanagerProfile,
+  item: Record<string, string>,
+  providerId: string,
+  accountId: string,
+): MappedVps {
+  const mapped = profile.map.vds(item, providerId, accountId)
+  return profile.map.enrichVds ? profile.map.enrichVds(item, mapped) : mapped
+}
+
+export function mapPaymentWithProfile(
+  profile: BillmanagerProfile,
+  item: Record<string, string>,
+  accountId: string,
+): MappedPayment | null {
+  return profile.map.payment(item, accountId)
+}
+
+export async function fetchVds(
+  baseUrl: string,
+  authinfo: string,
+  profile?: BillmanagerProfile,
+): Promise<Record<string, string>[]> {
+  const p = profile ?? profileFor(baseUrl)
+  const data = await billmanagerRequest(
+    baseUrl,
+    authinfo,
+    p.funcs.listVds,
+    p.requestParams?.listVds,
+  )
+  const elems = extractList(data, p.extract.listVdsKey)
   return elems.map((e) => elemToObject(e))
 }
 
 export async function fetchDashboardInfo(
   baseUrl: string,
   authinfo: string,
-  opts: { fallbackCurrency?: string | null } = {},
+  opts: { fallbackCurrency?: string | null; profile?: BillmanagerProfile } = {},
 ): Promise<DashboardInfo> {
-  const data = await billmanagerRequest(baseUrl, authinfo, 'dashboard.info', {
-    dashboard: 'info',
-    sfrom: 'ajax',
-  })
+  const p = opts.profile ?? profileFor(baseUrl)
+  const data = await billmanagerRequest(
+    baseUrl,
+    authinfo,
+    p.funcs.dashboard,
+    p.requestParams?.dashboard ?? {
+      dashboard: 'info',
+      sfrom: 'ajax',
+    },
+  )
   const elems =
     extractList(data, 'dashboard') ||
     (Array.isArray(data.elem) ? (data.elem as unknown[]) : [])
@@ -83,32 +128,48 @@ export async function fetchPayments(
     createdate?: string
     filter?: string
     status?: string | number
+    profile?: BillmanagerProfile
   } = {},
 ): Promise<Record<string, string>[]> {
-  const params: Record<string, string> = {}
+  const p = opts.profile ?? profileFor(baseUrl)
+  const params: Record<string, string | number> = {
+    ...p.requestParams?.payments,
+  }
   if (opts.createdatestart) params.createdatestart = opts.createdatestart
   if (opts.createdateend) params.createdateend = opts.createdateend
   if (opts.createdate === 'other') params.createdate = 'other'
   if (opts.filter === 'on') params.filter = 'on'
   if (opts.status != null) params.status = String(opts.status)
-  const data = await billmanagerRequest(baseUrl, authinfo, 'payment', params)
-  const elems = extractList(data, 'payment')
+  const data = await billmanagerRequest(baseUrl, authinfo, p.funcs.payments, params)
+  const elems = extractList(data, p.extract.paymentsKey)
   return elems.map((e) => elemToObject(e))
 }
 
 export async function fetchVdsOrderPricelist(
   baseUrl: string,
   authinfo: string,
-  opts: { plid?: string; period?: string; datacenter?: string } = {},
+  opts: {
+    plid?: string
+    period?: string
+    datacenter?: string
+    profile?: BillmanagerProfile
+  } = {},
 ): Promise<{ tariffItems: TariffItem[]; slist: Record<string, unknown> }> {
-  const params: Record<string, string> = {
+  const p = opts.profile ?? profileFor(baseUrl)
+  const params: Record<string, string | number> = {
     plid: opts.plid || '',
     sfrom: 'ajax',
+    ...p.requestParams?.orderPricelist,
   }
   if (opts.period) params.period = opts.period
   if (opts.datacenter) params.datacenter = opts.datacenter
 
-  const data = await billmanagerRequest(baseUrl, authinfo, 'vds.order', params)
+  const data = await billmanagerRequest(
+    baseUrl,
+    authinfo,
+    p.funcs.orderPricelist,
+    params,
+  )
 
   const tariflist = extractTariflist(data)
   const listNode = (data.list as Record<string, unknown>) ?? (data.doc as Record<string, unknown>)?.list
@@ -143,8 +204,10 @@ export async function fetchVdsOrderPricelist(
 export async function fetchVdsOrderPricelistAllDatacenters(
   baseUrl: string,
   authinfo: string,
+  profile?: BillmanagerProfile,
 ): Promise<{ tariffItems: TariffItem[]; slist: Record<string, unknown> }> {
-  const initial = await fetchVdsOrderPricelist(baseUrl, authinfo)
+  const p = profile ?? profileFor(baseUrl)
+  const initial = await fetchVdsOrderPricelist(baseUrl, authinfo, { profile: p })
   const slist = initial.slist || {}
   const datacenters = Array.isArray(slist.datacenter) ? slist.datacenter : []
 
@@ -161,7 +224,12 @@ export async function fetchVdsOrderPricelistAllDatacenters(
     const { country, location } = parseDatacenterName(dcName)
 
     const result =
-      i === 0 ? initial : await fetchVdsOrderPricelist(baseUrl, authinfo, { datacenter: dcKey })
+      i === 0
+        ? initial
+        : await fetchVdsOrderPricelist(baseUrl, authinfo, {
+            datacenter: dcKey,
+            profile: p,
+          })
     for (const t of result.tariffItems) {
       allTariffItems.push({
         ...t,

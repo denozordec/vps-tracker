@@ -79,6 +79,8 @@ vps-tracker/
 
 Формат запроса: `?authinfo=user:pass&out=bjson&func=vds|payment|dashboard.info|vds.order`
 
+**Профили хостеров (overrides):** `apps/api/src/services/billmanager/profiles/` — матч по `apiBaseUrl`, новый хостер = один файл overrides + запись в registry. HOWTO: [`profiles/README.md`](apps/api/src/services/billmanager/profiles/README.md).
+
 ## Уведомления
 
 - **Движок:** `apps/api/src/services/notifications/` — rules, dedup, engine, channels
