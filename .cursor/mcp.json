@@ -9,6 +9,12 @@
         "--path",
         "C:\\Users\\shats\\Dev\\vps-tracker"
       ]
+    },
+    "reui": {
+      "url": "https://mcp.reui.io",
+      "headers": {
+        "Authorization": "Bearer REUI-EAF4-EA40-6C5C-5D86"
+      }
     }
   }
 }
