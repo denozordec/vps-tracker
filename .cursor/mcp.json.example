@@ -13,7 +13,7 @@
     "reui": {
       "url": "https://mcp.reui.io",
       "headers": {
-        "Authorization": "Bearer REUI-EAF4-EA40-6C5C-5D86"
+        "Authorization": "Bearer <REUI_LICENSE_KEY>"
       }
     }
   }
