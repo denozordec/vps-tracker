@@ -1,0 +1,29 @@
+---
+description: Только hybrid KPI — KpiStatGrid / row tile DNA (stats-12). Запрет SectionCards и hand-roll.
+alwaysApply: true
+---
+
+# KPI hybrid — только kit (stats-12 DNA)
+
+Preview: [stats-12](https://reui.io/preview/base/stats-12). SoT DNA = EvoBGP. Markup в проекте: `apps/web/src/components/reui-kit/kpi-stat-grid.tsx`.
+
+Связанные: [`reui-mcp.mdc`](reui-mcp.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc).
+
+## MUST
+
+| Зона | Компонент / DNA |
+|------|-----------------|
+| KPI-полосы / dashboard metrics | только `reui-kit/KpiStatGrid` (через `OpsDashboard` / `DetailPanel.Metrics` при наличии) |
+| Markup | horizontal compact hybrid: icon left `Item` `size-10.5` `bg-muted` + `border-background` + shadow + `ItemMedia` + label/Badge + value ± `variant` |
+| Row icon tiles (data-grid) | та же DNA — semantic `text-*` на `bg-muted` |
+| Quick Actions | только `reui-kit/QuickActionGrid` (sibling hybrid DNA) |
+
+Импорты UI: `@cfdm/ui/components/*`.
+
+## NEVER
+
+- SectionCards / vertical-only KPI / hand-roll Frame/Card KPI
+- Другой size / radius / solid brand fill вместо `bg-muted`
+- `card-35` как замена stats-12 hybrid KPI
+- Копипаст ReUI block в route — adapt через `reui-kit/`
+- Голый lucide `size-4` в name-cell без hybrid tile

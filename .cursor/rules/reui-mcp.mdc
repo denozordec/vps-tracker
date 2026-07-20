@@ -36,7 +36,7 @@ alwaysApply: true
 | Data Grid | `@reui` | `@/components/reui/data-grid/*` → `ResourcePage` |
 | Filters | `@reui` | `@/components/reui/filters` |
 | Frame surface | `@reui` | `@/components/reui/frame` |
-| KPI | block [stats-12](https://reui.io/preview/base/stats-12) | `reui-kit/KpiStatGrid` (EvoBGP hybrid SoT) |
+| KPI | block [stats-12](https://reui.io/preview/base/stats-12) | `reui-kit/KpiStatGrid` — см. [`kpi-hybrid.mdc`](kpi-hybrid.mdc) |
 | Quick Actions | Frame tiles sibling KPI | `reui-kit/QuickActionGrid` |
 | Semantic badge / alert | `@reui` | `@/components/reui/badge`, `@/components/reui/alert` |
 | Number / date / autocomplete / color / kanban | `@reui` | `@/components/reui/*` |
