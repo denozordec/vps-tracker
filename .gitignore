@@ -19,6 +19,7 @@ dist-ssr
 
 # Local MCP configs (may contain REUI license Bearer)
 .cursor/mcp.json
+.mcp.json
 .codegraph/daemon.pid
 
 # pnpm
