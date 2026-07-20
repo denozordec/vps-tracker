@@ -8,7 +8,7 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
@@ -151,10 +151,10 @@ function ProvidersPage() {
       }
     >
       {(snap) => (
-        <DataGridCard
+        <ResourcePage
           columns={columnDefFromDataGrid(columns)}
           data={snap.providers}
-          rowId={(p) => p.id}
+          getRowId={(p) => p.id}
           pinLastColumn
         />
       )}

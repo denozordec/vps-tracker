@@ -15,12 +15,12 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
-import { SectionCards } from '@/components/section-cards'
-import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
+import { KpiStatGrid } from '@/components/reui-kit'
+import { KpiStatGridSkeleton, TableSkeleton } from '@/components/skeletons'
 import { RowActions } from '@/components/row-actions'
 import { PaymentEditSheet, paymentFormDefaults } from '@/components/domain/payment-edit-sheet'
 import type { PaymentFormValues } from '@/lib/schemas'
@@ -178,7 +178,7 @@ function PaymentsPage() {
       onRetry={() => refetch()}
       skeleton={
         <div className="flex flex-col gap-4">
-          <SectionCardsSkeleton count={3} />
+          <KpiStatGridSkeleton count={3} />
           <TableSkeleton />
         </div>
       }
@@ -225,7 +225,7 @@ function PaymentsPage() {
 
         return (
           <div className="flex flex-col gap-4">
-            <SectionCards
+            <KpiStatGrid
               items={[
                 {
                   label: 'Всего платежей',
@@ -246,10 +246,10 @@ function PaymentsPage() {
                 },
               ]}
             />
-            <DataGridCard
+            <ResourcePage
               columns={columnDefFromDataGrid(columns)}
               data={sorted}
-              rowId={(p) => p.id}
+              getRowId={(p) => p.id}
               pinLastColumn
               virtualization={sorted.length > 200}
               height={560}

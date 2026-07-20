@@ -6,7 +6,7 @@ import { api } from '@/lib/api-client'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
@@ -112,10 +112,10 @@ function AuditPage() {
         emptyDescription="Изменения VPS появятся здесь после CRUD-операций"
       >
         {(rows) => (
-          <DataGridCard
+          <ResourcePage
             columns={columnDefFromDataGrid(columns)}
             data={rows as AuditRow[]}
-            rowId={(r) => r.id}
+            getRowId={(r) => r.id}
             pageSize={25}
           />
         )}

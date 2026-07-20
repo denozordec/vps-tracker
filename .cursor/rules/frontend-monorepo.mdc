@@ -92,7 +92,7 @@ import '@cfdm/ui/globals.css'   // только в main.tsx
 
 - **`packages/ui`** — только output `shadcn add` (примитивы, registry hooks, `cn`)
 - **`apps/web/src/components/reui`** — только output `shadcn add @reui/*` (см. [`reui-mcp.mdc`](reui-mcp.mdc))
-- **`apps/web/src/components`** — blocks, layout, domain (`login-form`, `app-shell`, `DataGridCard`)
+- **`apps/web/src/components`** — blocks, layout, domain (`login-form`, `app-shell`, `reui-kit/*`)
 
 ## Стили (Tailwind v4 monorepo)
 

@@ -5,7 +5,7 @@ import { CpuIcon, MemoryStickIcon, HardDriveIcon } from 'lucide-react'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { EmptyState } from '@/components/empty-state'
 import { AnalyticsPage } from '@/components/analytics-page'
-import { SectionCards } from '@/components/section-cards'
+import { KpiStatGrid } from '@/components/reui-kit'
 import { Button } from '@cfdm/ui/components/button'
 import {
   ChartContainer,
@@ -74,24 +74,30 @@ function ResourcesPage() {
 
         return (
           <>
-            <SectionCards
+            <KpiStatGrid
               items={[
                 {
+                  id: 'vcpu',
                   label: 'vCPU',
                   value: totals.vcpu,
                   icon: <CpuIcon className="size-4" />,
+                  iconClassName: 'text-info',
                   hint: `${active.length} VPS`,
                 },
                 {
+                  id: 'ram',
                   label: 'RAM',
                   value: totals.ram,
                   icon: <MemoryStickIcon className="size-4" />,
+                  iconClassName: 'text-primary',
                   hint: 'GB',
                 },
                 {
+                  id: 'disk',
                   label: 'Disk',
                   value: totals.disk,
                   icon: <HardDriveIcon className="size-4" />,
+                  iconClassName: 'text-warning',
                   hint: 'GB',
                 },
               ]}

@@ -7,12 +7,7 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Badge } from '@cfdm/ui/components/badge'
-import {
-  DataGridCard,
-  columnDefFromDataGrid,
-  loadStoredColumnVisibility,
-  dataGridColumnVisibilityOptions,
-} from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/reui-kit'
 import type { VisibilityState } from '@tanstack/react-table'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
@@ -391,10 +386,10 @@ function TariffsPage() {
               </Alert>
             ) : null}
             {toolbar}
-            <DataGridCard
+            <ResourcePage
               columns={columnDefFromDataGrid(columns)}
               data={filteredTariffs}
-              rowId={(t) => t.id}
+              getRowId={(t) => t.id}
               emptyTitle="Тарифы не найдены"
               dense={filters.tableCompact}
               virtualization={filteredTariffs.length > 200}

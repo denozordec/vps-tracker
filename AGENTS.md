@@ -67,7 +67,7 @@ vps-tracker/
 - **VPS CRUD** — `apps/api/src/routes/vps.ts`, `packages/db/src/repositories/vps.ts`
 - **Платежи/баланс** — `apps/api/src/routes/payments.ts`, `apps/api/src/routes/balance-ledger.ts`
 - **Курсы валют** — `apps/web/src/lib/format.ts` (convertCurrency, formatInBaseCurrency), настройки в `settings.ratesUrl`
-- **UI shared** — `apps/web/src/components/` (PageShell, PageHeader, EmptyState, QueryState, ConfirmDialog, **DataGridCard**, VpsFiltersToolbar, AutoCompleteInput, SectionCards, StatusBadge, FormSheet, FormField, LoadingButton)
+- **UI shared** — `apps/web/src/components/` + **`reui-kit/`** (`ResourcePage`, `KpiStatGrid`, `QuickActionGrid`, `OpsDashboard`, `SettingsShell`, `DetailPanel`; `FrameDataGrid` — internal simple-grid for ResourcePage)
 - **UI primitives** — `packages/ui/src/components/*` (только output `shadcn add`)
 - **ReUI enterprise** — `apps/web/src/components/reui/*` (output `shadcn add @reui/*`); см. [`reui-mcp.mdc`](.cursor/rules/reui-mcp.mdc)
 
@@ -112,7 +112,8 @@ pnpm --filter web test         # Vitest frontend
 
 ## Соглашения
 
-- UI — [shadcn/ui](https://ui.shadcn.com) + [ReUI](https://reui.io/docs/get-started) через MCP `plugin-shadcn-shadcn`
+- UI — [ReUI PRO](https://reui.io/docs/get-started) first (MCP `user-reui`) + [shadcn/ui](https://ui.shadcn.com) primitives (MCP `plugin-shadcn-shadcn`)
+- Design contract — [`docs/ui-design-contract.md`](docs/ui-design-contract.md) (Frame, hybrid KPI, QuickActionGrid, NavUser chrome)
 - Коммиты — на русском, см. [`commit-messages-ru.mdc`](.cursor/rules/commit-messages-ru.mdc)
 - Gitflow — см. [`gitflow.mdc`](.cursor/rules/gitflow.mdc)
 - Структура — см. [`project-structure.mdc`](.cursor/rules/project-structure.mdc)

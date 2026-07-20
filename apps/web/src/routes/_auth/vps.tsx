@@ -11,7 +11,7 @@ import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/reui-kit'
 import type { VisibilityState } from '@tanstack/react-table'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
@@ -642,12 +642,12 @@ function VpsPage() {
               onColumnVisibilityChange={handleColumnVisibilityChange}
             />
             {tableSections.map((section) => (
-              <DataGridCard
+              <ResourcePage
                 key={section.key}
                 title={section.label ?? undefined}
                 columns={columnDefFromDataGrid(columns)}
                 data={section.items}
-                rowId={(v) => v.id}
+                getRowId={(v) => v.id}
                 emptyTitle="VPS не найдены"
                 pinLastColumn
                 dense={filters.tableCompact}

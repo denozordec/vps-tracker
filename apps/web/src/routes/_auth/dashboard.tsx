@@ -23,10 +23,10 @@ import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { dashboardStatsQueryOptions } from '@/queries/dashboard'
 import { OpsDashboard, QuickActionGrid, type KpiStatCard, type QuickActionItem } from '@/components/reui-kit'
 import { QueryState } from '@/components/query-state'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
-import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
+import { KpiStatGridSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@/components/reui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
@@ -131,7 +131,7 @@ function DashboardPage() {
       onRetry={() => refetch()}
       skeleton={
         <div className="flex flex-col gap-4">
-          <SectionCardsSkeleton count={6} />
+          <KpiStatGridSkeleton count={6} />
           <TableSkeleton />
         </div>
       }
@@ -420,19 +420,19 @@ function DashboardPage() {
                         </TabsTrigger>
                       </TabsList>
                       <TabsContent value="issues" className="mt-0">
-                        <DataGridCard
+                        <ResourcePage
                           title="Здоровье инвентаря"
                           description="Ставка, оплата, синк, баланс аккаунтов"
                           columns={columnDefFromDataGrid(issueColumns)}
                           data={issues}
-                          rowId={(i) => i.key}
+                          getRowId={(i) => i.key}
                           emptyTitle="Проблем не найдено"
                           emptyDescription="Критичных проблем в инвентаре не обнаружено"
                           pagination={false}
                         />
                       </TabsContent>
                       <TabsContent value="recent" className="mt-0">
-                        <DataGridCard
+                        <ResourcePage
                           title="Последние VPS"
                           description="Активные серверы"
                           actions={
@@ -442,18 +442,18 @@ function DashboardPage() {
                           }
                           columns={columnDefFromDataGrid(vpsColumns)}
                           data={activeVps.slice(0, 8)}
-                          rowId={(v) => v.id}
+                          getRowId={(v) => v.id}
                           pagination={false}
                           onRowClick={(v) => navigate({ to: '/vps', search: { edit: v.id } })}
                         />
                       </TabsContent>
                       <TabsContent value="risk" className="mt-0">
-                        <DataGridCard
+                        <ResourcePage
                           title="Аккаунты под риском"
                           description="Низкий баланс или устаревший синк BILLmanager"
                           columns={columnDefFromDataGrid(riskColumns)}
                           data={atRisk}
-                          rowId={(r) => r.id}
+                          getRowId={(r) => r.id}
                           emptyTitle="Рисков нет"
                           emptyDescription="Балансы и синхронизация в норме"
                           pagination={false}

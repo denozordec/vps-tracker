@@ -4,7 +4,7 @@ import { HistoryIcon, UserRoundIcon, CheckCircle2Icon, XCircleIcon, LoaderIcon }
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { CrudListPage } from '@/components/crud-list-page'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { StatusBadge } from '@/components/status-badge'
 import { dataGridCellStack } from '@/components/data-grid-cells'
@@ -98,10 +98,10 @@ function SyncJournalPage() {
       }
     >
       {(snap) => (
-        <DataGridCard
+        <ResourcePage
           columns={columnDefFromDataGrid(columns)}
           data={snap.syncLog ?? []}
-          rowId={(r) => r.id}
+          getRowId={(r) => r.id}
           dense
         />
       )}

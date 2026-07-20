@@ -7,8 +7,8 @@ import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
-import { SectionCards } from '@/components/section-cards'
-import { SectionCardsSkeleton } from '@/components/skeletons'
+import { KpiStatGrid } from '@/components/reui-kit'
+import { KpiStatGridSkeleton } from '@/components/skeletons'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Badge } from '@cfdm/ui/components/badge'
@@ -131,7 +131,7 @@ function RenewalsPage() {
         onRetry={() => refetch()}
         skeleton={
           <div className="flex flex-col gap-4">
-            <SectionCardsSkeleton count={3} />
+            <KpiStatGridSkeleton count={3} />
             <div className="flex flex-col gap-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-16 w-full rounded-lg" />
@@ -145,7 +145,7 @@ function RenewalsPage() {
       >
         {() => (
           <div className="flex flex-col gap-4">
-            <SectionCards
+            <KpiStatGrid
               items={[
                 {
                   label: 'Просрочено',

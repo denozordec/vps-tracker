@@ -20,7 +20,7 @@ import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { getPaidUntilDate } from '@/lib/paid-until'
 import {
@@ -261,11 +261,11 @@ function VpsDetailPage() {
                   />
                 </CardContent>
               </Card>
-              <DataGridCard
+              <ResourcePage
                 title="Связанные платежи"
                 columns={columnDefFromDataGrid(paymentColumns)}
                 data={relatedPayments}
-                rowId={(p) => p.id}
+                getRowId={(p) => p.id}
                 emptyTitle="Платежей нет"
                 pagination={false}
               />

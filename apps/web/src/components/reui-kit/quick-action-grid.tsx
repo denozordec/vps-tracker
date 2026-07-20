@@ -10,6 +10,7 @@ import {
 import { Badge } from '@/components/reui/badge'
 import { Item, ItemMedia } from '@cfdm/ui/components/item'
 import { cn } from '@cfdm/ui/lib/utils'
+import { kpiCols } from './kpi-cols'
 
 export interface QuickActionItem {
   id: string
@@ -29,16 +30,6 @@ interface QuickActionGridProps {
 }
 
 const DEFAULT_ICON_CLASS = 'text-muted-foreground [&_svg]:text-current'
-
-function kpiCols(count: number): string {
-  if (count <= 1) return 'grid-cols-1'
-  if (count === 2) return 'grid-cols-1 @xl:grid-cols-2'
-  if (count === 3) return 'grid-cols-1 @3xl:grid-cols-3'
-  if (count === 4) return 'grid-cols-1 @3xl:grid-cols-2 @6xl:grid-cols-4'
-  if (count === 5) return 'grid-cols-2 @3xl:grid-cols-3 xl:grid-cols-5'
-  if (count === 6) return 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-6'
-  return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
-}
 
 function QuickActionBody({ action }: { action: QuickActionItem }) {
   return (

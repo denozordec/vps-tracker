@@ -16,7 +16,7 @@ import {
   FilterToggleChip,
   type FilterChip,
 } from '@/components/list-filters-bar'
-import type { DataGridColumnVisibilityOption } from '@/components/data-grid-card'
+import type { DataGridColumnVisibilityOption } from '@/lib/data-grid-column-visibility'
 import type { VisibilityState } from '@tanstack/react-table'
 
 import {

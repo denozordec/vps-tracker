@@ -12,11 +12,11 @@ import { toast } from 'sonner'
 
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
-import { SectionCards } from '@/components/section-cards'
+import { KpiStatGrid } from '@/components/reui-kit'
 import { ProjectFiltersToolbar } from '@/components/project-filters-toolbar'
 import {
   applyProjectFilters,
@@ -243,7 +243,7 @@ function ProjectsPage() {
       {() => (
         <div className="flex flex-col gap-4">
           {overview ? (
-            <SectionCards
+            <KpiStatGrid
               items={[
                 {
                   label: 'Проектов',
@@ -291,10 +291,10 @@ function ProjectsPage() {
               }
             />
           ) : (
-            <DataGridCard
+            <ResourcePage
               columns={columnDefFromDataGrid(columns)}
               data={rows}
-              rowId={(r) => r.id}
+              getRowId={(r) => r.id}
               pinLastColumn
             />
           )}

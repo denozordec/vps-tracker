@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { Button } from '@cfdm/ui/components/button'
 import { AnalyticsPage } from '@/components/analytics-page'
-import { SectionCards } from '@/components/section-cards'
+import { KpiStatGrid } from '@/components/reui-kit'
 import { EmptyState } from '@/components/empty-state'
 import {
   ChartsGrid,
@@ -181,7 +181,7 @@ function ReportsPage() {
               shownVps={filteredVps.length}
               totalVps={snap.vps.length}
             />
-            <SectionCards
+            <KpiStatGrid
               items={[
                 {
                   label: 'Расход/мес',

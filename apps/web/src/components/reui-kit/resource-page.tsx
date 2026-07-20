@@ -40,6 +40,10 @@ import {
 } from '@/components/reui/alert'
 import { EmptyState } from '@/components/empty-state'
 import { applyFiltersToData } from './filter-utils'
+import {
+  FrameDataGrid,
+  type FrameDataGridProps,
+} from './frame-data-grid'
 
 export interface ResourcePageTab {
   id: string
@@ -47,21 +51,42 @@ export interface ResourcePageTab {
   count?: number
 }
 
-export interface ResourcePageProps<T extends object> {
-  title: string
+type SimpleGridPassthrough<T extends object> = Pick<
+  FrameDataGridProps<T>,
+  | 'onRowClick'
+  | 'pagination'
+  | 'footerContent'
+  | 'dense'
+  | 'initialSorting'
+  | 'virtualization'
+  | 'height'
+  | 'onRowSelectionChange'
+  | 'enableColumnVisibility'
+  | 'columnVisibility'
+  | 'onColumnVisibilityChange'
+  | 'columnVisibilityTrigger'
+  | 'columnVisibilityStorageKey'
+  | 'initialColumnVisibility'
+  | 'className'
+>
+
+export interface ResourcePageProps<T extends object> extends SimpleGridPassthrough<T> {
+  /** Optional when hideHeader / embedded under PageHeader. */
+  title?: string
   description?: string
   tabs?: ResourcePageTab[]
   activeTab?: string
   onTabChange?: (tabId: string) => void
   tabFilter?: (item: T, tabId: string) => boolean
-  filterFields: FilterFieldConfig[]
-  filters: Filter[]
-  onFiltersChange: (filters: Filter[]) => void
+  /** Empty / omit → simple Frame grid (no ReUI Filters). Preview: data-grid-filtering-2 */
+  filterFields?: FilterFieldConfig[]
+  filters?: Filter[]
+  onFiltersChange?: (filters: Filter[]) => void
   onClearFilters?: () => void
-  getFilterFieldValue: (item: T, field: string) => unknown
+  getFilterFieldValue?: (item: T, field: string) => unknown
   columns: ColumnDef<T, unknown>[]
   data: T[]
-  getRowId: (row: T) => string
+  getRowId: (row: T, index?: number) => string
   isLoading?: boolean
   isError?: boolean
   error?: Error | null
@@ -77,6 +102,13 @@ export interface ResourcePageProps<T extends object> {
   }) => ReactNode
   toolbarExtra?: ReactNode
   hideHeader?: boolean
+  pinLastColumn?: boolean
+  /** FrameDataGrid aliases when used as simple list. */
+  emptyTitle?: string
+  emptyDescription?: string
+  emptyAction?: ReactNode
+  /** Alias for primaryAction (FrameDataGrid `actions`). */
+  actions?: ReactNode
 }
 
 function ResourcePageSkeleton() {
@@ -98,18 +130,35 @@ function ResourcePageSkeleton() {
   )
 }
 
-export function ResourcePage<T extends object>({
-  title,
+function ResourceLoadError({
+  error,
+  onRetry,
+}: {
+  error?: Error | null
+  onRetry?: () => void
+}) {
+  return (
+    <Alert variant="destructive">
+      <CircleAlertIcon />
+      <AlertTitle>Ошибка загрузки</AlertTitle>
+      <AlertDescription className="flex flex-col gap-2">
+        <span>{error?.message ?? 'Не удалось загрузить данные'}</span>
+        {onRetry ? (
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+            Повторить
+          </Button>
+        ) : null}
+      </AlertDescription>
+    </Alert>
+  )
+}
+
+const noopFiltersChange = (_filters: Filter[]) => {}
+const defaultGetFilterFieldValue = (_item: unknown, _field: string) => undefined
+
+function ResourcePageSimple<T extends object>({
+  title = '',
   description,
-  tabs,
-  activeTab: controlledTab,
-  onTabChange,
-  tabFilter,
-  filterFields,
-  filters,
-  onFiltersChange,
-  onClearFilters,
-  getFilterFieldValue,
   columns,
   data,
   getRowId,
@@ -118,6 +167,101 @@ export function ResourcePage<T extends object>({
   error = null,
   onRetry,
   primaryAction,
+  actions,
+  emptyState,
+  emptyTitle,
+  emptyDescription,
+  emptyAction,
+  pageSize = 10,
+  enableRowSelection = false,
+  toolbarExtra,
+  hideHeader = false,
+  pinLastColumn = false,
+  onRowClick,
+  pagination,
+  footerContent,
+  dense,
+  initialSorting,
+  virtualization,
+  height,
+  onRowSelectionChange,
+  enableColumnVisibility,
+  columnVisibility,
+  onColumnVisibilityChange,
+  columnVisibilityTrigger,
+  columnVisibilityStorageKey,
+  initialColumnVisibility,
+  className,
+}: ResourcePageProps<T>) {
+  if (isLoading) return <ResourcePageSkeleton />
+  if (isError) return <ResourceLoadError error={error} onRetry={onRetry} />
+
+  const headerActions = primaryAction ?? actions
+  const resolvedEmpty = emptyState ?? (
+    emptyTitle || emptyDescription || emptyAction
+      ? { title: emptyTitle ?? 'Нет записей', description: emptyDescription, action: emptyAction }
+      : undefined
+  )
+
+  return (
+    <div className="w-full">
+      {toolbarExtra ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">{toolbarExtra}</div>
+      ) : null}
+      <FrameDataGrid
+        title={hideHeader ? undefined : title || undefined}
+        description={hideHeader ? undefined : description}
+        actions={hideHeader ? undefined : headerActions}
+        columns={columns}
+        data={data}
+        rowId={getRowId}
+        emptyTitle={resolvedEmpty?.title}
+        emptyDescription={resolvedEmpty?.description}
+        emptyAction={resolvedEmpty?.action}
+        pinLastColumn={pinLastColumn}
+        pageSize={pageSize}
+        enableRowSelection={enableRowSelection}
+        onRowClick={onRowClick}
+        pagination={pagination}
+        footerContent={footerContent}
+        dense={dense}
+        initialSorting={initialSorting}
+        virtualization={virtualization}
+        height={height}
+        onRowSelectionChange={onRowSelectionChange}
+        enableColumnVisibility={enableColumnVisibility}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={onColumnVisibilityChange}
+        columnVisibilityTrigger={columnVisibilityTrigger}
+        columnVisibilityStorageKey={columnVisibilityStorageKey}
+        initialColumnVisibility={initialColumnVisibility}
+        className={className}
+      />
+    </div>
+  )
+}
+
+function ResourcePageFiltered<T extends object>({
+  title = '',
+  description,
+  tabs,
+  activeTab: controlledTab,
+  onTabChange,
+  tabFilter,
+  filterFields = [],
+  filters = [],
+  onFiltersChange = noopFiltersChange,
+  onClearFilters,
+  getFilterFieldValue = defaultGetFilterFieldValue as (item: T, field: string) => unknown,
+  columns,
+  data,
+  getRowId,
+  isLoading = false,
+  isError = false,
+  error = null,
+  onRetry,
+  primaryAction,
+  actions,
   emptyState,
   pageSize = 10,
   enableRowSelection = false,
@@ -125,8 +269,10 @@ export function ResourcePage<T extends object>({
   toolbarExtra,
   hideHeader = false,
 }: ResourcePageProps<T>) {
+  const headerActions = primaryAction ?? actions
   const [internalTab, setInternalTab] = useState(tabs?.[0]?.id ?? 'all')
   const activeTab = controlledTab ?? internalTab
+  const showFilters = filterFields.length > 0
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -142,16 +288,20 @@ export function ResourcePage<T extends object>({
   }, [])
 
   const filteredData = useMemo(() => {
-    let result = applyFiltersToData(data, filters, getFilterFieldValue)
+    let result = showFilters
+      ? applyFiltersToData(data, filters, getFilterFieldValue)
+      : data
     if (tabs && tabs.length > 0 && tabFilter && activeTab !== 'all') {
       result = result.filter((item) => tabFilter(item, activeTab))
     }
     return result
-  }, [data, filters, getFilterFieldValue, tabs, tabFilter, activeTab])
+  }, [data, filters, getFilterFieldValue, tabs, tabFilter, activeTab, showFilters])
 
   const tabCounts = useMemo(() => {
     if (!tabs?.length || !tabFilter) return {}
-    const base = applyFiltersToData(data, filters, getFilterFieldValue)
+    const base = showFilters
+      ? applyFiltersToData(data, filters, getFilterFieldValue)
+      : data
     const counts: Record<string, number> = {}
     for (const tab of tabs) {
       counts[tab.id] =
@@ -160,7 +310,7 @@ export function ResourcePage<T extends object>({
           : base.filter((item) => tabFilter(item, tab.id)).length
     }
     return counts
-  }, [tabs, tabFilter, data, filters, getFilterFieldValue])
+  }, [tabs, tabFilter, data, filters, getFilterFieldValue, showFilters])
 
   const selectedIds = useMemo(
     () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
@@ -176,7 +326,7 @@ export function ResourcePage<T extends object>({
   const table = useReactTable({
     data: filteredData,
     columns,
-    getRowId,
+    getRowId: (row) => getRowId(row),
     state: { sorting, rowSelection, pagination },
     enableRowSelection,
     onSortingChange: setSorting,
@@ -219,26 +369,8 @@ export function ResourcePage<T extends object>({
     [tabs, tabCounts],
   )
 
-  if (isLoading) {
-    return <ResourcePageSkeleton />
-  }
-
-  if (isError) {
-    return (
-      <Alert variant="destructive">
-        <CircleAlertIcon />
-        <AlertTitle>Ошибка загрузки</AlertTitle>
-        <AlertDescription className="flex flex-col gap-2">
-          <span>{error?.message ?? 'Не удалось загрузить данные'}</span>
-          {onRetry ? (
-            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-              Повторить
-            </Button>
-          ) : null}
-        </AlertDescription>
-      </Alert>
-    )
-  }
+  if (isLoading) return <ResourcePageSkeleton />
+  if (isError) return <ResourceLoadError error={error} onRetry={onRetry} />
 
   if (data.length === 0 && emptyState) {
     return (
@@ -254,121 +386,137 @@ export function ResourcePage<T extends object>({
     )
   }
 
-  const emptyMessage = 'Нет записей по выбранным фильтрам.'
-
   return (
     <div className="w-full">
-    {selectionToolbar && selectedCount > 0
-      ? selectionToolbar({
-          selectedIds,
-          selectedCount,
-          clearSelection,
-        })
-      : null}
-    <DataGrid
-      table={table}
-      recordCount={filteredData.length}
-      emptyMessage={emptyMessage}
-      tableLayout={{ dense: true }}
-    >
-      <Frame dense variant="default" spacing="sm" className="w-full">
-        {!hideHeader ? (
-          <FrameHeader className="flex-row items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-px">
-              <FrameTitle className="text-balance">{title}</FrameTitle>
-              {description ? (
-                <FrameDescription className="flex flex-wrap items-center gap-1.5 text-xs text-pretty">
-                  <span>{description}</span>
-                  <span
-                    className="bg-input size-1 shrink-0 rounded-full"
-                    aria-hidden="true"
-                  />
-                  <span className="tabular-nums">
-                    {filteredData.length} записей
-                  </span>
-                  {selectedCount > 0 ? (
-                    <>
-                      <span
-                        className="bg-input size-1 shrink-0 rounded-full"
-                        aria-hidden="true"
-                      />
-                      <span>{selectedCount} выбрано</span>
-                    </>
-                  ) : null}
-                </FrameDescription>
+      {selectionToolbar && selectedCount > 0
+        ? selectionToolbar({
+            selectedIds,
+            selectedCount,
+            clearSelection,
+          })
+        : null}
+      <DataGrid
+        table={table}
+        recordCount={filteredData.length}
+        emptyMessage="Нет записей по выбранным фильтрам."
+        tableLayout={{ dense: true }}
+      >
+        <Frame dense variant="default" spacing="sm" className="w-full">
+          {!hideHeader ? (
+            <FrameHeader className="flex-row items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-px">
+                <FrameTitle className="text-balance">{title}</FrameTitle>
+                {description ? (
+                  <FrameDescription className="flex flex-wrap items-center gap-1.5 text-xs text-pretty">
+                    <span>{description}</span>
+                    <span
+                      className="bg-input size-1 shrink-0 rounded-full"
+                      aria-hidden="true"
+                    />
+                    <span className="tabular-nums">
+                      {filteredData.length} записей
+                    </span>
+                    {selectedCount > 0 ? (
+                      <>
+                        <span
+                          className="bg-input size-1 shrink-0 rounded-full"
+                          aria-hidden="true"
+                        />
+                        <span>{selectedCount} выбрано</span>
+                      </>
+                    ) : null}
+                  </FrameDescription>
+                ) : null}
+              </div>
+              {headerActions ? (
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  {headerActions}
+                </div>
               ) : null}
-            </div>
-            {primaryAction ? (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                {primaryAction}
-              </div>
-            ) : null}
-          </FrameHeader>
-        ) : null}
-
-        <FramePanel className="p-0 shadow-none!">
-          {countedTabs.length > 0 ? (
-            <>
-              <div className="px-(--frame-panel-header-px) pt-(--frame-panel-header-py)">
-                <CountedLineTabs
-                  tabs={countedTabs}
-                  value={activeTab}
-                  onValueChange={handleTabChange}
-                />
-              </div>
-              <Separator />
-            </>
+            </FrameHeader>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 px-(--frame-panel-header-px) py-(--frame-panel-header-py)">
-            <Filters
-              filters={filters}
-              fields={filterFields}
-              onChange={handleFiltersChange}
-              size="default"
-              trigger={
-                <Button type="button" variant="outline" aria-label="Фильтры">
-                  <FilterIcon className="size-4" aria-hidden="true" />
-                  Фильтры
-                </Button>
-              }
-            />
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {toolbarExtra}
-              {selectedCount > 0 ? (
-                <Badge size="sm" variant="secondary">
-                  {selectedCount} выбрано
-                </Badge>
-              ) : null}
-              {onClearFilters ? (
-                <Button type="button" variant="outline" onClick={handleClear}>
-                  <FilterXIcon className="size-4" aria-hidden="true" />
-                  Сбросить
-                </Button>
-              ) : null}
+          <FramePanel className="p-0 shadow-none!">
+            {countedTabs.length > 0 ? (
+              <>
+                <div className="px-(--frame-panel-header-px) pt-(--frame-panel-header-py)">
+                  <CountedLineTabs
+                    tabs={countedTabs}
+                    value={activeTab}
+                    onValueChange={handleTabChange}
+                  />
+                </div>
+                <Separator />
+              </>
+            ) : null}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 px-(--frame-panel-header-px) py-(--frame-panel-header-py)">
+              {showFilters ? (
+                <Filters
+                  filters={filters}
+                  fields={filterFields}
+                  onChange={handleFiltersChange}
+                  size="default"
+                  trigger={
+                    <Button type="button" variant="outline" aria-label="Фильтры">
+                      <FilterIcon className="size-4" aria-hidden="true" />
+                      Фильтры
+                    </Button>
+                  }
+                />
+              ) : (
+                <div />
+              )}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {toolbarExtra}
+                {selectedCount > 0 ? (
+                  <Badge size="sm" variant="secondary">
+                    {selectedCount} выбрано
+                  </Badge>
+                ) : null}
+                {showFilters && onClearFilters ? (
+                  <Button type="button" variant="outline" onClick={handleClear}>
+                    <FilterXIcon className="size-4" aria-hidden="true" />
+                    Сбросить
+                  </Button>
+                ) : null}
+              </div>
             </div>
-          </div>
 
-          <Separator />
+            {(showFilters || toolbarExtra || selectedCount > 0) ? <Separator /> : null}
 
-          <DataGridScrollArea>
-            <DataGridTable />
-          </DataGridScrollArea>
+            <DataGridScrollArea>
+              <DataGridTable />
+            </DataGridScrollArea>
 
-          <Separator />
+            <Separator />
 
-          <FrameFooter>
-            <DataGridPagination
-              sizes={[5, 10, 20, 50]}
-              rowsPerPageLabel="Строк на странице"
-              info="{from} - {to} of {count}"
-              previousPageLabel="Предыдущая"
-              nextPageLabel="Следующая"
-            />
-          </FrameFooter>
-        </FramePanel>
-      </Frame>
-    </DataGrid>
+            <FrameFooter>
+              <DataGridPagination
+                sizes={[5, 10, 20, 50]}
+                rowsPerPageLabel="Строк на странице"
+                info="{from} - {to} of {count}"
+                previousPageLabel="Предыдущая"
+                nextPageLabel="Следующая"
+              />
+            </FrameFooter>
+          </FramePanel>
+        </Frame>
+      </DataGrid>
     </div>
   )
+}
+
+/**
+ * Ops list page: Frame + DataGrid (+ optional ReUI Filters / tabs).
+ * Without filterFields/tabs → simple CRUD grid (FrameDataGrid under the hood).
+ * Preview: https://reui.io/preview/base/data-grid-filtering-2
+ */
+export function ResourcePage<T extends object>(props: ResourcePageProps<T>) {
+  const showFilters = (props.filterFields?.length ?? 0) > 0
+  const hasTabs = (props.tabs?.length ?? 0) > 0
+  if (!showFilters && !hasTabs) {
+    return <ResourcePageSimple {...props} />
+  }
+  return <ResourcePageFiltered {...props} />
 }

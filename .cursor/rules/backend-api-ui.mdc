@@ -24,7 +24,7 @@ Fastify backend: `apps/api/`. Контракты — `@cfdm/shared` (Zod). Front
 
 | API-данные | UI |
 |------------|-----|
-| Список | `DataGridCard` (сложные) / `Table` (простые) |
+| Список | `ResourcePage` (Frame + DataGrid; Filters optional) |
 | Создание | `Card` + `FieldGroup` + RHF |
 | Статус | `Badge` variants |
 | Ошибка | `sonner` `toast.error` |

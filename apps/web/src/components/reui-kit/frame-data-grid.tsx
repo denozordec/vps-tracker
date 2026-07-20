@@ -26,8 +26,8 @@ import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
 import { DataGridColumnHeader } from '@/components/reui/data-grid/data-grid-column-header'
 import { DataGridColumnVisibility } from '@/components/reui/data-grid/data-grid-column-visibility'
-import { EmptyState } from './empty-state'
-import type { DataGridColumn } from './data-grid-types'
+import { EmptyState } from '@/components/empty-state'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import {
   Frame,
   FrameDescription,
@@ -81,7 +81,7 @@ export function dataGridColumnVisibilityOptions<T>(
     }))
 }
 
-export interface DataGridCardProps<TData extends object> {
+export interface FrameDataGridProps<TData extends object> {
   title?: ReactNode
   description?: ReactNode
   actions?: ReactNode
@@ -161,7 +161,7 @@ function DataGridPaginationBar() {
   )
 }
 
-function DataGridCardBody<TData extends object>({
+function FrameDataGridBody<TData extends object>({
   table,
   data,
   emptyTitle,
@@ -223,7 +223,7 @@ function DataGridCardBody<TData extends object>({
   )
 }
 
-export function DataGridCard<TData extends object>({
+export function FrameDataGrid<TData extends object>({
   title,
   description,
   actions,
@@ -251,7 +251,7 @@ export function DataGridCard<TData extends object>({
   columnVisibilityStorageKey,
   initialColumnVisibility,
   className,
-}: DataGridCardProps<TData>) {
+}: FrameDataGridProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(() => {
@@ -378,7 +378,7 @@ export function DataGridCard<TData extends object>({
   }
 
   const gridBody = (
-    <DataGridCardBody
+    <FrameDataGridBody
       table={table}
       data={data}
       emptyTitle={emptyTitle}

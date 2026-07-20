@@ -1,207 +1,102 @@
 ---
-description: Frontend — ТОЛЬКО shadcn/ui docs (Components, Blocks, Installation); best practices, CLI-first
+description: Frontend — shadcn primitives + ReUI PRO blocks; CLI-first; kit patterns
 globs: apps/web/**/*,packages/ui/**/*
 alwaysApply: false
 ---
 
-# Frontend — shadcn/ui (обязательно)
+# Frontend — shadcn/ui + ReUI PRO
 
-**Источник истины — MCP shadcn + официальная документация.** Не выдумывать UI, не писать кастомный CSS, не обходить MCP и CLI.
+**Источник истины:** MCP **`user-reui`** (pages/blocks/KPI/settings) + MCP `plugin-shadcn-shadcn` (primitives) + docs. Не выдумывать UI.
 
-Monorepo layout — [`frontend-monorepo.mdc`](frontend-monorepo.mdc). MCP workflow — [`shadcn-mcp.mdc`](shadcn-mcp.mdc), ReUI — [`reui-mcp.mdc`](reui-mcp.mdc). UI patterns — [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc).
+Monorepo — [`frontend-monorepo.mdc`](frontend-monorepo.mdc). ReUI — [`reui-mcp.mdc`](reui-mcp.mdc). Patterns — [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc).
 
 | Документ | URL |
 |----------|-----|
-| **Components (primary catalog)** | https://ui.shadcn.com/docs/components |
-| **Blocks** | https://ui.shadcn.com/blocks |
+| **shadcn Components** | https://ui.shadcn.com/docs/components |
+| **ReUI Blocks** | https://reui.io/blocks |
+| **ReUI llms.txt** | https://reui.io/llms.txt |
+| **ReUI Settings** | https://reui.io/blocks/application/settings |
 | **Installation** | https://ui.shadcn.com/docs/installation |
 | **Monorepo** | https://ui.shadcn.com/docs/monorepo |
-| **Theming** | https://ui.shadcn.com/docs/theming |
-| **Dark Mode** | https://ui.shadcn.com/docs/dark-mode |
-| **ReUI (enterprise)** | https://reui.io/llms.txt |
-| **ReUI Get Started** | https://reui.io/docs/get-started |
-| **ReUI Styling** | https://reui.io/docs/styling |
 | **Forms (RHF)** | https://ui.shadcn.com/docs/forms/react-hook-form |
 
 ## Шаг 0 — перед любым UI-кодом
 
-0. **Codegraph** `codegraph_explore` — найти существующие реализации
-1. **MCP `plugin-shadcn-shadcn`:** `search_items_in_registries` → `get_item_examples_from_registries` → `get_add_command_for_items` ([`shadcn-mcp.mdc`](shadcn-mcp.mdc))
-2. Открыть **Components** или **Blocks** — найти готовое решение
-3. `cd apps/web && pnpm dlx shadcn@latest docs <component>` — сверить API с [Components](https://ui.shadcn.com/docs/components)
-4. Сверить MCP examples ↔ docs API — только потом писать код
-5. `cd apps/web && pnpm dlx shadcn@latest search "@shadcn/<query>"` или `"@reui/<query>"` — если MCP не дал результат
-6. Enterprise-компоненты (data grid, filters) → [`reui-mcp.mdc`](reui-mcp.mdc) + [llms.txt](https://reui.io/llms.txt)
+0. Найти существующие `reui-kit/*` / shared
+1. **Pages / KPI / settings / enterprise** → MCP `user-reui` (`search` → `get_block` / `compose_page`) + cite `previewUrl`
+2. **Primitives** → MCP `plugin-shadcn-shadcn` + `pnpm dlx shadcn@latest docs <component>`
+3. CLI add из `apps/web` → adapt
 
-**Новая страница** → сначала [Blocks](https://ui.shadcn.com/blocks), потом `pnpm dlx shadcn@latest add <block-id>`.
+**Новая страница** → сначала ReUI PRO `compose_page` / blocks ([reui.io/blocks](https://reui.io/blocks)), не ui.shadcn.com/blocks как primary.
 
-## Docs workflow
-
-1. MCP `plugin-shadcn-shadcn` — search → examples → add command (`@shadcn` и/или `@reui`)
-2. `@shadcn/*` → `pnpm dlx shadcn@latest docs <component>`; `@reui/*` → ReUI docs + llms.txt
-3. ReUI enterprise → [`reui-mcp.mdc`](reui-mcp.mdc)
-4. Context7 — только TanStack / Recharts
-
-## Shared components (обязательно)
+## Shared / kit (обязательно)
 
 | Component | Файл |
 |-----------|------|
 | `PageShell` | `page-shell.tsx` |
-| `PageHeader` | `page-header.tsx` |
+| `ResourcePage` | `reui-kit/resource-page.tsx` |
+| `OpsDashboard` / `KpiStatGrid` / `QuickActionGrid` | `reui-kit/ops-dashboard.tsx`, `kpi-stat-grid.tsx`, `quick-action-grid.tsx` |
+| `KanbanBoard` | `reui-kit/kanban-board.tsx` |
+| `DetailPanel` | `reui-kit/detail-panel.tsx` |
+| `SettingsShell` | `reui-kit/settings-shell.tsx` |
 | `EmptyState` | `empty-state.tsx` |
 | `QueryState` | `query-state.tsx` |
 | `ConfirmDialog` | `confirm-dialog.tsx` |
-| `DataGridCard` | `data-grid-card.tsx` |
-| `SectionCards` | `section-cards.tsx` |
 | `StatusBadge` | `status-badge.tsx` |
 | `FormSheet` | `form-sheet.tsx` |
 | `FormField` | `form-field.tsx` |
 | `LoadingButton` | `loading-button.tsx` |
-| `SectionCardsSkeleton` | `section-cards-skeleton.tsx` |
-| `TableSkeleton` | `table-skeleton.tsx` |
+| `SettingRow` | `setting-row.tsx` |
+
+**Не использовать как эталон:** устаревшие `PageHeader` / `SectionCards` / `DataGridCard` / `TableCard` (если удалены или мёртвы).
 
 **Overlay:** Sheet — forms; AlertDialog — destructive confirm.
 
-## Шаг 1 — CLI (обязательно)
+## Шаг 1 — CLI
 
 ```bash
 cd apps/web
-pnpm dlx shadcn@latest add table select badge card field input button ...
-pnpm dlx shadcn@latest add sidebar-07    # layout
-pnpm dlx shadcn@latest add dashboard-01 # dashboard
-pnpm dlx shadcn@latest add login-03     # auth
-pnpm dlx shadcn@latest add @reui/data-grid   # ReUI enterprise (→ apps/web/src/components/reui/)
-pnpm dlx shadcn@latest add @reui/filters
-pnpm dlx shadcn@latest apply b2fA --only theme -y   # тема — ТОЛЬКО так
+pnpm dlx shadcn@latest add button field input ...
+pnpm dlx shadcn@latest add @reui/frame @reui/data-grid @reui/filters
+pnpm dlx shadcn@latest add @reui/stats-12 @reui/card-35 @reui/settings-16 @reui/auth-13
+pnpm dlx shadcn@latest apply b2fA --only theme -y
 ```
 
-- ReUI: `add @reui/<name>` → `apps/web/src/components/reui/` (см. [`reui-mcp.mdc`](reui-mcp.mdc))
-- Копипаст с сайта **без** CLI — запрещено
-- `packages/ui/src/components/*` — только registry; domain-логика → `apps/web/src/components/<name>.tsx`
+## Приоритет композиции
 
-## Шаг 2 — композиция (best practices)
+1. `@cfdm/ui/components/*` (primitives)
+2. ReUI PRO block → adapt (`blocks/` reference + kit)
+3. `reui-kit/*` + shared
+4. Domain-обёртка
 
-### Приоритет
-
-1. Установленный `@cfdm/ui/components/*`
-2. Block из registry (адаптация под TanStack Router)
-3. ReUI `@/components/reui/*` через shared: `DataGridCard`, `VpsFiltersToolbar`, `AutoCompleteInput` ([`reui-mcp.mdc`](reui-mcp.mdc))
-4. Shared проекта: `PageShell`, `PageHeader`, `EmptyState`, `QueryState`, `ConfirmDialog`, `SectionCards`, `StatusBadge`
-5. Domain-обёртка — последний уровень кастомизации
-
-### Запрещено в apps/web
+## Запрещено
 
 | ❌ | ✅ |
-|----|---|
-| `<table>`, `<select>`, `<hr>` | `Table`, `Select`, `Separator` из [Components](https://ui.shadcn.com/docs/components) |
-| `bg-emerald-*`, `text-blue-500`, hex в className | `bg-primary`, `text-muted-foreground`, `Badge variant` |
-| Ручной `globals.css`, `.css` модули | CLI `apply b2fA --only theme` |
-| `space-y-*` / `space-x-*` | `flex` + `gap-*` |
-| `w-10 h-10` | `size-10` |
-| `className` для цветов Button/Badge | `variant`, `size` |
-| `useState` для полей формы | `FieldGroup` + RHF + Zod |
-| Styled `<Link>` | `Button variant="link"` + `render={<Link />}` |
-| `inline style={{}}` в routes | layout Tailwind |
-| `animate-pulse` div | `Skeleton` |
-| кастомный toast | `sonner` → `toast()` |
+|----|-----|
+| `<table>`, raw select | DataGrid / `Select` |
+| `bg-emerald-*` | semantic / ReUI `variant` |
+| Card как ops-shell | ReUI `Frame` |
+| Hand-roll KPI | `KpiStatGrid` / [stats-12](https://reui.io/preview/base/stats-12) |
+| `space-y-*` | `flex` + `gap-*` |
 | `@/components/ui/*` | `@cfdm/ui/components/*` |
-
-### Устаревшие библиотеки (миграция с Tabler)
-
-| ❌ удалить | ✅ заменить на |
-|-----------|----------------|
-| `@tabler/core` (CSS-фреймворк) | Tailwind v4 + shadcn tokens |
-| `import '@tabler/core/dist/css/tabler.min.css'` в `main.tsx` | `import '@cfdm/ui/globals.css'` |
-| `@tabler/icons-react` (`Icon*`) | `lucide-react` (`<PlusIcon />` и т.п.) |
-| `chart.js` | `recharts` через shadcn `Chart`/`ChartContainer` |
-| `react-router-dom` (`<BrowserRouter>`, `<Routes>`, `useNavigate`) | TanStack Router (`createFileRoute`, `<Link>`, `useNavigate`) |
-| Bootstrap-классы Tabler (`page`, `navbar-vertical`, `nav-link`, `container-tight`, `spinner-border`, `d-lg-none`) | shadcn `AppShell` (sidebar-07), `Button`, `Skeleton` |
-| Prop-drilling `db` + `actions` из `App.jsx` | `useQuery`/`useMutation` + key factories в `queries/` |
-| `useState` + `loadDataSet()` в корне | `QueryClient` + route loaders (`ensureQueryData`) |
-
-### Формы
-
-По https://ui.shadcn.com/docs/forms/react-hook-form:
-
-```tsx
-<FieldGroup>
-  <Field data-invalid={!!errors.name}>
-    <FieldLabel htmlFor="name">Имя</FieldLabel>
-    <Input id="name" aria-invalid={!!errors.name} {...register('name')} />
-  </Field>
-</FieldGroup>
-```
-
-### Card
-
-`CardHeader` / `CardTitle` / `CardDescription` / `CardContent` / `CardFooter` — полная композиция из docs.
-
-### Таблицы
-
-Простая таблица → shadcn `Table` из docs.
-
-Сложные data-списки (сортировка, пагинация, virtual, column visibility) → **`DataGridCard`** (`@reui/data-grid` под капотом), не shadcn Data Table и не raw `<table>`.
-
-### Графики
-
-`Chart` + `ChartContainer` + `chartConfig` с `var(--chart-1)` — не raw recharts без обёртки.
-
-### Иконки в Button
-
-```tsx
-<Button>
-  <PlusIcon data-icon="inline-start" />
-  Создать
-</Button>
-```
-
-Без `size-4` на иконке внутри shadcn-компонента.
-
-## Стек (не shadcn, но обязателен)
-
-TanStack Router + Query — [`vite-tanstack-frontend.mdc`](vite-tanstack-frontend.mdc).
-
-- Preset: **base-nova** + **neutral** — [`apps/web/components.json`](apps/web/components.json), [`packages/ui/components.json`](packages/ui/components.json)
-- `@base-ui/react` → `render` prop (не Radix `asChild`)
-- **Не Next.js** — нет Server Components, `'use client'`
 
 ## Эталоны проекта
 
-| Зона | Файл | Block |
-|------|------|-------|
-| Shell | `apps/web/src/components/layout/app-shell.tsx` | [sidebar-07](https://ui.shadcn.com/blocks) |
-| Login | `apps/web/src/routes/login.tsx` | [login-03](https://ui.shadcn.com/blocks) |
-| Dashboard | `apps/web/src/routes/_auth/index.tsx` | [dashboard-01](https://ui.shadcn.com/blocks) |
-| CRUD | `routes/_auth/vps.tsx`, `payments.tsx` и др. | `DataGridCard` + `FormSheet` |
+| Зона | Файл | Preview |
+|------|------|---------|
+| Shell | `layout/app-shell.tsx` | [app-shell-12](https://reui.io/preview/base/app-shell-12) |
+| Login | `routes/login.tsx` | [auth-13](https://reui.io/preview/base/auth-13) |
+| Dashboard | `routes/_auth/index.tsx` | [stats-12](https://reui.io/preview/base/stats-12) / dashboard-1 |
+| Lists | `ResourcePage` | [data-grid-filtering-2](https://reui.io/preview/base/data-grid-filtering-2) |
+| Settings | `settings/integrations.tsx` | [settings-16](https://reui.io/preview/base/settings-16) |
 
-## Структура файлов
+## Чеклист
 
-```
-apps/web/src/
-  components/        ← domain + layout + shared (blocks)
-    reui/            ← ReUI CLI output (@reui/*) — не в packages/ui
-  routes/            ← страницы (композиция @cfdm/ui + ReUI, без raw HTML)
-  queries/           ← queryOptions (не inline в routes)
-  lib/schemas.ts     ← Zod для форм
-
-packages/ui/src/
-  components/        ← только CLI (не трогать под кейс)
-  hooks/             ← registry hooks (use-mobile)
-  lib/utils.ts       ← cn()
-  styles/globals.css ← только output shadcn CLI
-```
-
-## Чеклист перед завершением задачи
-
-- [ ] MCP shadcn: search + examples (`@shadcn` и/или `@reui`)
-- [ ] Enterprise-компоненты — [`reui-mcp.mdc`](reui-mcp.mdc) + llms.txt
-- [ ] Решение есть в shadcn docs/blocks или ReUI catalog
-- [ ] Компоненты добавлены через `pnpm dlx shadcn@latest add` из `apps/web`
-- [ ] Нет кастомного CSS и raw HTML-примитивов
-- [ ] Semantic tokens / ReUI `variant` вместо raw Tailwind-цветов
-- [ ] shadcn → `@cfdm/ui`; ReUI → `@/components/reui`
-- [ ] `pnpm --filter web build` без ошибок
+- [ ] `user-reui` + preview/docs для зоны
+- [ ] Frame surface
+- [ ] CLI add при новых items
+- [ ] `pnpm --filter web build`
 
 ## Язык
 
-Ответы пользователю — русский. Commits — [`commit-messages-ru.mdc`](commit-messages-ru.mdc).
+Ответы — русский. Commits — [`commit-messages-ru.mdc`](commit-messages-ru.mdc).

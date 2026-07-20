@@ -4,7 +4,7 @@ import { PageShell } from './page-shell'
 import { PageHeader } from './page-header'
 import { QueryState } from './query-state'
 import { EmptyState } from './empty-state'
-import { SectionCardsSkeleton } from './skeletons'
+import { KpiStatGridSkeleton } from './skeletons'
 
 interface AnalyticsPageProps<T> {
   title: string
@@ -49,7 +49,7 @@ export function AnalyticsPage<T>({
         isError={isError}
         error={error}
         onRetry={onRetry}
-        skeleton={skeleton ?? <SectionCardsSkeleton count={3} />}
+        skeleton={skeleton ?? <KpiStatGridSkeleton count={3} />}
       >
         {(snap) =>
           analyticsEmpty ? (

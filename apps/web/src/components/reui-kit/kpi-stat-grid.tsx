@@ -1,40 +1,44 @@
-import type { ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
+
 import { Frame, FramePanel } from '@/components/reui/frame'
 import { Badge } from '@/components/reui/badge'
-import { Item, ItemMedia } from '@cfdm/ui/components/item'
 import { cn } from '@cfdm/ui/lib/utils'
+import { kpiCols } from './kpi-cols'
+import { Item, ItemMedia } from '@cfdm/ui/components/item'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
 
 export type KpiStatVariant = 'default' | 'warning' | 'destructive'
 
-export interface KpiStatCard {
-  id: string
-  label: string
-  value: string | number
-  hint?: string
+/**
+ * KPI tile data — horizontal compact hybrid (icon left + label/Badge + value).
+ * @see https://reui.io/preview/base/stats-12
+ */
+export type KpiStatItem = {
+  id?: string
+  label: ReactNode
+  value: ReactNode
+  hint?: ReactNode
   to?: string
   search?: Record<string, unknown>
   onSelect?: () => void
+  onClick?: () => void
   selected?: boolean
+  active?: boolean
   icon?: ReactNode
   iconClassName?: string
-  /** Semantic color for the primary value */
   variant?: KpiStatVariant
   footer?: ReactNode
 }
 
-/** @deprecated Use KpiStatCard */
-export type OpsKpiCard = KpiStatCard
+/** CFDM-compatible card shape (id required). */
+export type KpiStatCardData = KpiStatItem & { id: string }
 
-interface KpiStatGridProps {
-  cards: KpiStatCard[]
-  isLoading?: boolean
-  emptyMessage?: ReactNode
-  emptyIcon?: ReactNode
-  className?: string
-  skeletonCount?: number
-}
+/** @deprecated Use KpiStatCardData */
+export type OpsKpiCard = KpiStatCardData
+
+/** @deprecated Use KpiStatCardData — type alias for CFDM kit parity */
+export type KpiStatCard = KpiStatCardData
 
 const DEFAULT_ICON_CLASS = 'text-muted-foreground [&_svg]:text-current'
 
@@ -44,103 +48,146 @@ const VALUE_VARIANT_CLASS: Record<KpiStatVariant, string> = {
   destructive: 'text-destructive',
 }
 
-function kpiCols(count: number): string {
-  if (count <= 1) return 'grid-cols-1'
-  if (count === 2) return 'grid-cols-1 @xl:grid-cols-2'
-  if (count === 3) return 'grid-cols-1 @3xl:grid-cols-3'
-  if (count === 4) return 'grid-cols-1 @3xl:grid-cols-2 @6xl:grid-cols-4'
-  if (count === 5) return 'grid-cols-2 @3xl:grid-cols-3 xl:grid-cols-5'
-  if (count === 6) return 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-6'
-  return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+function handleCardKeyDown(onActivate: () => void, event: KeyboardEvent<HTMLDivElement>) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    onActivate()
+  }
 }
 
-function resolveFooter(card: KpiStatCard): ReactNode {
-  if (card.footer) return card.footer
-  if (card.hint) {
+function resolveActivate(item: KpiStatItem): (() => void) | undefined {
+  return item.onClick ?? item.onSelect
+}
+
+function isSelected(item: KpiStatItem): boolean {
+  return Boolean(item.selected ?? item.active)
+}
+
+function resolveFooter(item: KpiStatItem): ReactNode {
+  if (item.footer) return item.footer
+  if (typeof item.hint === 'string') {
     return (
       <Badge variant="outline" size="sm">
-        {card.hint}
+        {item.hint}
       </Badge>
     )
   }
+  if (item.hint) return item.hint
   return null
 }
 
-function KpiStatCardBody({ card }: { card: KpiStatCard }) {
-  const footer = resolveFooter(card)
-  const valueVariant = card.variant ?? 'default'
+function KpiStatCardBody({ item }: { item: KpiStatItem }) {
+  const footer = resolveFooter(item)
+  const valueVariant = item.variant ?? 'default'
 
   return (
     <div className="relative z-10 flex h-full items-start gap-3">
-      {card.icon ? (
+      {item.icon ? (
         <Item
           className={cn(
             'border-background bg-muted flex size-10.5 shrink-0 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-4',
-            card.iconClassName ?? DEFAULT_ICON_CLASS,
+            item.iconClassName ?? DEFAULT_ICON_CLASS,
           )}
         >
           <ItemMedia variant="icon" className="size-auto">
-            {card.icon}
+            {item.icon}
           </ItemMedia>
         </Item>
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-start justify-between gap-2">
-          <span className="text-muted-foreground text-sm font-medium">{card.label}</span>
+          <div className="text-muted-foreground text-sm font-medium">{item.label}</div>
           {footer ? <div className="shrink-0">{footer}</div> : null}
         </div>
-        <span
+        <div
           className={cn(
             'text-2xl leading-none font-bold tabular-nums',
             VALUE_VARIANT_CLASS[valueVariant],
           )}
         >
-          {card.value}
-        </span>
+          {item.value}
+        </div>
       </div>
     </div>
   )
 }
 
-function KpiStatCardItem({ card }: { card: KpiStatCard }) {
-  const interactive = Boolean(card.to || card.onSelect)
-  const panelClass = cn(
-    'relative isolate flex h-full flex-col',
-    card.selected && 'ring-primary/30 bg-muted/30 ring-1',
-    interactive &&
-      'hover:bg-muted/40 focus-within:ring-ring cursor-pointer transition-colors focus-within:ring-2',
-  )
+function panelClassName(item: KpiStatItem, className?: string) {
+  const onActivate = resolveActivate(item)
+  const clickable = Boolean(item.to || onActivate)
+  const selected = isSelected(item)
 
-  if (card.to) {
-    return (
+  return cn(
+    'relative isolate flex h-full flex-col',
+    clickable &&
+      'hover:bg-muted/40 focus-within:ring-ring cursor-pointer transition-colors focus-within:ring-2',
+    selected && 'ring-primary/30 bg-muted/30 ring-1',
+    className,
+  )
+}
+
+/** Single KPI tile — used for embedded / standalone contexts. */
+export function KpiStatCardTile({
+  item,
+  embedded = false,
+  className,
+}: {
+  item: KpiStatItem
+  embedded?: boolean
+  className?: string
+}) {
+  const onActivate = resolveActivate(item)
+  const panelClass = panelClassName(item, className)
+
+  let panel: ReactNode
+
+  if (item.to) {
+    panel = (
       <FramePanel className={panelClass}>
-        <Link to={card.to} search={card.search} className="focus-visible:outline-none">
-          <KpiStatCardBody card={card} />
+        <Link to={item.to} search={item.search} className="focus-visible:outline-none">
+          <KpiStatCardBody item={item} />
         </Link>
       </FramePanel>
     )
-  }
-
-  if (card.onSelect) {
-    return (
+  } else if (onActivate) {
+    panel = (
+      <FramePanel
+        className={panelClass}
+        onClick={onActivate}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => handleCardKeyDown(onActivate, e)}
+      >
+        <KpiStatCardBody item={item} />
+      </FramePanel>
+    )
+  } else {
+    panel = (
       <FramePanel className={panelClass}>
-        <button
-          type="button"
-          onClick={card.onSelect}
-          className="w-full text-start focus-visible:outline-none"
-        >
-          <KpiStatCardBody card={card} />
-        </button>
+        <KpiStatCardBody item={item} />
       </FramePanel>
     )
   }
 
-  return (
-    <FramePanel className={panelClass}>
-      <KpiStatCardBody card={card} />
-    </FramePanel>
-  )
+  if (embedded) {
+    return <Frame className="h-full ring-1 ring-foreground/10">{panel}</Frame>
+  }
+
+  return <Frame className="h-full">{panel}</Frame>
+}
+
+/** @deprecated Prefer KpiStatCardTile — kept for existing imports */
+export function KpiStatCard({
+  item,
+  embedded = false,
+  className,
+}: {
+  item: KpiStatItem
+  embedded?: boolean
+  className?: string
+}) {
+  return <KpiStatCardTile item={item} embedded={embedded} className={className} />
 }
 
 function KpiStatGridSkeleton({ count }: { count: number }) {
@@ -164,23 +211,78 @@ function KpiStatGridSkeleton({ count }: { count: number }) {
   )
 }
 
+interface KpiStatGridProps {
+  /** EvoBGP primary API */
+  items?: KpiStatItem[]
+  /** CFDM-compatible API */
+  cards?: KpiStatCardData[]
+  isLoading?: boolean
+  emptyMessage?: ReactNode
+  emptyIcon?: ReactNode
+  className?: string
+  skeletonCount?: number
+  /** Wrap each tile in its own Frame (analytics panels). */
+  embedded?: boolean
+  'aria-label'?: string
+}
+
+function KpiStatCardItem({ item }: { item: KpiStatItem }) {
+  const onActivate = resolveActivate(item)
+  const panelClass = panelClassName(item)
+
+  if (item.to) {
+    return (
+      <FramePanel className={panelClass}>
+        <Link to={item.to} search={item.search} className="focus-visible:outline-none">
+          <KpiStatCardBody item={item} />
+        </Link>
+      </FramePanel>
+    )
+  }
+
+  if (onActivate) {
+    return (
+      <FramePanel
+        className={panelClass}
+        onClick={onActivate}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => handleCardKeyDown(onActivate, e)}
+      >
+        <KpiStatCardBody item={item} />
+      </FramePanel>
+    )
+  }
+
+  return (
+    <FramePanel className={panelClass}>
+      <KpiStatCardBody item={item} />
+    </FramePanel>
+  )
+}
+
 /**
- * Hybrid KPI — EvoBGP visual (colored icon + Badge) + horizontal compact layout.
+ * Hybrid KPI — EvoBGP visual + horizontal compact layout (icon left).
  * Preview: https://reui.io/preview/base/stats-12
  */
 export function KpiStatGrid({
+  items,
   cards,
   isLoading = false,
   emptyMessage,
   emptyIcon,
   className,
   skeletonCount = 4,
+  embedded = false,
+  'aria-label': ariaLabel,
 }: KpiStatGridProps) {
   if (isLoading) {
     return <KpiStatGridSkeleton count={skeletonCount} />
   }
 
-  if (cards.length === 0) {
+  const list = items ?? cards ?? []
+
+  if (list.length === 0 && (emptyMessage || emptyIcon)) {
     return (
       <Frame dense spacing="sm" className={cn('w-full', className)}>
         <FramePanel className="flex items-center gap-3 p-4">
@@ -193,13 +295,31 @@ export function KpiStatGrid({
     )
   }
 
+  if (embedded) {
+    return (
+      <section aria-label={ariaLabel} className={cn('@container w-full', className)}>
+        <div className={cn('grid gap-2', kpiCols(list.length || 1))}>
+          {list.map((item, index) => (
+            <KpiStatCardTile key={kpiStatItemKey(item, index)} item={item} embedded />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <Frame className={cn('@container w-full', className)}>
-      <div className={cn('grid gap-2', kpiCols(cards.length))}>
-        {cards.map((card) => (
-          <KpiStatCardItem key={card.id} card={card} />
+    <Frame className={cn('@container w-full', className)} aria-label={ariaLabel}>
+      <div className={cn('grid gap-2', kpiCols(list.length || 1))}>
+        {list.map((item, index) => (
+          <KpiStatCardItem key={kpiStatItemKey(item, index)} item={item} />
         ))}
       </div>
     </Frame>
   )
+}
+
+export function kpiStatItemKey(item: KpiStatItem, index: number): string {
+  if (item.id) return item.id
+  if (typeof item.label === 'string') return item.label
+  return `kpi-${index}`
 }

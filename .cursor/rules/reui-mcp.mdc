@@ -1,13 +1,13 @@
 ---
-description: ReUI registry (@reui) — enterprise-компоненты, MCP workflow, зависимости, матрица выбора shadcn vs ReUI
+description: ReUI PRO (@reui) — MCP user-reui, Frame surface, kit, license, матрица выбора
 alwaysApply: true
 ---
 
-# ReUI MCP — обязательно для enterprise-компонентов
+# ReUI MCP — обязательно (PRO + free)
 
-ReUI — first-class shadcn registry. Проект: **Base UI** (`style: base-nova`), surface lock **`frame`**.
+Проект: **Base UI** (`style: base-nova`), surface lock **`frame`**.
 
-Связанные: [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`frontend-monorepo.mdc`](frontend-monorepo.mdc), [`docs/ui-design-contract.md`](../../docs/ui-design-contract.md).
+Связанные: [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`frontend-monorepo.mdc`](frontend-monorepo.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc).
 
 | Документ | URL |
 |----------|-----|
@@ -15,49 +15,68 @@ ReUI — first-class shadcn registry. Проект: **Base UI** (`style: base-no
 | **Get Started** | https://reui.io/docs/get-started |
 | **Styling** | https://reui.io/docs/styling |
 | **MCP** | https://reui.io/docs/mcp |
+| **Blocks** | https://reui.io/blocks |
+| **Settings blocks** | https://reui.io/blocks/application/settings |
 | **License** | https://reui.io/docs/license-setup |
-| **Base UI** | https://reui.io/docs/components/base/<name> |
+| **Base UI components** | https://reui.io/docs/components/base/<name> |
 
 ## Primary MCP
 
-1. **`user-reui`** — `search` / `get_block` / `compose_page` (`surface: "frame"`) — cite `previewUrl`
-2. **`plugin-shadcn-shadcn`** — primitives `@shadcn`; `@reui` вторично
+1. **`user-reui`** — `search` / `compose_page` / `get_block` / `get_component` / `get_install_command` / `validate_usage` / `get_audit_checklist`
+2. **`plugin-shadcn-shadcn`** — primitives `@shadcn`; для `@reui` — вторично
 
-## Когда использовать ReUI vs shadcn
+**Обязательно** цитировать `previewUrl` + `docsUrl` для каждой UI-зоны.
+
+## Когда ReUI vs shadcn
 
 | Задача | Registry | Импорт |
 |--------|----------|--------|
-| Button, Sheet, Field, Sidebar | `@shadcn` | `@cfdm/ui/components/*` |
-| Frame surface | `@reui` | `@/components/reui/frame` |
-| Data Grid lists | `@reui` | `reui-kit/ResourcePage` |
-| KPI | `@reui` stats-12 | `reui-kit/KpiStatGrid` |
+| Button, Sheet, Field, Sidebar, Tabs | `@shadcn` | `@cfdm/ui/components/*` |
+| PRO pages/sections (settings, stats, auth, dashboard) | `@reui` blocks | adapt → `apps/web/src/components/` / `reui-kit/` |
+| Data Grid | `@reui` | `@/components/reui/data-grid/*` → `ResourcePage` |
 | Filters | `@reui` | `@/components/reui/filters` |
-| Semantic badge | `@reui` | `@/components/reui/badge` / `StatusBadge` |
-| Number / date / autocomplete / color | `@reui` | `@/components/reui/*` |
+| Frame surface | `@reui` | `@/components/reui/frame` |
+| KPI | block [stats-12](https://reui.io/preview/base/stats-12) | `reui-kit/KpiStatGrid` (EvoBGP hybrid SoT) |
+| Quick Actions | Frame tiles sibling KPI | `reui-kit/QuickActionGrid` |
+| Semantic badge / alert | `@reui` | `@/components/reui/badge`, `@/components/reui/alert` |
+| Number / date / autocomplete / color / kanban | `@reui` | `@/components/reui/*` |
 
-**Сложные списки** — `ResourcePage` (Frame + data-grid + filters), не Card `DataGridCard`, не raw `<table>`.
+**Сложные списки** — `ResourcePage` (с Filters) или `FrameDataGrid` (простой CRUD Frame+DataGrid); не raw `<table>`, не Card shell.  
+**Quick Actions** — только `QuickActionGrid` (не Card / Button grid).
+**KPI** — только `KpiStatGrid` (EvoBGP hybrid); не SectionCards.
 
 ## MCP workflow
 
-0. Поиск `reui-kit/*`, `@/components/reui/*`
-1. `user-reui` `search` (`surface: "frame"`)
-2. CLI из `apps/web`: `pnpm dlx shadcn@latest add @reui/<name> --yes`
-3. Post-add: shadcn imports → `@cfdm/ui/components/*`
-4. Adapt → kit / route
-5. `validate_usage` + `get_audit_checklist`
+0. Codegraph / поиск существующих `reui-kit/*`, `@/components/reui/*`
+1. `user-reui` `search` (`surface: "frame"`, `category` при известном)
+2. Страница целиком → `compose_page`; секция → `get_block`
+3. `get_component` для API primitives из `componentsUsed`
+4. CLI из `apps/web`: `pnpm dlx shadcn@latest add @reui/<name> --yes`
+5. Post-add: shadcn imports → `@cfdm/ui/components/*`
+6. Adapt by reuse → kit / route
+7. `validate_usage` + `get_audit_checklist`
 
 ## Размещение
 
 | Слой | Путь | Импорт |
 |------|------|--------|
-| shadcn primitives | `packages/ui/src/components/` | `@cfdm/ui/components/*` |
-| ReUI enterprise | `apps/web/src/components/reui/` | `@/components/reui/*` |
+| shadcn | `packages/ui/src/components/` | `@cfdm/ui/components/*` |
+| ReUI CLI | `apps/web/src/components/reui/` | `@/components/reui/*` |
+| PRO blocks (reference) | `apps/web/src/components/blocks/` | adapt into kit, не копипаст в routes |
 | Kit | `apps/web/src/components/reui-kit/` | `@/components/reui-kit/*` |
+
+## Установленные ReUI (apps/web)
+
+**Components:** `frame`, `data-grid/*`, `filters`, `kanban`, `badge`, `alert`, `autocomplete`, `number-field`, `date-selector`, `color-picker`, `timeline`, `rating`, `phone-input`, `icon-stack`
+
+**Kit:** `ResourcePage`, `KpiStatGrid`, `QuickActionGrid`, `OpsDashboard`, `KanbanBoard`, `DetailPanel`, `SettingsShell`
+
+**Blocks (reference):** `stats-12`, `card-35`, `auth-13`, `app-shell-12`, `settings-16`, `settings-8`, `empty-state-12`, `form-7`, `data-grid-filtering-2`, `dashboard-1`, …
 
 ## License
 
 ```env
-# apps/web/.env.local
+# .env.local (gitignored)
 REUI_LICENSE_KEY=
 ```
 
@@ -67,25 +86,27 @@ REUI_LICENSE_KEY=
 
 | Зона | Preview |
 |------|---------|
-| KPI | https://reui.io/preview/base/stats-12 |
+| KPI / Quick Actions | https://reui.io/preview/base/stats-12 · https://reui.io/preview/base/card-12 |
 | List | https://reui.io/preview/base/data-grid-filtering-2 |
 | Settings | https://reui.io/preview/base/settings-16 |
+| Auth | https://reui.io/preview/base/auth-13 |
 | Shell | https://reui.io/preview/base/app-shell-12 |
 | Empty | https://reui.io/preview/base/empty-state-12 |
-| Dashboard | https://reui.io/preview/base/dashboard-1 |
 
 ## Запрещено
 
 - Копипаст с reui.io без CLI
-- ReUI в `packages/ui`
-- Card как ops-shell
-- Hand-roll data-grid/filters/KPI при наличии kit
+- ReUI в `packages/ui` / импорт как `@cfdm/ui`
+- Radix-варианты docs — только Base UI
+- Raw `bg-emerald-*` вместо ReUI `variant`
+- Hand-roll data-grid/filters/KPI/Quick Actions/settings rows при наличии `@reui` / kit
 - Смешивать Card и Frame на ops-экране
+- Ставить shadcn/ui blocks выше ReUI PRO
 
 ## Чеклист
 
+- [ ] `user-reui` search/get_block + previewUrl
 - [ ] `surface: frame`
-- [ ] `user-reui` + previewUrl
-- [ ] CLI add из `apps/web`
-- [ ] Kit / `@/components/reui` / `@cfdm/ui`
+- [ ] CLI add из `apps/web` при новом item
+- [ ] Kit / `@/components/reui` / `@cfdm/ui` — правильный слой
 - [ ] `pnpm --filter web build`

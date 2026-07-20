@@ -6,68 +6,189 @@ alwaysApply: false
 
 # Frontend UI Patterns
 
-См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [`docs/ui-design-contract.md`](../../docs/ui-design-contract.md), [ReUI llms.txt](https://reui.io/llms.txt).
-
-## Surface
-
-**`UI_SURFACE = 'frame'`** (`lib/ui-surface.ts`). Ops/list/dashboard/detail/settings — ReUI Frame, не Card shell.
+См. также: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [Components](https://ui.shadcn.com/docs/components), [ReUI llms.txt](https://reui.io/llms.txt).
 
 ## Docs workflow (обязательно)
 
-0. Codegraph / поиск `reui-kit/*`
-1. MCP **`user-reui`** — search → `get_block` / `compose_page` (`surface: "frame"`) — cite `previewUrl` + `docsUrl`
-2. Primitives: MCP `plugin-shadcn-shadcn` + CLI docs
-3. CLI: `cd apps/web && pnpm dlx shadcn@latest add @reui/...`
-4. Adapt в kit — не hand-roll
-5. Context7 — только TanStack / Recharts
-6. `validate_usage` / `get_audit_checklist`
+0. Codegraph / поиск существующих shared/domain / `reui-kit`
+1. Skill ReUI + shadcn — component selection
+2. **Primary:** MCP `user-reui` — search → `get_block` / `compose_page` (`surface: "frame"`) — **всегда cite `previewUrl` + `docsUrl`**
+3. Primitives: MCP `plugin-shadcn-shadcn` + `pnpm dlx shadcn@latest docs <component>`
+4. CLI: `cd apps/web && pnpm dlx shadcn@latest add @reui/...` → сверить API
+5. Код по examples + docs (только после MCP ↔ docs)
+6. Context7 — **только** TanStack Router/Query, Recharts
+7. MCP `validate_usage` / `get_audit_checklist` — перед merge
+
+## Surface
+
+Проект использует **ReUI Frame** (`surface: frame`), не shadcn Card как оболочку list/ops-экранов. Эталон списка: [data-grid-filtering-2](https://reui.io/preview/base/data-grid-filtering-2).
+
+## Обязательные референсы по зонам
+
+| Зона | Preview |
+|------|---------|
+| KPI | [stats-12](https://reui.io/preview/base/stats-12) — EvoBGP hybrid SoT |
+| Quick Actions | [stats-12](https://reui.io/preview/base/stats-12) · [card-12](https://reui.io/preview/base/card-12) → `QuickActionGrid` |
+| List | [data-grid-filtering-2](https://reui.io/preview/base/data-grid-filtering-2) |
+| Settings | [settings-16](https://reui.io/preview/base/settings-16), [Application Settings](https://reui.io/blocks/application/settings) |
+| Settings rows / Health-check | [settings-2](https://reui.io/preview/base/settings-2), [settings-3](https://reui.io/preview/base/settings-3) |
+| Auth | [auth-13](https://reui.io/preview/base/auth-13) |
+| Empty | [empty-state-12](https://reui.io/preview/base/empty-state-12) |
+| Forms | [form-7](https://reui.io/preview/base/form-7) |
+| Shell | [app-shell-12](https://reui.io/preview/base/app-shell-12) |
+
+**SettingRow:** `FieldSeparator` opt-in (`separated`); не между toggle-row и nested fields (Health-check). Settings-секции — отдельные Frame + `gap`, без hairline под PageHeader.
 
 ## Иерархия компонентов
 
 ```
 @cfdm/ui/components/*     ← shadcn CLI (packages/ui)
 @/components/reui/*       ← ReUI CLI @reui/* (apps/web)
-apps/web/src/components/
-  reui-kit/               ← ResourcePage, KpiStatGrid, OpsDashboard, SettingsShell
+apps/web/src/components/  ← shared + domain + layout
   page-shell.tsx
-  page-header.tsx
-  empty-state.tsx         ← Empty + IconStack (empty-state-12)
+  reui-kit/
+    resource-page.tsx     ← list: Frame + line Tabs + Filters + DataGrid
+    kanban-board.tsx      ← kanban + KanbanBoardSkeleton
+    detail-panel.tsx      ← detail: Frame header/metrics
+    settings-shell.tsx
+    ops-dashboard.tsx     ← KPI stats-12 + charts
+  catalog-board-toggle.tsx
+  empty-state.tsx
   query-state.tsx
+  confirm-dialog.tsx
+  status-badge.tsx
   form-sheet.tsx
-  layout/
-  domain-*
+  form-field.tsx
+  loading-button.tsx
+  layout/                 ← app-shell, site-header, app-sidebar
+  domain-*                ← бизнес-компоненты
 ```
 
 ## Матрица стандартизации
 
-| Элемент | Shared | Primitive / Preview |
-|---------|--------|---------------------|
+| Элемент | Shared | Primitive |
+|---------|--------|-----------|
 | Page wrapper | `PageShell` | — |
-| Page title | `PageHeader` | — |
-| KPI | `reui-kit/KpiStatGrid` | [stats-12](https://reui.io/preview/base/stats-12) |
-| Data list | `reui-kit/ResourcePage` | [data-grid-filtering-2](https://reui.io/preview/base/data-grid-filtering-2) |
-| Dashboard | `reui-kit/OpsDashboard` | [dashboard-1](https://reui.io/preview/base/dashboard-1) |
-| Settings | `reui-kit/SettingsShell` | [settings-16](https://reui.io/preview/base/settings-16) |
-| Filters | ResourcePage / domain toolbars | `@reui/filters` |
-| Empty | `EmptyState` | [empty-state-12](https://reui.io/preview/base/empty-state-12) |
-| Loading / Error | `QueryState` | Skeleton, ReUI Alert |
-| Status | `StatusBadge` | `@reui/badge` |
-| Create/Edit | `FormSheet` | Sheet, Field |
-| Delete confirm | `ConfirmDialog` | AlertDialog |
-| Nav | `AppShell` | [app-shell-12](https://reui.io/preview/base/app-shell-12) |
+| List page | `ResourcePage` | ReUI `Frame` + `data-grid` + `filters` + shadcn `Tabs` `variant="line"` |
+| Catalog / Board | `CatalogBoardToggle` + `ResourcePage` / `KanbanBoard` | `?view=board` на `/groups`, `/services` |
+| Kanban | `KanbanBoard` / `KanbanBoardSkeleton` | ReUI `kanban` + `Frame` |
+| Detail | `DetailPanel` | ReUI `Frame` |
+| Settings | `SettingsShell` | — |
+| Dashboard KPI | `OpsDashboard` / `KpiStatGrid` | ReUI Frame [stats-12](https://reui.io/preview/base/stats-12) hybrid |
+| Quick Actions | `QuickActionGrid` | Frame tiles + Badge «Перейти» |
+| Empty | `EmptyState` | `Empty` |
+| Loading / Error | `QueryState` / kit skeletons | `Skeleton`, `Alert` |
+| Status | `StatusBadge` | ReUI `Badge` (`success`/`info`/`warning`) |
+| Create/Edit | `FormSheet` + `*-edit-sheet.tsx` | `Sheet`, `Field` |
+| Form field | `FormField` | `Field`, `Input`, `Select` |
+| Submit button | `LoadingButton` | `Button`, `Spinner` |
+| Delete confirm | `ConfirmDialog` | `AlertDialog` |
+| Nav | `AppSidebar` (`isActive` обязателен) | `Sidebar` |
+| Breadcrumbs | `SiteHeader` | `Breadcrumb` |
+| Dates | `lib/format.ts` | — |
 
-**Устарело (не использовать на новых экранах):** `DataGridCard`, `SectionCards` (Card KPI).
+## Header actions
+
+Независимые CTA в header → `flex shrink-0 flex-wrap items-center justify-end gap-2`.
+
+**Не** оборачивать в `ButtonGroup` (он склеивает кнопки). `ButtonGroup` — только для связанных контролок (filter chips и т.п.).
+
+Max 1 primary (`default`) на экран; остальные `outline` / `ghost`.
+
+Toggle «Доска» / «К каталогу» — всегда `outline` в `primaryAction` / `KanbanBoard.toolbarActions` (не отдельный Frame-shell).
+
+## Line tabs (project standard)
+
+Эталон: [c-tabs-2](https://reui.io/preview/base/components/c-tabs-2) + counted [filtering-2](https://reui.io/preview/base/data-grid-filtering-2).
+
+```tsx
+<TabsList variant="line" className="gap-5">
+  <TabsTrigger value="…" className="text-muted-foreground hover:text-foreground h-auto gap-2 px-0 pb-3">
+    <span>Label</span>
+    <span className="bg-muted text-muted-foreground … tabular-nums rounded-md">{count}</span>
+  </TabsTrigger>
+</TabsList>
+```
+
+- Примитив: [`packages/ui/.../tabs.tsx`](../../packages/ui/src/components/tabs.tsx) — line = `h-auto`, без `flex-1`, без `dark:data-active:bg-input/30`, underline `after:bottom-0`
+- Active = яркий текст + **foreground underline**, без фона
+- Count pill всегда `bg-muted`
+- Active state — Base UI `data-active`, не Radix `data-[state=active]`
+- Не трогать internals `reui/date-selector`
+
+## Catalog / Board (`/groups`, `/services`)
+
+| Режим | UI | Search |
+|-------|-----|--------|
+| Catalog (default) | `ResourcePage` + primary create | omit / `view=catalog` |
+| Board | `KanbanBoard` DnD | `?view=board` |
+
+- Groups tabs: Все / С доменами / Пустые
+- Services tabs: Все / Включены / Выключены / Без группы
+- DnD только на board; kanban hooks/cards не удалять
+
+## Dashboard KPI
+
+Эталон: [stats-12](https://reui.io/preview/base/stats-12) — icon tile + value + label + optional badge/footer; клик через `to` (`Link`) / `onSelect`. Compact strip: [card-35](https://reui.io/preview/base/card-35).
+
+## Sidebar
+
+- Каждый `SidebarMenuButton` получает `isActive` от pathname (`useRouterState`)
+- `--sidebar-accent` в `AppShell` — заметный mix primary (~14%), не 5%
+
+## Overlay selection
+
+| Сценарий | Компонент |
+|----------|-----------|
+| Create/edit форма | `Sheet` |
+| Destructive confirm | `AlertDialog` via `ConfirmDialog` |
+| Modal preview | `Dialog` |
+
+## Block registry
+
+| Зона | Block / эталон |
+|------|----------------|
+| Shell | [app-shell-12](https://reui.io/preview/base/app-shell-12) |
+| List + tabs + filters | [data-grid-filtering-2](https://reui.io/preview/base/data-grid-filtering-2) |
+| Line tabs | [c-tabs-2](https://reui.io/preview/base/components/c-tabs-2) |
+| KPI | [stats-12](https://reui.io/preview/base/stats-12) — на dashboard, certificates, domains, groups, services |
+| Login | [auth-13](https://reui.io/preview/base/auth-13) |
+| Settings | [settings-16](https://reui.io/preview/base/settings-16) / [settings-6](https://reui.io/preview/base/settings-6) |
+| Empty | [empty-state-12](https://reui.io/preview/base/empty-state-12) |
 
 ## Spacing
 
 ```
-PageShell / main: gap-4 md:gap-6, px-4 md:px-6
-FieldGroup:       gap-4
-Toolbar:          gap-2
+AppShell main: gap-4 md:gap-6, px-4 md:px-6, py-4 md:py-5
+  (--sidebar-width: 240px; header h-12; AppSwitcher + AppsMenu — Shared App Shell chrome)
+PageShell:     gap-4 md:gap-6
+Title/desc:    gap-px
+Card/Frame grid: gap-4 (dashboard denser: gap-2 md:gap-3)
+FieldGroup:    gap-4
+Item list:     gap-2
+Toolbar / header actions: gap-2
+Tabs list (line): gap-5
 ```
 
-**Запрещено:** `space-y-*`, raw colors, Card как ops-shell, page-level Spinner.
+Shared chrome (vps-tracker / CFDM / EvoBGP): см. [`docs/ui-design-contract.md`](../../docs/ui-design-contract.md) — секция **Shared App Shell chrome**. Preview: [app-shell-12](https://reui.io/preview/base/app-shell-12).
 
-## Button hierarchy
+**Запрещено:** `space-y-*`, raw colors (`bg-emerald-*`), custom empty divs, page-level Spinner / plain «Загрузка…» без Skeleton.
 
-Max 1 primary (`default`) на экран; остальные `outline` / `ghost`.
+## UX/UI (состояния данных)
+
+Каждый блок: **default, hover, focus, disabled, empty, loading, error**.
+
+- **Loading** — `Skeleton` / `ResourcePage` skeleton / `KanbanBoardSkeleton` / `OpsDashboard` skeleton, не Spinner на странице
+- **Empty** — `EmptyState` с CTA
+- **Zero-results** — message внутри DataGrid (+ «Сбросить»)
+- **Error** — `QueryState` / `Alert` + `onRetry`
+- **Overflow** — `truncate`, `max-w-*`, `Tooltip`; `tabular-nums` для чисел
+- **Density** — operational (`dense` Frame/DataGrid); max 1 primary CTA
+- **A11y** — `aria-invalid`, `aria-label`/`sr-only` на icon-only, `aria-current="page"` на active nav/settings
+
+## Button hierarchy (max 1 primary per screen)
+
+1. `default` — главный CTA
+2. `outline` — вторичные действия
+3. `ghost` / `link` — навигация, cancel
+4. `destructive` — только с `ConfirmDialog`

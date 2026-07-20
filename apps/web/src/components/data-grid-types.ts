@@ -17,7 +17,7 @@ export interface DataGridColumn<T> {
 /** @deprecated Используйте DataGridColumn */
 export type DataTableColumn<T> = DataGridColumn<T>
 
-/** Унифицированные классы колонок для DataGridCard. */
+/** Унифицированные классы колонок для FrameDataGrid. */
 export const COL = {
   num: 'w-28 text-right tabular-nums',
   date: 'w-32 text-right tabular-nums text-muted-foreground',

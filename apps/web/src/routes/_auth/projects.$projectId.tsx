@@ -17,9 +17,9 @@ import { api, ApiError } from '@/lib/api-client'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
-import { SectionCards } from '@/components/section-cards'
+import { KpiStatGrid } from '@/components/reui-kit'
 import { EmptyState } from '@/components/empty-state'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { StatusBadge } from '@/components/status-badge'
 import { ProjectEditSheet, projectFormDefaults } from '@/components/domain/project-edit-sheet'
@@ -27,7 +27,7 @@ import type { ProjectFormValues } from '@/lib/schemas'
 import { Button } from '@cfdm/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
+import { KpiStatGridSkeleton, TableSkeleton } from '@/components/skeletons'
 import {
   formatCurrency,
   normalizeRatesPayload,
@@ -246,7 +246,7 @@ function ProjectDetailPage() {
         onRetry={() => refetch()}
         skeleton={
           <div className="flex flex-col gap-4">
-            <SectionCardsSkeleton count={3} />
+            <KpiStatGridSkeleton count={3} />
             <TableSkeleton />
           </div>
         }
@@ -264,7 +264,7 @@ function ProjectDetailPage() {
             />
           ) : (
             <div className="flex flex-col gap-4">
-              <SectionCards
+              <KpiStatGrid
                 items={[
                   {
                     label: 'Активных VPS',
@@ -301,12 +301,12 @@ function ProjectDetailPage() {
                   </CardContent>
                 </Card>
               ) : null}
-              <DataGridCard
+              <ResourcePage
                 title="VPS проекта"
                 description={`${projectVps.length} серверов`}
                 columns={columnDefFromDataGrid(columns)}
                 data={projectVps}
-                rowId={(v) => v.id}
+                getRowId={(v) => v.id}
                 emptyTitle="VPS не назначены"
                 emptyDescription="Назначьте проект при редактировании VPS"
               />

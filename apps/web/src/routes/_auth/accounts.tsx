@@ -21,13 +21,12 @@ import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid, KpiStatGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
 import { HealthModeBanner } from '@/components/health-mode-banner'
-import { SectionCards } from '@/components/section-cards'
 import {
   ProviderAccountEditSheet,
   providerAccountFormDefaults,
@@ -223,31 +222,39 @@ function AccountsPage() {
     const defaultFilters = buildDefaultAccountFilters()
     return [
       {
+        id: 'all',
         label: 'Всего аккаунтов',
         value: accounts.length,
         icon: <UserRoundIcon className="size-4" />,
+        iconClassName: 'text-muted-foreground',
         active: !health && !hasActiveAccountFilters(filters),
         onClick: () => setFilters(defaultFilters),
       },
       {
+        id: 'syncable',
         label: 'Готовы к синку',
         value: syncableCount,
         icon: <RefreshCwIcon className="size-4" />,
+        iconClassName: 'text-info',
         active: matchesAccountFilterPreset(filters, { syncableOnly: true }),
         onClick: () => setFilters({ ...defaultFilters, syncableOnly: true }),
       },
       {
+        id: 'issues',
         label: 'С проблемами',
         value: countAccountsWithIssues(accounts, healthCtx),
         icon: <ActivityIcon className="size-4" />,
+        iconClassName: 'text-warning',
         variant: atRisk.length ? ('warning' as const) : ('default' as const),
         active: matchesAccountFilterPreset(filters, { issuesOnly: true }),
         onClick: () => setFilters({ ...defaultFilters, issuesOnly: true }),
       },
       {
+        id: 'low-balance',
         label: 'Низкий баланс',
         value: lowBalanceCount,
         icon: <WalletIcon className="size-4" />,
+        iconClassName: 'text-destructive',
         variant: lowBalanceCount ? ('destructive' as const) : ('default' as const),
         active: matchesAccountFilterPreset(filters, { lowBalanceOnly: true }),
         onClick: () => setFilters({ ...defaultFilters, lowBalanceOnly: true }),
@@ -428,7 +435,7 @@ function AccountsPage() {
     >
       {() => (
         <div className="flex flex-col gap-4">
-          {snapshot ? <SectionCards items={summaryCards} /> : null}
+          {snapshot ? <KpiStatGrid items={summaryCards} /> : null}
           {snapshot ? (
             <AccountFiltersToolbar
               filters={filters}
@@ -439,10 +446,10 @@ function AccountsPage() {
             />
           ) : null}
           {health ? <HealthModeBanner health={health} exitTo="/accounts" /> : null}
-          <DataGridCard
+          <ResourcePage
             columns={columnDefFromDataGrid(columns)}
             data={filteredAccounts}
-            rowId={(a) => a.id}
+            getRowId={(a) => a.id}
             pinLastColumn
             emptyTitle={health || hasActiveAccountFilters(filters) ? 'Нет аккаунтов с этими фильтрами' : 'Нет записей'}
             emptyDescription={

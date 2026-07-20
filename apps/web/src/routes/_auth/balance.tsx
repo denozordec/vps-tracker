@@ -20,12 +20,12 @@ import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { DataGridCard, columnDefFromDataGrid } from '@/components/data-grid-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
-import { SectionCards } from '@/components/section-cards'
-import { SectionCardsSkeleton, TableSkeleton } from '@/components/skeletons'
+import { KpiStatGrid } from '@/components/reui-kit'
+import { KpiStatGridSkeleton, TableSkeleton } from '@/components/skeletons'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { BalanceEntrySheet, balanceEntryFormDefaults } from '@/components/domain/balance-entry-sheet'
 import type { BalanceLedgerFormValues } from '@/lib/schemas'
@@ -181,7 +181,7 @@ function BalancePage() {
       onRetry={() => refetch()}
       skeleton={
         <div className="flex flex-col gap-4">
-          <SectionCardsSkeleton count={3} />
+          <KpiStatGridSkeleton count={3} />
           <TableSkeleton />
         </div>
       }
@@ -210,7 +210,7 @@ function BalancePage() {
     >
       {() => (
           <div className="flex flex-col gap-4">
-            <SectionCards
+            <KpiStatGrid
               items={[
                 {
                   label: 'Всего приходов',
@@ -232,10 +232,10 @@ function BalancePage() {
                 },
               ]}
             />
-            <DataGridCard
+            <ResourcePage
               columns={columnDefFromDataGrid(columns)}
               data={rows}
-              rowId={(r) => r.id}
+              getRowId={(r) => r.id}
               pinLastColumn
               footerContent={
                 <div className="flex flex-wrap justify-end gap-6 px-3 py-2 text-sm tabular-nums">

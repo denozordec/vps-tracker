@@ -1,56 +1,44 @@
 ---
-description: ВСЕГДА использовать MCP-плагин shadcn UI перед любым UI-кодом
+description: shadcn MCP — primitives secondary; pages/blocks → user-reui first
 alwaysApply: true
 ---
 
-# shadcn MCP — обязательно
+# shadcn MCP — primitives (secondary)
 
-Перед **любой** задачей с UI (новый экран, компонент, стили, рефакторинг внешнего вида) — **сначала MCP** `plugin-shadcn-shadcn`, не память и не веб-поиск.
+Перед UI-задачей: **сначала** MCP `user-reui` для pages / KPI / lists / settings / Frame ([`reui-mcp.mdc`](reui-mcp.mdc)).  
+MCP `plugin-shadcn-shadcn` — для **primitives** `@shadcn` и registry sync, не вместо PRO blocks.
 
 CLI и docs — **после** MCP, по команде из `get_add_command_for_items`.
 
-Enterprise-компоненты (Data Grid, Filters, Stepper, Kanban и др.) — дополнительно [`reui-mcp.mdc`](reui-mcp.mdc) и registry `@reui`.
+## Порядок (primitives)
 
-## Порядок (строго)
+0. Поиск существующих shared / `reui-kit`
+1. **`get_project_registries`**
+2. **`search_items_in_registries`** — primitive / example
+3. **`get_item_examples_from_registries`**
+4. **`get_add_command_for_items`** → CLI из `apps/web`
+5. `pnpm dlx shadcn@latest docs <component>` — сверить API
+6. Адаптировать под TanStack → `apps/web/src/`
+7. Context7 — только TanStack / Recharts / не-shadcn
+8. **`get_audit_checklist`** — перед merge
 
-0. **Codegraph** `codegraph_explore` — найти существующие реализации и shared-обёртки (один вызов перед правками)
-1. **`get_project_registries`** — какие registry доступны в проекте (`@shadcn`, `@reui`)
-2. **`search_items_in_registries`** — компонент, block, example (`query`: `"card"`, `"data grid"`, `"filters"`)
-   - shadcn primitives/blocks → `registries: ["@shadcn"]` или omit
-   - Data Grid, Filters, Stepper, Kanban, Autocomplete и др. → **параллельно** `registries: ["@reui"]` (см. [`reui-mcp.mdc`](reui-mcp.mdc))
-3. **`get_item_examples_from_registries`** — полный код примера перед написанием JSX
-4. **`get_add_command_for_items`** — точная CLI-команда `pnpm dlx shadcn@latest add ...`
-5. Выполнить add из `apps/web` (см. [`frontend-monorepo.mdc`](frontend-monorepo.mdc))
-6. **CLI docs (обязательно):**
-   - `@shadcn/*` → `cd apps/web && pnpm dlx shadcn@latest docs <component>` — [ui.shadcn.com/docs/components](https://ui.shadcn.com/docs/components)
-   - `@reui/*` → [ReUI docs](https://reui.io/docs/components/base/<name>) + [llms.txt](https://reui.io/llms.txt) — **не** ui.shadcn.com
-7. Сверить examples из MCP с API из docs CLI — реализовать только после совпадения
-8. Адаптировать пример под TanStack Router / Query → `apps/web/src/`
-9. **Context7** — только TanStack / Recharts / не-shadcn (не заменяет шаги 1–8 для примитивов)
-10. **`get_audit_checklist`** — перед merge PR
-11. **Codegraph** `codegraph_status` — Pending sync пустой после правок
-
-## Когда вызывать MCP
+## Когда
 
 | Задача | MCP |
 |--------|-----|
-| Новая страница / layout | `search` → `types: ["block"]` → examples → add block |
-| Нет примитива в `@cfdm/ui` | `search` → `get_add_command_for_items` → add |
-| Data Grid, Filters, Stepper, Kanban | `search` с `registries: ["@reui"]` → [`reui-mcp.mdc`](reui-mcp.mdc) |
-| Сомнение в API/props | `get_item_examples_from_registries` |
-| Ревью UI перед сдачей | `get_audit_checklist` |
+| Новая страница / KPI / list / settings | **`user-reui`** ([`reui-mcp.mdc`](reui-mcp.mdc)) |
+| Нет примитива в `@cfdm/ui` | `plugin-shadcn-shadcn` → add |
+| Сомнение в props примитива | examples + docs CLI |
 
 ## Запрещено
 
-- Писать UI по памяти, не проверив MCP
-- Копипаст с ui.shadcn.com без examples/add из MCP
-- Самописные примитивы, если есть item в registry
-- Пропускать MCP «потому что компонент простой»
+- Писать UI по памяти
+- Ставить ui.shadcn.com/blocks выше ReUI PRO
+- Самописные примитивы при наличии registry item
 
-## Сервер и инструменты
+## Сервер
 
-- **MCP server:** `plugin-shadcn-shadcn`
-- **Инструменты:** `get_project_registries`, `search_items_in_registries`, `get_item_examples_from_registries`, `get_add_command_for_items`, `view_items_in_registries`, `list_items_in_registries`, `get_audit_checklist`
-- Перед вызовом — прочитать schema в `mcps/plugin-shadcn-shadcn/tools/`
+- **MCP:** `plugin-shadcn-shadcn` (+ `user-reui` primary)
+- Schema: `mcps/plugin-shadcn-shadcn/tools/`
 
-Связанные правила: [`shadcn-ui-production.mdc`](shadcn-ui-production.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`reui-mcp.mdc`](reui-mcp.mdc).
+Связанные: [`shadcn-ui-production.mdc`](shadcn-ui-production.mdc), [`reui-mcp.mdc`](reui-mcp.mdc), [`frontend-shadcn.mdc`](frontend-shadcn.mdc).

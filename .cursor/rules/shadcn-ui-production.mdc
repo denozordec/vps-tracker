@@ -1,40 +1,37 @@
 ---
-description: shadcn/ui — глобальные UI-принципы проекта; frontend см. frontend-shadcn.mdc
+description: shadcn/ui + ReUI PRO — глобальные UI-принципы; ReUI PRO выше shadcn
 alwaysApply: true
 ---
 
-# shadcn/ui — правила проекта
+# shadcn/ui + ReUI PRO — правила проекта
 
-UI строится по [shadcn/ui](https://ui.shadcn.com/docs/installation) + **ReUI registry** (`@reui`): [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks), [ReUI Get Started](https://reui.io/docs/get-started).
+UI строится по [shadcn/ui](https://ui.shadcn.com/docs/installation) + **ReUI PRO** (`@reui`): [Components](https://ui.shadcn.com/docs/components), [Blocks](https://ui.shadcn.com/blocks), [ReUI Get Started](https://reui.io/docs/get-started), [llms.txt](https://reui.io/llms.txt).
 
-**Первый шаг любой UI-задачи — MCP `plugin-shadcn-shadcn`** (см. [`shadcn-mcp.mdc`](shadcn-mcp.mdc)): search → examples → add command → CLI. Enterprise-компоненты — [`reui-mcp.mdc`](reui-mcp.mdc).
+**Иерархия:** ReUI PRO (`user-reui`) **выше** базового shadcn. Pages / KPI / lists / settings / shell → ReUI; shadcn — primitives.
 
-## Разработка frontend
+**Первый шаг UI-задачи:**
+1. MCP **`user-reui`** для pages / KPI / data-grid / settings / Frame / Quick Actions (`surface: frame`)
+2. MCP **`plugin-shadcn-shadcn`** для primitives `@shadcn`
 
-**Все правила frontend** — в [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc) и [`frontend-monorepo.mdc`](frontend-monorepo.mdc) (globs: `apps/web/**`, `packages/ui/**`).
+См. [`shadcn-mcp.mdc`](shadcn-mcp.mdc), [`reui-mcp.mdc`](reui-mcp.mdc). Contract: [`docs/ui-design-contract.md`](../../docs/ui-design-contract.md).
 
-Кратко: docs → CLI из `apps/web` → Block → композиция → `pnpm --filter web build`. Кастомный CSS и самописные примитивы **запрещены**.
+## Frontend
+
+Детали: [`frontend-shadcn.mdc`](frontend-shadcn.mdc), [`frontend-ui-patterns.mdc`](frontend-ui-patterns.mdc), [`frontend-monorepo.mdc`](frontend-monorepo.mdc).
+
+Кратко: MCP → CLI из `apps/web` → Block → kit → `pnpm --filter web build`. Кастомный CSS и самописные примитивы **запрещены**.
 
 ## Стек
 
 - Monorepo: `apps/web` + `packages/ui` (`@cfdm/ui`), pnpm workspaces
 - Vite + TanStack Router/Query + shadcn **base-nova** + ReUI **@reui**
 - Конфиг: [`apps/web/components.json`](apps/web/components.json), [`packages/ui/components.json`](packages/ui/components.json)
-- Тема: `pnpm dlx shadcn@latest apply b2fA --only theme -y` — единственный способ менять базовую тему `globals.css`; ReUI semantic tokens — [Styling](https://reui.io/docs/styling)
+- Тема: `pnpm dlx shadcn@latest apply b2fA --only theme -y`; ReUI tokens — [Styling](https://reui.io/docs/styling)
+- License: `REUI_LICENSE_KEY` в `apps/web/.env.local`
 
 ## Backend → UI
 
 При правках API с экранами: [`backend-api-ui.mdc`](backend-api-ui.mdc). Backend: `apps/api` (Fastify + Drizzle).
-
-## Устаревший стек (запрещён в apps/web)
-
-Проект мигрирует с Tabler-стека на shadcn/ui. **Не использовать**:
-
-- `@tabler/core` и `@tabler/core/dist/css/tabler.min.css` — заменить на `@cfdm/ui/globals.css`
-- `@tabler/icons-react` — иконки только `lucide-react`
-- `chart.js` — графики только `recharts` через shadcn `Chart`/`ChartContainer`
-- `react-router-dom` — роутинг только TanStack Router (`createFileRoute`, file-based routes)
-- Bootstrap/Tabler utility-классы (`page`, `navbar-vertical`, `nav-link`, `container-tight`, `spinner-border`, `d-lg-none`, `page-wrapper`) — layout через Tailwind + shadcn blocks (sidebar-07)
 
 ## Язык
 
