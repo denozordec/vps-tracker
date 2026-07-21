@@ -63,3 +63,44 @@ export function diffPreview(diff: Record<string, unknown> | null | undefined, ma
   const rest = entries.length - maxKeys
   return rest > 0 ? `${head} (+${rest})` : head
 }
+
+export type AuditEntityLookup = {
+  vps?: Map<string, { dns?: string | null; ip?: string | null }>
+  provider?: Map<string, { name?: string | null }>
+  providerAccount?: Map<string, { name?: string | null }>
+  serverProject?: Map<string, { name?: string | null }>
+}
+
+function strFromDiff(diff: Record<string, unknown> | null | undefined, key: string): string {
+  const v = diff?.[key]
+  return typeof v === 'string' && v.trim() ? v.trim() : ''
+}
+
+/** Человекочитаемое имя сущности: dns/ip для VPS, name для хостера/аккаунта/проекта. */
+export function auditEntityTitle(
+  entity: string,
+  entityId: string,
+  diff?: Record<string, unknown> | null,
+  lookup?: AuditEntityLookup,
+): string {
+  if (entity === 'vps') {
+    const row = lookup?.vps?.get(entityId)
+    const fromSnap = (row?.dns || row?.ip || '').trim()
+    if (fromSnap) return fromSnap
+    const fromDiff = strFromDiff(diff, 'dns') || strFromDiff(diff, 'ip')
+    if (fromDiff) return fromDiff
+  }
+  if (entity === 'provider') {
+    const name = (lookup?.provider?.get(entityId)?.name || strFromDiff(diff, 'name')).trim()
+    if (name) return name
+  }
+  if (entity === 'providerAccount') {
+    const name = (lookup?.providerAccount?.get(entityId)?.name || strFromDiff(diff, 'name')).trim()
+    if (name) return name
+  }
+  if (entity === 'serverProject') {
+    const name = (lookup?.serverProject?.get(entityId)?.name || strFromDiff(diff, 'name')).trim()
+    if (name) return name
+  }
+  return entityId
+}

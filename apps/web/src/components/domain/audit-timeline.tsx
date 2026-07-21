@@ -25,7 +25,9 @@ import {
   auditActionBadgeVariant,
   auditActionLabel,
   auditEntityLabel,
+  auditEntityTitle,
   diffFieldEntries,
+  type AuditEntityLookup,
 } from '@/components/domain/audit-labels'
 import { cn } from '@cfdm/ui/lib/utils'
 import { Button } from '@cfdm/ui/components/button'
@@ -47,6 +49,7 @@ export interface AuditRow {
 
 interface AuditTimelineProps {
   rows: AuditRow[]
+  entityLookup?: AuditEntityLookup
 }
 
 function actionIcon(action: string) {
@@ -79,19 +82,32 @@ function timeLabel(iso: string): string {
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-function EntityIdLink({ entity, entityId }: { entity: string; entityId: string }) {
+function EntityTargetLink({
+  entity,
+  entityId,
+  title,
+}: {
+  entity: string
+  entityId: string
+  title: string
+}) {
   if (entity === 'vps') {
     return (
       <Button
         variant="link"
-        className="h-auto p-0 font-mono text-xs"
+        className="h-auto max-w-full truncate p-0 text-sm font-medium"
+        title={entityId}
         render={<Link to="/vps/$vpsId" params={{ vpsId: entityId }} />}
       >
-        {entityId}
+        {title}
       </Button>
     )
   }
-  return <span className="font-mono text-xs">{entityId}</span>
+  return (
+    <span className="truncate text-sm font-medium" title={entityId}>
+      {title}
+    </span>
+  )
 }
 
 function EventRow({
@@ -99,15 +115,18 @@ function EventRow({
   step,
   isLast,
   defaultOpen,
+  entityLookup,
 }: {
   row: AuditRow
   step: number
   isLast: boolean
   defaultOpen: boolean
+  entityLookup?: AuditEntityLookup
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const fieldCount = diffFieldEntries(row.diff).length
   const actor = row.actorUserId?.trim() || 'система'
+  const title = auditEntityTitle(row.entity, row.entityId, row.diff, entityLookup)
 
   return (
     <TimelineItem step={step} className={cn('ms-10', isLast ? 'pb-0' : 'pb-6')}>
@@ -136,7 +155,7 @@ function EventRow({
                   <UserRoundIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
                   <span className="text-muted-foreground truncate text-sm font-medium">{actor}</span>
                   <span className="text-muted-foreground text-xs">·</span>
-                  <EntityIdLink entity={row.entity} entityId={row.entityId} />
+                  <EntityTargetLink entity={row.entity} entityId={row.entityId} title={title} />
                   {fieldCount > 0 ? (
                     <Badge variant="outline" size="xs">
                       {fieldCount} {fieldCount === 1 ? 'поле' : 'полей'}
@@ -157,11 +176,19 @@ function EventRow({
                     <dd className="text-sm font-medium">{auditEntityLabel(row.entity)}</dd>
                   </div>
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <dt className="text-muted-foreground text-xs">ID</dt>
+                    <dt className="text-muted-foreground text-xs">Объект</dt>
                     <dd className="min-w-0">
-                      <EntityIdLink entity={row.entity} entityId={row.entityId} />
+                      <EntityTargetLink entity={row.entity} entityId={row.entityId} title={title} />
                     </dd>
                   </div>
+                  {title !== row.entityId ? (
+                    <div className="flex min-w-0 flex-col gap-0.5 sm:col-span-2">
+                      <dt className="text-muted-foreground text-xs">ID</dt>
+                      <dd className="text-muted-foreground truncate font-mono text-xs" title={row.entityId}>
+                        {row.entityId}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <dt className="text-muted-foreground text-xs">Актор</dt>
                     <dd className="truncate text-sm font-medium">{actor}</dd>
@@ -187,7 +214,7 @@ function EventRow({
 }
 
 /** Day-grouped audit timeline — DNA solution-users-6. */
-export function AuditTimeline({ rows }: AuditTimelineProps) {
+export function AuditTimeline({ rows, entityLookup }: AuditTimelineProps) {
   const days = useMemo(() => {
     const map = new Map<string, { key: string; label: string; events: AuditRow[] }>()
     for (const row of rows) {
@@ -217,6 +244,7 @@ export function AuditTimeline({ rows }: AuditTimelineProps) {
                 step={index + 1}
                 isLast={index === day.events.length - 1}
                 defaultOpen={dayIndex === 0 && index < 2}
+                entityLookup={entityLookup}
               />
             ))}
           </Timeline>

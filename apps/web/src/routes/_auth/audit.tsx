@@ -5,6 +5,7 @@ import { HistoryIcon, UserRoundIcon } from 'lucide-react'
 import { z } from 'zod'
 
 import { api } from '@/lib/api-client'
+import { snapshotQueryOptions } from '@/queries/snapshot'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { QueryState } from '@/components/query-state'
@@ -17,7 +18,9 @@ import {
   auditActionBadgeVariant,
   auditActionLabel,
   auditEntityLabel,
+  auditEntityTitle,
   diffPreview,
+  type AuditEntityLookup,
 } from '@/components/domain/audit-labels'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@/components/reui/badge'
@@ -40,6 +43,8 @@ const ACTION_FILTERS: { value: AuditActionFilter; label: string }[] = [
 
 export const Route = createFileRoute('/_auth/audit')({
   validateSearch: (search) => auditSearchSchema.parse(search),
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData(snapshotQueryOptions()),
   component: AuditPage,
 })
 
@@ -53,6 +58,23 @@ function AuditPage() {
     queryKey: ['audit'],
     queryFn: () => api.fetchAuditLog(200) as Promise<AuditRow[]>,
   })
+  const { data: snapshot } = useQuery(snapshotQueryOptions())
+
+  const entityLookup = useMemo<AuditEntityLookup>(() => {
+    const vps = new Map(
+      (snapshot?.vps ?? []).map((v) => [v.id, { dns: v.dns, ip: v.ip }] as const),
+    )
+    const provider = new Map(
+      (snapshot?.providers ?? []).map((p) => [p.id, { name: p.name }] as const),
+    )
+    const providerAccount = new Map(
+      (snapshot?.providerAccounts ?? []).map((a) => [a.id, { name: a.name }] as const),
+    )
+    const serverProject = new Map(
+      (snapshot?.serverProjects ?? []).map((p) => [p.id, { name: p.name }] as const),
+    )
+    return { vps, provider, providerAccount, serverProject }
+  }, [snapshot])
 
   const filtered = useMemo(() => {
     const rows = data ?? []
@@ -123,19 +145,28 @@ function AuditPage() {
     },
     {
       key: 'entityId',
-      header: 'ID',
-      cell: (r) =>
-        r.entity === 'vps' ? (
-          <Button
-            variant="link"
-            className="h-auto p-0 font-mono text-xs"
-            render={<Link to="/vps/$vpsId" params={{ vpsId: r.entityId }} />}
-          >
-            {r.entityId}
-          </Button>
-        ) : (
-          <span className="font-mono text-xs">{r.entityId}</span>
-        ),
+      header: 'Объект',
+      sortValue: (r) => auditEntityTitle(r.entity, r.entityId, r.diff, entityLookup),
+      cell: (r) => {
+        const title = auditEntityTitle(r.entity, r.entityId, r.diff, entityLookup)
+        if (r.entity === 'vps') {
+          return (
+            <Button
+              variant="link"
+              className="h-auto max-w-full truncate p-0 text-sm font-medium"
+              title={r.entityId}
+              render={<Link to="/vps/$vpsId" params={{ vpsId: r.entityId }} />}
+            >
+              {title}
+            </Button>
+          )
+        }
+        return (
+          <span className="truncate text-sm font-medium" title={r.entityId}>
+            {title}
+          </span>
+        )
+      },
     },
     {
       key: 'actor',
@@ -218,7 +249,7 @@ function AuditPage() {
             )
           }
 
-          return <AuditTimeline rows={filtered} />
+          return <AuditTimeline rows={filtered} entityLookup={entityLookup} />
         }}
       </QueryState>
     </PageShell>
