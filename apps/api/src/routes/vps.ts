@@ -5,6 +5,7 @@ import { vpsGrantsRepository } from '@cfdm/db/repositories/spaces'
 import { getCurrentSpaceId } from '@cfdm/db'
 import { vpsSchema } from '@cfdm/shared/contracts/vps'
 import { auditCreate, auditDelete, auditUpdate } from '../services/audit.js'
+import { actorFromRequest } from '../lib/audit-actor.js'
 import { canWriteInSpace, requireSpaceRole } from '../plugins/space.js'
 
 export const vpsRoutes: FastifyPluginAsync = async (app) => {
@@ -43,7 +44,9 @@ export const vpsRoutes: FastifyPluginAsync = async (app) => {
     const created = vpsRepository.create(parsed.data)
     const list = Array.isArray(created) ? created : [created]
     const last = list[list.length - 1] as { id?: string } | undefined
-    if (last?.id) auditCreate('vps', last.id, parsed.data as Record<string, unknown>)
+    if (last?.id) {
+      auditCreate('vps', last.id, parsed.data as Record<string, unknown>, actorFromRequest(req))
+    }
     return reply.code(201).send(created)
   })
 
@@ -61,7 +64,7 @@ export const vpsRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
       }
       vpsDomainsRepository.rematchAll()
-      auditUpdate('vps', req.params.id, parsed.data as Record<string, unknown>)
+      auditUpdate('vps', req.params.id, parsed.data as Record<string, unknown>, actorFromRequest(req))
       return updated
     }
 
@@ -73,7 +76,7 @@ export const vpsRoutes: FastifyPluginAsync = async (app) => {
       if (!updated) {
         return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
       }
-      auditUpdate('vps', req.params.id, parsed.data as Record<string, unknown>)
+      auditUpdate('vps', req.params.id, parsed.data as Record<string, unknown>, actorFromRequest(req))
       return { ...updated, access: 'shared', grantPermission: 'write' }
     }
 
@@ -96,7 +99,7 @@ export const vpsRoutes: FastifyPluginAsync = async (app) => {
       }
       return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } })
     }
-    auditDelete('vps', req.params.id)
+    auditDelete('vps', req.params.id, actorFromRequest(req))
     return reply.code(204).send()
   })
 

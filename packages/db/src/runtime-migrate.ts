@@ -220,6 +220,7 @@ const CORE_TABLE_MIGRATIONS: string[] = [
   )`,
   `CREATE TABLE IF NOT EXISTS audit_log (
     id TEXT PRIMARY KEY,
+    eventId TEXT,
     spaceId TEXT NOT NULL DEFAULT 'space-main',
     entity TEXT NOT NULL,
     entityId TEXT NOT NULL,
@@ -325,6 +326,7 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE vps_health_checks ADD COLUMN spaceId TEXT`,
   `ALTER TABLE audit_log ADD COLUMN spaceId TEXT`,
   `ALTER TABLE audit_log ADD COLUMN actorUserId TEXT`,
+  `ALTER TABLE audit_log ADD COLUMN eventId TEXT`,
   `ALTER TABLE spaces ADD COLUMN deletedAt TEXT`,
   `ALTER TABLE sync_log ADD COLUMN spaceId TEXT`,
   `ALTER TABLE sync_log ADD COLUMN summary TEXT`,

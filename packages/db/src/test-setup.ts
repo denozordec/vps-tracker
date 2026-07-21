@@ -264,6 +264,7 @@ CREATE TABLE IF NOT EXISTS server_projects (
 
 CREATE TABLE IF NOT EXISTS audit_log (
   id TEXT PRIMARY KEY,
+  eventId TEXT,
   spaceId TEXT NOT NULL DEFAULT 'space-main',
   entity TEXT NOT NULL,
   entityId TEXT NOT NULL,

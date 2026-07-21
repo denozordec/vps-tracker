@@ -275,6 +275,7 @@ export const vpsHealthChecks = sqliteTable('vps_health_checks', {
 
 export const auditLog = sqliteTable('audit_log', {
   id: text('id').primaryKey(),
+  eventId: text('eventId'),
   spaceId: text('spaceId')
     .notNull()
     .default('space-main')

@@ -4,11 +4,13 @@ import { getDb, schema } from '../index.js'
 import { getCurrentSpaceId } from '../space-context.js'
 
 export interface AuditEntryInput {
+  eventId: string
   entity: string
   entityId: string
   action: 'create' | 'update' | 'delete'
   diff?: Record<string, unknown>
   actorUserId?: string | null
+  createdAt?: string
 }
 
 function parseDiff(row: { diff: string | null }) {
@@ -26,13 +28,14 @@ export const auditLogRepository = {
       .insert(schema.auditLog)
       .values({
         id: `audit-${randomUUID()}`,
+        eventId: input.eventId,
         spaceId: getCurrentSpaceId(),
         entity: input.entity,
         entityId: input.entityId,
         action: input.action,
         diff: input.diff ? JSON.stringify(input.diff) : null,
         actorUserId: input.actorUserId ?? null,
-        createdAt: new Date().toISOString(),
+        createdAt: input.createdAt ?? new Date().toISOString(),
       })
       .run()
   },
