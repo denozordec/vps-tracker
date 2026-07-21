@@ -392,6 +392,7 @@ export const api = {
       entityId: string
       action: string
       diff: Record<string, unknown> | null
+      actorUserId?: string | null
       createdAt: string
     }>>(`/api/audit?limit=${limit}`),
 }

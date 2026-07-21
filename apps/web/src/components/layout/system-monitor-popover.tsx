@@ -72,11 +72,35 @@ function MetricCell({ metric }: { metric: MonitorMetric }) {
   )
 }
 
+type SyncStatusRow = {
+  accountId?: string
+  status?: string | null
+  ok?: boolean
+}
+
 function isStaleSync(lastAt: string | null | undefined): boolean {
   if (!lastAt) return true
   const ts = new Date(lastAt).getTime()
   if (Number.isNaN(ts)) return true
   return Date.now() - ts > 24 * 60 * 60 * 1000
+}
+
+function isSyncFailureStatus(row: SyncStatusRow): boolean {
+  const status = String(row.status ?? '').toLowerCase()
+  return status === 'failed' || status === 'error' || row.ok === false
+}
+
+/** Последний синк на аккаунт (журнал desc по startedAt); старые fail после OK игнорируются. */
+function countCurrentSyncFailures(rows: SyncStatusRow[]): number {
+  const seen = new Set<string>()
+  let failed = 0
+  for (const row of rows) {
+    const accountId = row.accountId
+    if (!accountId || seen.has(accountId)) continue
+    seen.add(accountId)
+    if (isSyncFailureStatus(row)) failed += 1
+  }
+  return failed
 }
 
 /** Live system monitor popover (app-shell pattern, VPS Tracker API data). */
@@ -85,7 +109,7 @@ export function SystemMonitorPopover() {
   const snapQ = useQuery({ ...snapshotQueryOptions(), refetchInterval: 30_000 })
   const syncQ = useQuery({
     queryKey: ['sync', 'status'],
-    queryFn: () => api.fetchSyncStatus() as Promise<Array<{ status?: string; ok?: boolean }>>,
+    queryFn: () => api.fetchSyncStatus() as Promise<SyncStatusRow[]>,
     refetchInterval: 30_000,
   })
   const notifyQ = useQuery({
@@ -106,12 +130,8 @@ export function SystemMonitorPopover() {
   const lowBalance = (stats?.lowBalanceAccountCount ?? 0) > 0
   const staleSync =
     (stats?.staleSyncAccountCount ?? 0) > 0 || isStaleSync(stats?.lastGlobalSyncAt)
-  const recentSyncFailed = (syncQ.data ?? []).some(
-    (row) =>
-      String(row.status ?? '').toLowerCase() === 'failed' ||
-      String(row.status ?? '').toLowerCase() === 'error' ||
-      row.ok === false,
-  )
+  const failedSyncCount = countCurrentSyncFailures(syncQ.data ?? [])
+  const recentSyncFailed = failedSyncCount > 0
   const syncAlert = staleSync || recentSyncFailed
   const failedNotifications = (notifyQ.data ?? []).filter(
     (n) => String(n.status ?? '').toLowerCase() === 'failed',
@@ -123,7 +143,7 @@ export function SystemMonitorPopover() {
       {
         id: 'sync',
         label: 'Синк',
-        value: syncAlert ? '!' : 'OK',
+        value: recentSyncFailed ? String(failedSyncCount) : syncAlert ? '!' : 'OK',
         unit: '',
         percent: syncAlert ? 35 : 100,
         icon: <RefreshCw aria-hidden />,
@@ -164,7 +184,7 @@ export function SystemMonitorPopover() {
         alert: downCount > 0,
       },
     ],
-    [downCount, issuesCount, lowBalance, recentSyncFailed, runwayDays, runwayLow, syncAlert],
+    [downCount, failedSyncCount, issuesCount, lowBalance, recentSyncFailed, runwayDays, runwayLow, syncAlert],
   )
 
   const spiking = metrics.some((m) => m.alert) || !apiOk || failedNotifications > 0
