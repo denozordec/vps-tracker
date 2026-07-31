@@ -4,11 +4,9 @@ import type { VpsTrackerEvent } from '@cfdm/shared/contracts/integration-cfdm'
 
 function resolveCfdmApiBase(): string | null {
   const row = settingsRepository.getBySpace()
-  if (!row) return null
-  const explicit = row.cfdmApiUrl?.trim()
-  if (explicit) return explicit.replace(/\/$/, '')
-  const cfdm = settingsRepository.getAppSwitcher().apps.find((a) => a.id === 'cfdm')
-  return cfdm?.url?.trim().replace(/\/$/, '') ?? null
+  const explicit = row?.cfdmApiUrl?.trim() ?? ''
+  if (!explicit) return null
+  return explicit.replace(/\/$/, '')
 }
 
 export async function notifyCfdmVpsEvent(

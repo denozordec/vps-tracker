@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeDb } from '@cfdm/db'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { resetTestDb } from '@cfdm/db/test-setup'
@@ -191,19 +191,38 @@ describe('settings cfdm sync', () => {
       integrationEnabled: true,
       integrationToken: 'shared-token',
       cfdmApiUrl: '',
+    })
+    const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
+    expect(res.statusCode).toBe(502)
+    const body = res.json() as { ok: boolean; error: string }
+    expect(body.ok).toBe(false)
+    expect(body.error).toContain('URL API CFDM')
+  })
+
+  it('uses only saved cfdmApiUrl, not App Switcher defaults', async () => {
+    settingsRepository.upsert('settings-main', {
+      integrationEnabled: true,
+      integrationToken: 'shared-token',
+      cfdmApiUrl: 'https://cfdm.prod.example',
       appSwitcher: {
         menuLabel: 'Apps',
         apps: [
           {
-            id: 'vps-tracker',
-            name: 'VPS Tracker',
-            url: 'http://127.0.0.1:3001',
+            id: 'cfdm',
+            name: 'CFDM',
+            url: 'http://192.168.100.67:6363',
           },
         ],
       },
     })
+    const fetchMock = vi.fn(async () =>
+      Response.json({ ok: true, count: 0, bindings: [], fullSync: true }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
     const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
-    expect(res.statusCode).toBe(502)
-    expect(res.json()).toMatchObject({ ok: false })
+    expect(res.statusCode).toBe(200)
+    const call = fetchMock.mock.calls[0] as [string] | undefined
+    expect(call?.[0]).toBe('https://cfdm.prod.example/api/v1/integrations/vps-tracker/sync')
   })
 })

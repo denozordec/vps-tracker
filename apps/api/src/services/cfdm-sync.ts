@@ -17,22 +17,20 @@ function isUsableHttpUrl(raw: string): boolean {
   }
 }
 
+/** Только явно сохранённый settings.cfdmApiUrl — без App Switcher / локальных дефолтов. */
 function resolveCfdmApiBase(): string | null {
   const row = settingsRepository.getBySpace()
-  if (!row) return null
-  const explicit = row.cfdmApiUrl?.trim()
-  if (explicit && isUsableHttpUrl(explicit)) return explicit.replace(/\/$/, '')
-  const cfdm = settingsRepository.getAppSwitcher().apps.find((a) => a.id === 'cfdm')
-  const fromSwitcher = cfdm?.url?.trim().replace(/\/$/, '') ?? ''
-  if (fromSwitcher && isUsableHttpUrl(fromSwitcher)) return fromSwitcher
-  return null
+  const explicit = row?.cfdmApiUrl?.trim() ?? ''
+  if (!explicit) return null
+  if (!isUsableHttpUrl(explicit)) return null
+  return explicit.replace(/\/$/, '')
 }
 
 function networkErrorMessage(baseUrl: string, err: unknown): string {
   const raw = err instanceof Error ? err.message : 'Ошибка сети'
   return (
     `Не удалось подключиться к CFDM (${baseUrl}): ${raw}. ` +
-    'Укажите URL API CFDM (доступный с хоста VPS Tracker API) и сохраните.'
+    'Проверьте, что сохранённый URL API доступен с хоста, где запущен VPS Tracker API.'
   )
 }
 
@@ -47,10 +45,15 @@ export async function requestCfdmFullSync(): Promise<{
     return {
       ok: false,
       error:
-        'Укажите URL API CFDM в настройках интеграции (или добавьте приложение cfdm в App Switcher)',
+        'URL API CFDM не сохранён в настройках интеграции. Укажите продовый URL и нажмите «Сохранить интеграцию».',
     }
   }
-  if (!token) return { ok: false, error: 'Укажите integration token' }
+  if (!token) {
+    return {
+      ok: false,
+      error: 'Integration token не сохранён. Сгенерируйте/вставьте токен и сохраните интеграцию.',
+    }
+  }
 
   const syncUrl = `${baseUrl}/api/v1/integrations/vps-tracker/sync`
 
@@ -75,7 +78,6 @@ export async function requestCfdmFullSync(): Promise<{
       }
     }
 
-    // Pull: CFDM отдаёт bindings в ответе — применяем локально (без обратного push).
     if (Array.isArray(body.bindings)) {
       const parsed = cfdmSyncBindingsBodySchema.safeParse({
         bindings: body.bindings,
@@ -97,7 +99,6 @@ export async function requestCfdmFullSync(): Promise<{
       }
     }
 
-    // Legacy: CFDM уже запушил bindings сам и вернул только count.
     settingsRepository.touchIntegrationSync()
     return { ok: true, count: body.count ?? 0 }
   } catch (err) {

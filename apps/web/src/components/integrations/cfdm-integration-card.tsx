@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -31,7 +32,7 @@ function generateToken(): string {
 
 interface CfdmIntegrationFormProps {
   settings?: Settings
-  /** URL CFDM из App Switcher — подсказка и fallback, если cfdmApiUrl не сохранён */
+  /** URL CFDM из App Switcher (portal) — только подсказка для заполнения поля */
   fallbackCfdmUrl?: string
   onSave: (values: {
     cfdmApiUrl?: string
@@ -49,14 +50,24 @@ export function CfdmIntegrationForm({
   isSaving,
 }: CfdmIntegrationFormProps) {
   const queryClient = useQueryClient()
+  const savedUrl = settings?.cfdmApiUrl?.trim() ?? ''
+  const switcherUrl = fallbackCfdmUrl?.trim() || ''
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     values: {
-      cfdmApiUrl: settings?.cfdmApiUrl ?? '',
+      cfdmApiUrl: savedUrl,
       integrationToken: '',
       integrationEnabled: Boolean(settings?.integrationEnabled),
     },
   })
+
+  // Если URL ещё не сохранён в settings — подставить prod URL из App Switcher и включить «Сохранить».
+  useEffect(() => {
+    if (savedUrl || !switcherUrl) return
+    if (form.getValues('cfdmApiUrl')?.trim()) return
+    form.setValue('cfdmApiUrl', switcherUrl, { shouldDirty: true, shouldTouch: true })
+  }, [savedUrl, switcherUrl, form])
 
   const syncMut = useMutation({
     mutationFn: () => api.syncCfdm(),
@@ -75,18 +86,18 @@ export function CfdmIntegrationForm({
 
   function handleSubmit(values: FormValues) {
     const token = values.integrationToken?.trim()
+    const url = values.cfdmApiUrl?.trim() ?? ''
     onSave({
       integrationEnabled: values.integrationEnabled,
-      cfdmApiUrl: values.cfdmApiUrl?.trim() || undefined,
+      // Всегда пишем явное значение — иначе URL не попадает в БД.
+      cfdmApiUrl: url,
       ...(token ? { integrationToken: token } : {}),
     })
   }
 
   const hasSavedToken = Boolean(settings?.integrationTokenSet)
-  const hasSavedUrl = Boolean(settings?.cfdmApiUrl?.trim())
-  const switcherUrl = fallbackCfdmUrl?.trim() || ''
-  const canSync =
-    hasSavedToken || Boolean(settings?.integrationLastSyncAt?.trim())
+  const hasSavedUrl = Boolean(savedUrl)
+  const canSync = hasSavedToken && hasSavedUrl
 
   return (
     <form
@@ -96,7 +107,7 @@ export function CfdmIntegrationForm({
       <FieldGroup className="gap-0">
         <SettingRow
           title="Принимать синхронизацию"
-          description="Разрешить CFDM пушить домены и сервисы (авто-sync). Ручная кнопка работает и без этого."
+          description="Разрешить CFDM пушить домены и сервисы (авто-sync)"
         >
           <Controller
             control={form.control}
@@ -114,10 +125,10 @@ export function CfdmIntegrationForm({
           title="URL API CFDM"
           description={
             hasSavedUrl
-              ? 'Сохранён — ручной sync и failover vps_down'
+              ? `Сохранён: ${savedUrl}`
               : switcherUrl
-                ? `Не сохранён — sync пойдёт на App Switcher: ${switcherUrl}`
-                : 'Укажите URL API CFDM (например http://192.168.x.x:6363) и сохраните'
+                ? `Не сохранён в БД. Подставлен URL из App Switcher — нажмите «Сохранить интеграцию»`
+                : 'Укажите продовый URL API CFDM и сохраните'
           }
           labelFor="cfdm-api-url"
           stacked
@@ -125,7 +136,7 @@ export function CfdmIntegrationForm({
           <Input
             id="cfdm-api-url"
             className="w-full"
-            placeholder={switcherUrl || 'http://192.168.100.67:6363'}
+            placeholder="https://cfdm.example.org"
             {...form.register('cfdmApiUrl')}
           />
         </SettingRow>
@@ -173,7 +184,7 @@ export function CfdmIntegrationForm({
           description={
             settings?.integrationLastSyncAt
               ? `Последний sync: ${new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}`
-              : 'Запросить полную выгрузку доменов и сервисов из CFDM'
+              : 'Используются только сохранённые URL и токен'
           }
           last
         >
@@ -185,11 +196,17 @@ export function CfdmIntegrationForm({
             disabled={syncMut.isPending || !canSync}
             title={
               canSync
-                ? 'Синхронизировать по сохранённым credentials'
-                : 'Сначала сохраните integration token'
+                ? `Синхронизировать с ${savedUrl}`
+                : !hasSavedUrl
+                  ? 'Сначала сохраните URL API CFDM'
+                  : 'Сначала сохраните integration token'
             }
             onClick={() => {
-              if (!canSync) {
+              if (!hasSavedUrl) {
+                toast.error('Сначала сохраните URL API CFDM (кнопка «Сохранить интеграцию»)')
+                return
+              }
+              if (!hasSavedToken) {
                 toast.error('Сначала сохраните integration token')
                 return
               }

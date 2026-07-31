@@ -243,11 +243,9 @@ function SettingsIntegrationsPage() {
                     id="cfdm"
                     name="CF Domain Manager"
                     description={
-                      current?.cfdmApiUrl
+                      current?.cfdmApiUrl?.trim()
                         ? current.cfdmApiUrl
-                        : appSwitcher.apps.find((a) => a.id === 'cfdm')?.url
-                          ? `URL из App Switcher · приём доменов и сервисов`
-                          : 'Приём синхронизации доменов и сервисов'
+                        : 'URL API не сохранён — укажите продовый домен и сохраните'
                     }
                     logo={<GlobeIcon aria-hidden="true" />}
                     status={cfdmStatus}
