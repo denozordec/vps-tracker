@@ -418,6 +418,7 @@ export function columnDefFromDataGrid<T>(
             accessorFn: c.sortValue
               ? (row: T) => c.sortValue!(row)
               : (row: T) => (row as Record<string, unknown>)[c.key] as string | number,
+            sortingFn: c.sortingFn ?? 'auto',
           }
         : {}),
       header: Icon

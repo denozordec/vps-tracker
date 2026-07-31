@@ -8,6 +8,8 @@ export interface DataGridColumn<T> {
   icon?: LucideIcon
   sortable?: boolean
   sortValue?: (row: T) => string | number
+  /** TanStack sortingFn; для числовых sortValue — `'basic'`. */
+  sortingFn?: 'auto' | 'alphanumeric' | 'basic' | 'text' | 'datetime'
   headerTitle?: string
   className?: string
   headerClassName?: string

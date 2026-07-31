@@ -151,16 +151,34 @@ export function vpsTariffRateAmount(vps: {
   return monthly ?? 0
 }
 
-/** Месячный burn-rate для сортировки и отчётов. */
+/**
+ * Сопоставимая суточная стоимость (единый знаменатель для сортировки).
+ * Месячный тариф → / 30; суточный → dailyRate (fallback: monthly/30).
+ */
+export function vpsTariffComparableDailyRate(vps: {
+  tariffType?: string | null
+  dailyRate?: number | string | null
+  monthlyRate?: number | string | null
+}): number {
+  const daily = tariffRateNumber(vps.dailyRate)
+  const monthly = tariffRateNumber(vps.monthlyRate)
+  if (vps.tariffType === 'daily') {
+    if (daily != null && daily > 0) return daily
+    if (monthly != null && monthly > 0) return monthly / 30
+    return 0
+  }
+  if (monthly != null && monthly > 0) return monthly / 30
+  if (daily != null && daily > 0) return daily
+  return 0
+}
+
+/** Месячный burn-rate для сортировки и отчётов (= comparable daily × 30). */
 export function vpsTariffMonthlyBurn(vps: {
   tariffType?: string | null
   dailyRate?: number | string | null
   monthlyRate?: number | string | null
 }): number {
-  const daily = tariffRateNumber(vps.dailyRate) ?? 0
-  const monthly = tariffRateNumber(vps.monthlyRate) ?? 0
-  if (vps.tariffType === 'daily') return daily * 30
-  return monthly
+  return vpsTariffComparableDailyRate(vps) * 30
 }
 
 const ENVIRONMENT_LABELS: Record<string, string> = {

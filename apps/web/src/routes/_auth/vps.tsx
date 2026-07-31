@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import type { VpsFormValues } from '@/lib/schemas'
-import { normalizeRatesPayload, effectiveVpsTariffCurrency, formatInProviderCurrency, vpsStatusLabel, tariffTypeLabel, vpsTariffRateAmount, vpsTariffMonthlyBurn } from '@/lib/format'
+import { normalizeRatesPayload, effectiveVpsTariffCurrency, formatInProviderCurrency, vpsStatusLabel, tariffTypeLabel, vpsTariffRateAmount, vpsTariffComparableDailyRate, convertWithProviderRate } from '@/lib/format'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
@@ -405,6 +405,7 @@ function VpsPage() {
       key: 'specs',
       header: 'Ресурсы',
       icon: CpuIcon,
+      sortingFn: 'basic',
       sortValue: (v) => v.vcpu,
       cell: (v) => (
         <span className="tabular-nums text-muted-foreground">
@@ -431,7 +432,21 @@ function VpsPage() {
       key: 'tariff',
       header: 'Тариф',
       icon: CreditCardIcon,
-      sortValue: (v) => vpsTariffMonthlyBurn(v),
+      // Единый знаменатель: суточная стоимость в базовой валюте (5,59/сутки > 75/мес).
+      sortingFn: 'basic',
+      sortValue: (v) => {
+        const provider = providerById.get(v.providerId)
+        const daily = vpsTariffComparableDailyRate(v)
+        if (!(daily > 0)) return 0
+        const currency = effectiveVpsTariffCurrency(v, provider)
+        return convertWithProviderRate(
+          daily,
+          currency,
+          provider,
+          snapshot?.settings ?? null,
+          ratesData,
+        ).value
+      },
       cell: (v) => {
         const provider = providerById.get(v.providerId)
         const currency = effectiveVpsTariffCurrency(v, provider)
