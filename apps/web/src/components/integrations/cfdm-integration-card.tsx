@@ -31,6 +31,8 @@ function generateToken(): string {
 
 interface CfdmIntegrationFormProps {
   settings?: Settings
+  /** URL CFDM из App Switcher — подсказка и fallback, если cfdmApiUrl не сохранён */
+  fallbackCfdmUrl?: string
   onSave: (values: {
     cfdmApiUrl?: string
     integrationToken?: string
@@ -42,6 +44,7 @@ interface CfdmIntegrationFormProps {
 /** CFDM integration form — Frame/SettingRow. Preview https://reui.io/preview/base/settings-2 · https://reui.io/preview/base/settings-16 */
 export function CfdmIntegrationForm({
   settings,
+  fallbackCfdmUrl,
   onSave,
   isSaving,
 }: CfdmIntegrationFormProps) {
@@ -79,9 +82,9 @@ export function CfdmIntegrationForm({
     })
   }
 
-  // Sync по сохранённому токену (URL — cfdmApiUrl или App Switcher на API).
   const hasSavedToken = Boolean(settings?.integrationTokenSet)
   const hasSavedUrl = Boolean(settings?.cfdmApiUrl?.trim())
+  const switcherUrl = fallbackCfdmUrl?.trim() || ''
   const canSync =
     hasSavedToken || Boolean(settings?.integrationLastSyncAt?.trim())
 
@@ -93,7 +96,7 @@ export function CfdmIntegrationForm({
       <FieldGroup className="gap-0">
         <SettingRow
           title="Принимать синхронизацию"
-          description="Разрешить CFDM пушить домены и сервисы"
+          description="Разрешить CFDM пушить домены и сервисы (авто-sync). Ручная кнопка работает и без этого."
         >
           <Controller
             control={form.control}
@@ -111,8 +114,10 @@ export function CfdmIntegrationForm({
           title="URL API CFDM"
           description={
             hasSavedUrl
-              ? 'Сохранён — для failover vps_down и ручного sync'
-              : 'Не сохранён: укажите URL и нажмите «Сохранить», либо настройте CFDM в App Switcher'
+              ? 'Сохранён — ручной sync и failover vps_down'
+              : switcherUrl
+                ? `Не сохранён — sync пойдёт на App Switcher: ${switcherUrl}`
+                : 'Укажите URL API CFDM (например http://192.168.x.x:6363) и сохраните'
           }
           labelFor="cfdm-api-url"
           stacked
@@ -120,7 +125,7 @@ export function CfdmIntegrationForm({
           <Input
             id="cfdm-api-url"
             className="w-full"
-            placeholder="https://cfdm.example.com"
+            placeholder={switcherUrl || 'http://192.168.100.67:6363'}
             {...form.register('cfdmApiUrl')}
           />
         </SettingRow>

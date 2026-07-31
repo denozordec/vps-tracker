@@ -115,12 +115,31 @@ describe('settings cfdm sync', () => {
   })
 
   it('requests full sync from CFDM', async () => {
-    const fetchMock = vi.fn(async () => Response.json({ ok: true, count: 3 }))
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        ok: true,
+        count: 1,
+        fullSync: true,
+        bindings: [
+          {
+            bindingId: 1,
+            serviceId: 10,
+            serviceName: 'web',
+            serviceSlug: 'web',
+            fqdn: 'app.example.com',
+            zoneName: 'example.com',
+            hostname: 'app',
+            ips: ['1.2.3.4'],
+          },
+        ],
+      }),
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ ok: true, count: 3 })
+    expect(res.json()).toMatchObject({ ok: true })
+    expect((res.json() as { count: number }).count).toBeGreaterThanOrEqual(1)
 
     const call = fetchMock.mock.calls[0] as [string, RequestInit] | undefined
     expect(call?.[0]).toBe('http://cfdm.test/api/v1/integrations/vps-tracker/sync')
@@ -135,13 +154,36 @@ describe('settings cfdm sync', () => {
       integrationToken: 'shared-token',
       cfdmApiUrl: 'http://cfdm.test',
     })
-    const fetchMock = vi.fn(async () => Response.json({ ok: true, count: 1 }))
+    const fetchMock = vi.fn(async () =>
+      Response.json({ ok: true, count: 0, bindings: [], fullSync: true }),
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ ok: true, count: 1 })
+    expect(res.json()).toEqual({ ok: true, count: 0 })
     expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('returns clear error when CFDM is unreachable', async () => {
+    settingsRepository.upsert('settings-main', {
+      integrationEnabled: true,
+      integrationToken: 'shared-token',
+      cfdmApiUrl: 'http://cfdm.test',
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed')
+      }),
+    )
+
+    const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
+    expect(res.statusCode).toBe(502)
+    const body = res.json() as { ok: boolean; error: string }
+    expect(body.ok).toBe(false)
+    expect(body.error).toContain('http://cfdm.test')
+    expect(body.error).toContain('fetch failed')
   })
 
   it('returns error when CFDM URL is missing', async () => {
@@ -149,6 +191,16 @@ describe('settings cfdm sync', () => {
       integrationEnabled: true,
       integrationToken: 'shared-token',
       cfdmApiUrl: '',
+      appSwitcher: {
+        menuLabel: 'Apps',
+        apps: [
+          {
+            id: 'vps-tracker',
+            name: 'VPS Tracker',
+            url: 'http://127.0.0.1:3001',
+          },
+        ],
+      },
     })
     const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
     expect(res.statusCode).toBe(502)

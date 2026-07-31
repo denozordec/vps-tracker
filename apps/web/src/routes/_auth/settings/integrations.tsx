@@ -256,6 +256,9 @@ function SettingsIntegrationsPage() {
                   >
                     <CfdmIntegrationForm
                       settings={current}
+                      fallbackCfdmUrl={
+                        appSwitcher.apps.find((a) => a.id === 'cfdm')?.url
+                      }
                       isSaving={saveMut.isPending}
                       onSave={(values) => saveMut.mutate(values)}
                     />
