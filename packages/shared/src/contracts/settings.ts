@@ -27,6 +27,7 @@ export const settingsSchema = z.object({
   appSwitcher: appSwitcherConfigSchema.optional(),
   integrationToken: z.string().optional(),
   integrationEnabled: z.boolean().optional(),
+  cfdmApiUrl: z.string().url('Невалидный URL').or(z.literal('')).optional(),
   showQuickActions: z.boolean().optional(),
 })
 

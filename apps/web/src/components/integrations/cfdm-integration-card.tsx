@@ -79,9 +79,11 @@ export function CfdmIntegrationForm({
     })
   }
 
-  // Только сохранённые credentials — без ввода токена и без «сначала сохранить форму».
+  // Sync по сохранённому токену (URL — cfdmApiUrl или App Switcher на API).
+  const hasSavedToken = Boolean(settings?.integrationTokenSet)
+  const hasSavedUrl = Boolean(settings?.cfdmApiUrl?.trim())
   const canSync =
-    Boolean(settings?.cfdmApiUrl?.trim()) && Boolean(settings?.integrationTokenSet)
+    hasSavedToken || Boolean(settings?.integrationLastSyncAt?.trim())
 
   return (
     <form
@@ -107,23 +109,27 @@ export function CfdmIntegrationForm({
         </SettingRow>
         <SettingRow
           title="URL API CFDM"
-          description="Для failover vps_down и ручного sync"
+          description={
+            hasSavedUrl
+              ? 'Сохранён — для failover vps_down и ручного sync'
+              : 'Не сохранён: укажите URL и нажмите «Сохранить», либо настройте CFDM в App Switcher'
+          }
           labelFor="cfdm-api-url"
           stacked
         >
           <Input
             id="cfdm-api-url"
             className="w-full"
-            placeholder="http://192.168.100.67:6363"
+            placeholder="https://cfdm.example.com"
             {...form.register('cfdmApiUrl')}
           />
         </SettingRow>
         <SettingRow
           title="Integration token"
           description={
-            settings?.integrationTokenSet
-              ? 'Токен установлен — введите новый для замены'
-              : 'Сгенерируйте или вставьте токен'
+            hasSavedToken
+              ? 'Токен сохранён — введите новый только для замены'
+              : 'Сгенерируйте или вставьте токен, затем сохраните'
           }
           labelFor="integration-token"
           stacked
@@ -135,8 +141,8 @@ export function CfdmIntegrationForm({
               autoComplete="new-password"
               className="min-w-0 flex-1"
               placeholder={
-                settings?.integrationTokenSet
-                  ? 'Токен установлен — введите новый для замены'
+                hasSavedToken
+                  ? 'Токен сохранён — введите новый для замены'
                   : 'Сгенерируйте или вставьте токен'
               }
               {...form.register('integrationToken')}
@@ -171,13 +177,19 @@ export function CfdmIntegrationForm({
             variant="outline"
             size="sm"
             loading={syncMut.isPending}
-            disabled={!canSync}
+            disabled={syncMut.isPending || !canSync}
             title={
               canSync
-                ? 'Запустить sync по сохранённым URL и токену'
-                : 'Сначала сохраните URL API CFDM и integration token'
+                ? 'Синхронизировать по сохранённым credentials'
+                : 'Сначала сохраните integration token'
             }
-            onClick={() => syncMut.mutate()}
+            onClick={() => {
+              if (!canSync) {
+                toast.error('Сначала сохраните integration token')
+                return
+              }
+              syncMut.mutate()
+            }}
           >
             <RefreshCwIcon data-icon="inline-start" aria-hidden="true" />
             Синхронизировать

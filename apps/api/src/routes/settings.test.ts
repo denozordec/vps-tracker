@@ -101,6 +101,19 @@ describe('settings cfdm sync', () => {
     closeDb()
   })
 
+  it('persists cfdmApiUrl via PUT settings', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/settings/settings-main',
+      payload: { cfdmApiUrl: 'http://192.168.100.67:6363' },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({ cfdmApiUrl: 'http://192.168.100.67:6363' })
+
+    const dto = settingsRepository.get('settings-main')
+    expect(dto?.cfdmApiUrl).toBe('http://192.168.100.67:6363')
+  })
+
   it('requests full sync from CFDM', async () => {
     const fetchMock = vi.fn(async () => Response.json({ ok: true, count: 3 }))
     vi.stubGlobal('fetch', fetchMock)

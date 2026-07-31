@@ -245,7 +245,9 @@ function SettingsIntegrationsPage() {
                     description={
                       current?.cfdmApiUrl
                         ? current.cfdmApiUrl
-                        : 'Приём синхронизации доменов и сервисов'
+                        : appSwitcher.apps.find((a) => a.id === 'cfdm')?.url
+                          ? `URL из App Switcher · приём доменов и сервисов`
+                          : 'Приём синхронизации доменов и сервисов'
                     }
                     logo={<GlobeIcon aria-hidden="true" />}
                     status={cfdmStatus}
