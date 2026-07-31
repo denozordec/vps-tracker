@@ -13,7 +13,12 @@ export const cfdmBindingSyncItemSchema = z.object({
 })
 
 export const cfdmSyncBindingsBodySchema = z.object({
-  bindings: z.array(cfdmBindingSyncItemSchema).min(1),
+  bindings: z.array(cfdmBindingSyncItemSchema),
+  /** Полная пересинхронизация: удалить CFDM-домены, которых нет в payload. */
+  fullSync: z.boolean().optional(),
+}).refine((data) => data.fullSync === true || data.bindings.length >= 1, {
+  message: 'bindings обязателен, если fullSync не задан',
+  path: ['bindings'],
 })
 
 export type CfdmBindingSyncItem = z.infer<typeof cfdmBindingSyncItemSchema>

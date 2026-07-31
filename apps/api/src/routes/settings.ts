@@ -6,6 +6,7 @@ import { settingsSchema, telegramTestBodySchema } from '@cfdm/shared/contracts/s
 import { restartScheduler } from '../services/scheduler.js'
 import { sendTelegramMessage } from '../services/telegram.js'
 import { deliverWebhook } from '../services/notifications/channels.js'
+import { requestCfdmFullSync } from '../services/cfdm-sync.js'
 import { requireSpaceRole } from '../plugins/space.js'
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
@@ -79,5 +80,17 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       data: { source: 'settings_test' },
     })
     return result.ok ? { ok: true } : { ok: false, error: result.error ?? 'Ошибка webhook' }
+  })
+
+  app.post('/api/settings/cfdm/sync', async (req, reply) => {
+    if (!requireSpaceRole(req, reply, 'admin')) return
+    const result = await requestCfdmFullSync()
+    if (!result.ok) {
+      return reply.code(502).send({
+        ok: false,
+        error: result.error ?? 'Не удалось синхронизировать с CFDM',
+      })
+    }
+    return { ok: true, count: result.count ?? 0 }
   })
 }

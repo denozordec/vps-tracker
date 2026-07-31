@@ -162,6 +162,11 @@ export const api = {
   sendWebhookTest: () =>
     fetchApi<{ ok: boolean; error?: string }>('/api/settings/webhook/test', { method: 'POST' }),
 
+  syncCfdm: () =>
+    fetchApi<{ ok: boolean; count?: number; error?: string }>('/api/settings/cfdm/sync', {
+      method: 'POST',
+    }),
+
   fetchNotificationLog: (limit = 50) =>
     fetchApi<import('@/types/entities').NotificationLogRow[]>(
       `/api/notifications/log?limit=${limit}`,

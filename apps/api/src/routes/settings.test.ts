@@ -81,3 +81,49 @@ describe('settings telegram test', () => {
     expect(url).toContain('botoverride-token/')
   })
 })
+
+describe('settings cfdm sync', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    resetTestDb()
+    settingsRepository.upsert('settings-main', {
+      integrationEnabled: true,
+      integrationToken: 'shared-token',
+      cfdmApiUrl: 'http://cfdm.test',
+    })
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    vi.unstubAllGlobals()
+    closeDb()
+  })
+
+  it('запрашивает полный sync у CFDM', async () => {
+    const fetchMock = vi.fn(async () => Response.json({ ok: true, count: 3 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ ok: true, count: 3 })
+
+    const call = fetchMock.mock.calls[0] as [string, RequestInit] | undefined
+    expect(call?.[0]).toBe('http://cfdm.test/api/v1/integrations/vps-tracker/sync')
+    expect((call?.[1].headers as Record<string, string>).Authorization).toBe(
+      'Bearer shared-token',
+    )
+  })
+
+  it('возвращает ошибку если приём выключен', async () => {
+    settingsRepository.upsert('settings-main', {
+      integrationEnabled: false,
+      integrationToken: 'shared-token',
+      cfdmApiUrl: 'http://cfdm.test',
+    })
+    const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
+    expect(res.statusCode).toBe(502)
+    expect(res.json()).toMatchObject({ ok: false })
+  })
+})

@@ -2,6 +2,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { RefreshCwIcon } from 'lucide-react'
 
 import { SettingRow } from '@/components/setting-row'
 import { LoadingButton } from '@/components/loading-button'
@@ -9,6 +11,8 @@ import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
 import { Button } from '@cfdm/ui/components/button'
 import { Switch } from '@cfdm/ui/components/switch'
+import { api, ApiError } from '@/lib/api-client'
+import { snapshotQueryOptions } from '@/queries/snapshot'
 import type { Settings } from '@/types/entities'
 
 const formSchema = z.object({
@@ -35,18 +39,34 @@ interface CfdmIntegrationFormProps {
   isSaving?: boolean
 }
 
-/** CFDM integration form — Frame/SettingRow, no Card. Preview https://reui.io/preview/base/settings-3 */
+/** CFDM integration form — Frame/SettingRow. Preview https://reui.io/preview/base/settings-2 · https://reui.io/preview/base/settings-16 */
 export function CfdmIntegrationForm({
   settings,
   onSave,
   isSaving,
 }: CfdmIntegrationFormProps) {
+  const queryClient = useQueryClient()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     values: {
       cfdmApiUrl: settings?.cfdmApiUrl ?? '',
       integrationToken: '',
       integrationEnabled: settings?.integrationEnabled === true,
+    },
+  })
+
+  const syncMut = useMutation({
+    mutationFn: () => api.syncCfdm(),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: snapshotQueryOptions().queryKey })
+      toast.success(
+        result.count != null
+          ? `Синхронизация завершена: ${result.count} bindings`
+          : 'Синхронизация завершена',
+      )
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof ApiError ? e.message : 'Не удалось синхронизировать с CFDM')
     },
   })
 
@@ -58,6 +78,11 @@ export function CfdmIntegrationForm({
       ...(token ? { integrationToken: token } : {}),
     })
   }
+
+  const canSync =
+    settings?.integrationEnabled === true &&
+    Boolean(settings?.cfdmApiUrl?.trim()) &&
+    settings?.integrationTokenSet === true
 
   return (
     <form
@@ -83,7 +108,7 @@ export function CfdmIntegrationForm({
         </SettingRow>
         <SettingRow
           title="URL API CFDM"
-          description="Для failover vps_down"
+          description="Для failover vps_down и ручного sync"
           labelFor="cfdm-api-url"
           stacked
         >
@@ -103,7 +128,6 @@ export function CfdmIntegrationForm({
           }
           labelFor="integration-token"
           stacked
-          last={!settings?.integrationLastSyncAt}
         >
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Input
@@ -134,17 +158,27 @@ export function CfdmIntegrationForm({
             </Button>
           </div>
         </SettingRow>
-        {settings?.integrationLastSyncAt ? (
-          <SettingRow
-            title="Последний sync"
-            description={new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}
-            last
+        <SettingRow
+          title="Синхронизация"
+          description={
+            settings?.integrationLastSyncAt
+              ? `Последний sync: ${new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}`
+              : 'Запросить полную выгрузку доменов и сервисов из CFDM'
+          }
+          last
+        >
+          <LoadingButton
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={syncMut.isPending}
+            disabled={!canSync || form.formState.isDirty}
+            onClick={() => syncMut.mutate()}
           >
-            <span className="text-muted-foreground text-sm tabular-nums">
-              {new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}
-            </span>
-          </SettingRow>
-        ) : null}
+            <RefreshCwIcon data-icon="inline-start" aria-hidden="true" />
+            Синхронизировать
+          </LoadingButton>
+        </SettingRow>
       </FieldGroup>
       <div className="flex justify-end border-t px-5 py-3">
         <LoadingButton

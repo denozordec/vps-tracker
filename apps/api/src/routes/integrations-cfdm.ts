@@ -27,7 +27,9 @@ export const integrationsCfdmRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return runInIntegrationSpace(req, () => {
-        const result = vpsDomainsRepository.syncBindings(parsed.data.bindings)
+        const result = vpsDomainsRepository.syncBindings(parsed.data.bindings, {
+          fullSync: parsed.data.fullSync === true,
+        })
         settingsRepository.touchIntegrationSync()
         return {
           ok: true,

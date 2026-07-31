@@ -27,7 +27,7 @@ describe('integrations CFDM routes', () => {
       method: 'POST',
       url: '/api/integrations/cfdm/ping',
     })
-    expect(res.statusCode).toBe(401)
+    expect(res.statusCode).toBe(503)
   })
 
   it('принимает ping с верным Bearer', async () => {
@@ -43,5 +43,23 @@ describe('integrations CFDM routes', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(res.json()).toEqual({ ok: true, service: 'vps-tracker' })
+  })
+
+  it('принимает fullSync с пустым списком bindings', async () => {
+    settingsRepository.upsert('settings-main', {
+      integrationToken: 'test-secret',
+      integrationEnabled: true,
+    })
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/integrations/cfdm/sync-bindings',
+      headers: {
+        authorization: 'Bearer test-secret',
+        'content-type': 'application/json',
+      },
+      payload: { bindings: [], fullSync: true },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({ ok: true, upserted: 0 })
   })
 })

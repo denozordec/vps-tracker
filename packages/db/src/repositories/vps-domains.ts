@@ -125,7 +125,10 @@ export const vpsDomainsRepository = {
     return { updated }
   },
 
-  syncBindings(items: CfdmBindingSyncItem[]): {
+  syncBindings(
+    items: CfdmBindingSyncItem[],
+    opts?: { fullSync?: boolean },
+  ): {
     matched: number
     unmatched: number
     deleted: number
@@ -139,12 +142,15 @@ export const vpsDomainsRepository = {
     let unmatched = 0
     let deleted = 0
     let upserted = 0
+    const keptBindingIds = new Set<number>()
 
     for (const item of items) {
       if (item.deleted) {
         if (this.deleteByCfdmBindingId(item.bindingId)) deleted++
         continue
       }
+
+      keptBindingIds.add(item.bindingId)
 
       const vpsId = findVpsIdByIps(allVps, item.ips)
       const matchStatus = resolveMatchStatus(vpsId)
@@ -174,6 +180,25 @@ export const vpsDomainsRepository = {
         db.insert(schema.vpsDomains).values({ id: generateId('vd'), ...values }).run()
       }
       upserted++
+    }
+
+    if (opts?.fullSync) {
+      const rows = db
+        .select()
+        .from(schema.vpsDomains)
+        .where(
+          and(
+            eq(schema.vpsDomains.spaceId, spaceId),
+            eq(schema.vpsDomains.source, 'cfdm'),
+          ),
+        )
+        .all()
+      for (const row of rows) {
+        if (!keptBindingIds.has(row.cfdmBindingId)) {
+          db.delete(schema.vpsDomains).where(eq(schema.vpsDomains.id, row.id)).run()
+          deleted++
+        }
+      }
     }
 
     return { matched, unmatched, deleted, upserted }
