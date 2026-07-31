@@ -205,7 +205,7 @@ export function VpsEditSheet({
                     <NumberField
                       id="vps-vcpu"
                       min={0}
-                      step={1}
+                      step="any"
                       value={Number(field.value ?? 0)}
                       onValueChange={(val) => field.onChange(val ?? 0)}
                     >
@@ -226,7 +226,7 @@ export function VpsEditSheet({
                     <NumberField
                       id="vps-ram"
                       min={0}
-                      step={1}
+                      step="any"
                       value={Number(field.value ?? 0)}
                       onValueChange={(val) => field.onChange(val ?? 0)}
                     >
@@ -247,7 +247,7 @@ export function VpsEditSheet({
                     <NumberField
                       id="vps-disk"
                       min={0}
-                      step={1}
+                      step="any"
                       value={Number(field.value ?? 0)}
                       onValueChange={(val) => field.onChange(val ?? 0)}
                     >

@@ -50,7 +50,7 @@ export const vpsSchema = z.object({
   country: z.string().optional().default(''),
   city: z.string().optional().default(''),
   datacenter: z.string().optional().default(''),
-  vcpu: z.coerce.number().int().min(0).default(1),
+  vcpu: z.coerce.number().min(0).default(1),
   ramGb: z.coerce.number().min(0).default(1),
   diskGb: z.coerce.number().min(0).default(10),
   status: vpsStatusSchema.default('active'),
