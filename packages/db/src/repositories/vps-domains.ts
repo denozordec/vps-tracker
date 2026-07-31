@@ -18,6 +18,19 @@ function normalizeHost(host: string): string {
   return host.trim().toLowerCase().replace(/\.+$/, '')
 }
 
+function isIpLiteral(value: string): boolean {
+  const v = value.trim()
+  if (!v) return false
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(v)) {
+    return v.split('.').every((p) => {
+      const n = Number(p)
+      return Number.isInteger(n) && n >= 0 && n <= 255
+    })
+  }
+  // грубый IPv6 — отсекает hostname вроде ihome.rkns.top
+  return v.includes(':') && !v.includes(' ')
+}
+
 function collectVpsIps(vps: { ip?: string | null; additionalIps?: string[] }): string[] {
   const ips: string[] = []
   if (vps.ip?.trim()) ips.push(normalizeIp(vps.ip))
@@ -31,7 +44,9 @@ function findVpsIdByIps(
   allVps: ReturnType<typeof vpsRepository.list>,
   ips: string[],
 ): string | null {
-  const normalized = [...new Set(ips.map(normalizeIp).filter(Boolean))]
+  const normalized = [
+    ...new Set(ips.map(normalizeIp).filter((ip) => ip && isIpLiteral(ip))),
+  ]
   if (normalized.length === 0) return null
 
   const matches: string[] = []
@@ -51,7 +66,7 @@ function findVpsIdByDns(
   hostname: string,
 ): string | null {
   const key = normalizeHost(hostname)
-  if (!key) return null
+  if (!key || isIpLiteral(key)) return null
   const matches = allVps.filter((v) => normalizeHost(v.dns ?? '') === key)
   if (matches.length === 1) return matches[0]!.id
   return null
@@ -70,6 +85,20 @@ function findVpsIdForBinding(
 
 function resolveMatchStatus(vpsId: string | null): 'matched' | 'unmatched' {
   return vpsId ? 'matched' : 'unmatched'
+}
+
+function applyInheritedMatch(
+  db: ReturnType<typeof getDb>,
+  rowId: string,
+  vpsId: string,
+  counters: { matched: number; unmatched: number },
+): void {
+  db.update(schema.vpsDomains)
+    .set({ vpsId, matchStatus: 'matched' })
+    .where(eq(schema.vpsDomains.id, rowId))
+    .run()
+  counters.matched++
+  counters.unmatched = Math.max(0, counters.unmatched - 1)
 }
 
 export const vpsDomainsRepository = {
@@ -174,6 +203,8 @@ export const vpsDomainsRepository = {
     let upserted = 0
     const keptBindingIds = new Set<number>()
     const fqdnToVpsId = new Map<string, string>()
+    const serviceMatchedVps = new Map<number, Set<string>>()
+    const counters = { matched: 0, unmatched: 0 }
 
     for (const item of items) {
       if (item.deleted) {
@@ -186,10 +217,13 @@ export const vpsDomainsRepository = {
       const vpsId = findVpsIdForBinding(allVps, item)
       const matchStatus = resolveMatchStatus(vpsId)
       if (matchStatus === 'matched') {
-        matched++
+        counters.matched++
         fqdnToVpsId.set(normalizeHost(item.fqdn), vpsId!)
+        const set = serviceMatchedVps.get(item.serviceId) ?? new Set<string>()
+        set.add(vpsId!)
+        serviceMatchedVps.set(item.serviceId, set)
       } else {
-        unmatched++
+        counters.unmatched++
       }
 
       const existing = this.getByCfdmBindingId(item.bindingId)
@@ -205,7 +239,7 @@ export const vpsDomainsRepository = {
         cfdmBindingId: item.bindingId,
         source: 'cfdm' as const,
         matchStatus,
-        targetIps: JSON.stringify(item.ips),
+        targetIps: JSON.stringify(item.ips.filter(isIpLiteral)),
         syncedAt: now,
       }
 
@@ -217,7 +251,7 @@ export const vpsDomainsRepository = {
       upserted++
     }
 
-    // CNAME → уже matched FQDN (например imsk → ihome, а ihome привязан по IP/dns)
+    // CNAME → уже matched FQDN (например imsk → ihome)
     let inherited = true
     while (inherited) {
       inherited = false
@@ -227,16 +261,29 @@ export const vpsDomainsRepository = {
         if (!existing || existing.vpsId) continue
         const parentVpsId = fqdnToVpsId.get(normalizeHost(item.cnameTarget))
         if (!parentVpsId) continue
-        db.update(schema.vpsDomains)
-          .set({ vpsId: parentVpsId, matchStatus: 'matched' })
-          .where(eq(schema.vpsDomains.id, existing.id))
-          .run()
+        applyInheritedMatch(db, existing.id, parentVpsId, counters)
         fqdnToVpsId.set(normalizeHost(item.fqdn), parentVpsId)
-        matched++
-        unmatched = Math.max(0, unmatched - 1)
+        const set = serviceMatchedVps.get(item.serviceId) ?? new Set<string>()
+        set.add(parentVpsId)
+        serviceMatchedVps.set(item.serviceId, set)
         inherited = true
       }
     }
+
+    // Sibling bindings того же CFDM-сервиса → один уникальный VPS
+    for (const item of items) {
+      if (item.deleted) continue
+      const existing = this.getByCfdmBindingId(item.bindingId)
+      if (!existing || existing.vpsId) continue
+      const matched = serviceMatchedVps.get(item.serviceId)
+      if (!matched || matched.size !== 1) continue
+      const siblingVpsId = [...matched][0]!
+      applyInheritedMatch(db, existing.id, siblingVpsId, counters)
+      fqdnToVpsId.set(normalizeHost(item.fqdn), siblingVpsId)
+    }
+
+    matched = counters.matched
+    unmatched = counters.unmatched
 
     if (opts?.fullSync) {
       const rows = db
