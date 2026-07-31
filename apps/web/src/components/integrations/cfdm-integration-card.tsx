@@ -51,7 +51,7 @@ export function CfdmIntegrationForm({
     values: {
       cfdmApiUrl: settings?.cfdmApiUrl ?? '',
       integrationToken: '',
-      integrationEnabled: settings?.integrationEnabled === true,
+      integrationEnabled: Boolean(settings?.integrationEnabled),
     },
   })
 
@@ -79,10 +79,9 @@ export function CfdmIntegrationForm({
     })
   }
 
+  // Только сохранённые credentials — без ввода токена и без «сначала сохранить форму».
   const canSync =
-    settings?.integrationEnabled === true &&
-    Boolean(settings?.cfdmApiUrl?.trim()) &&
-    settings?.integrationTokenSet === true
+    Boolean(settings?.cfdmApiUrl?.trim()) && Boolean(settings?.integrationTokenSet)
 
   return (
     <form
@@ -99,7 +98,7 @@ export function CfdmIntegrationForm({
             name="integrationEnabled"
             render={({ field }) => (
               <Switch
-                checked={field.value}
+                checked={Boolean(field.value)}
                 onCheckedChange={field.onChange}
                 aria-label="Принимать синхронизацию"
               />
@@ -172,7 +171,12 @@ export function CfdmIntegrationForm({
             variant="outline"
             size="sm"
             loading={syncMut.isPending}
-            disabled={!canSync || form.formState.isDirty}
+            disabled={!canSync}
+            title={
+              canSync
+                ? 'Запустить sync по сохранённым URL и токену'
+                : 'Сначала сохраните URL API CFDM и integration token'
+            }
             onClick={() => syncMut.mutate()}
           >
             <RefreshCwIcon data-icon="inline-start" aria-hidden="true" />

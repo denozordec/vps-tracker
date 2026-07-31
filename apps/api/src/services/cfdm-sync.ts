@@ -14,11 +14,6 @@ export async function requestCfdmFullSync(): Promise<{
   count?: number
   error?: string
 }> {
-  const row = settingsRepository.getBySpace()
-  if (!row?.integrationEnabled) {
-    return { ok: false, error: 'Включите приём синхронизации' }
-  }
-
   const token = settingsRepository.getIntegrationToken()
   const baseUrl = resolveCfdmApiBase()
   if (!baseUrl) return { ok: false, error: 'Укажите URL API CFDM' }

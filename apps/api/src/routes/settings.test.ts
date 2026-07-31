@@ -101,7 +101,7 @@ describe('settings cfdm sync', () => {
     closeDb()
   })
 
-  it('запрашивает полный sync у CFDM', async () => {
+  it('requests full sync from CFDM', async () => {
     const fetchMock = vi.fn(async () => Response.json({ ok: true, count: 3 }))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -116,11 +116,26 @@ describe('settings cfdm sync', () => {
     )
   })
 
-  it('возвращает ошибку если приём выключен', async () => {
+  it('works with saved token even when accept toggle is off', async () => {
     settingsRepository.upsert('settings-main', {
       integrationEnabled: false,
       integrationToken: 'shared-token',
       cfdmApiUrl: 'http://cfdm.test',
+    })
+    const fetchMock = vi.fn(async () => Response.json({ ok: true, count: 1 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ ok: true, count: 1 })
+    expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('returns error when CFDM URL is missing', async () => {
+    settingsRepository.upsert('settings-main', {
+      integrationEnabled: true,
+      integrationToken: 'shared-token',
+      cfdmApiUrl: '',
     })
     const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
     expect(res.statusCode).toBe(502)
