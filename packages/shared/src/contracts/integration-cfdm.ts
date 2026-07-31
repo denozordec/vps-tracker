@@ -9,6 +9,8 @@ export const cfdmBindingSyncItemSchema = z.object({
   zoneName: z.string().min(1),
   hostname: z.string(),
   ips: z.array(z.string()),
+  /** CNAME-цель (FQDN), если binding — CNAME; для матчинга по dns / цепочке. */
+  cnameTarget: z.string().optional(),
   deleted: z.boolean().optional(),
 })
 
