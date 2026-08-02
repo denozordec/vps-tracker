@@ -30,20 +30,10 @@ function roundRate(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-function mapBillingCycle(cycle: string | undefined): {
-  tariffType: string
-  dailyRate: number | null
-  monthlyRate: number | null
-} {
-  const c = String(cycle ?? '').toLowerCase()
-  return { tariffType: c.includes('day') ? 'daily' : 'monthly', dailyRate: null, monthlyRate: null }
-}
-
 function ratesFromTotal(
   total: number,
   cycle: string | undefined,
 ): { tariffType: string; dailyRate: number | null; monthlyRate: number | null } {
-  const base = mapBillingCycle(cycle)
   const c = String(cycle ?? '').toLowerCase()
   if (c.includes('day')) {
     return { tariffType: 'daily', dailyRate: roundRate(total), monthlyRate: null }
@@ -253,7 +243,7 @@ export function mapVpsRecordToVps(
     currency,
     dailyRate: rates.dailyRate,
     monthlyRate: rates.monthlyRate,
-    createdAt: dateToIso(detail.date_created),
+    createdAt: dateToIso(serviceDetail?.date_created),
     paidUntil: dateToIso(detail.next_due ?? service.next_due),
     notes: label ? `${label} [veesp-${externalId}]` : `veesp-${externalId}`,
   }

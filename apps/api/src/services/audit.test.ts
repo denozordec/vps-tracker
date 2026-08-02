@@ -46,7 +46,9 @@ describe('audit dual-write', () => {
   })
 
   it('fire-and-forgets portal ingest with vps action key', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ accepted: 1, duplicates: 0 })))
+    const fetchMock = vi.fn<typeof fetch>(
+      async () => new Response(JSON.stringify({ accepted: 1, duplicates: 0 })),
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     auditCreate(
@@ -63,15 +65,15 @@ describe('audit dual-write', () => {
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('http://portal.test/api/v1/ingest/audit')
-    expect(init.method).toBe('POST')
-    expect(init.headers).toMatchObject({
+    expect(init?.method).toBe('POST')
+    expect(init?.headers).toMatchObject({
       Authorization: 'Bearer test-ingest-secret',
       'Content-Type': 'application/json',
     })
 
-    const body = JSON.parse(String(init.body)) as {
+    const body = JSON.parse(String(init?.body)) as {
       events: Array<{
         event_id: string
         source_app: string
@@ -94,7 +96,7 @@ describe('audit dual-write', () => {
   it('does not throw when portal ingest fails', () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => {
+      vi.fn<typeof fetch>(async () => {
         throw new Error('network down')
       }),
     )

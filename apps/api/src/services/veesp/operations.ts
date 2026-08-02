@@ -62,6 +62,7 @@ export interface VeespVmDetail extends VeespVmListItem {
 }
 
 export interface VeespIpItem {
+  id?: string | number
   ip?: string
   address?: string
   ipaddress?: string
@@ -207,7 +208,7 @@ export function isVpsService(service: VeespServiceListItem, vpsCategoryIds?: Set
   return false
 }
 
-function unwrapKeyedList<T extends Record<string, unknown>>(raw: unknown): T[] {
+function unwrapKeyedList<T>(raw: unknown): T[] {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
   const out: T[] = []
   for (const [key, item] of Object.entries(raw as Record<string, unknown>)) {
@@ -218,7 +219,7 @@ function unwrapKeyedList<T extends Record<string, unknown>>(raw: unknown): T[] {
     }
     if (typeof item !== 'object') continue
     const row = item as Record<string, unknown>
-    out.push({ ...row, id: row.id ?? key } as T)
+    out.push({ ...row, id: row.id ?? key } as unknown as T)
   }
   return out
 }

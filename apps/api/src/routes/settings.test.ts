@@ -26,7 +26,7 @@ describe('settings telegram test', () => {
   it('returns telegram API error with hint', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
+      vi.fn<typeof fetch>(async () =>
         Response.json({ ok: false, description: 'Bad Request: chat not found' }),
       ),
     )
@@ -39,7 +39,7 @@ describe('settings telegram test', () => {
   })
 
   it('uses body overrides and falls back to db token', async () => {
-    const fetchMock = vi.fn(async () => Response.json({ ok: true }))
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
 
     const res = await app.inject({
@@ -54,9 +54,9 @@ describe('settings telegram test', () => {
     const body = res.json() as { ok: boolean }
     expect(body.ok).toBe(true)
 
-    const call = fetchMock.mock.calls[0] as [string, RequestInit] | undefined
+    const call = fetchMock.mock.calls[0]
     expect(call).toBeDefined()
-    const sent = JSON.parse(String(call![1].body)) as {
+    const sent = JSON.parse(String(call![1]?.body)) as {
       chat_id: string
       message_thread_id: number
     }
@@ -65,7 +65,7 @@ describe('settings telegram test', () => {
   })
 
   it('uses body token when provided', async () => {
-    const fetchMock = vi.fn(async () => Response.json({ ok: true }))
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
 
     await app.inject({
@@ -77,7 +77,7 @@ describe('settings telegram test', () => {
       },
     })
 
-    const url = String((fetchMock.mock.calls[0] as [string])[0])
+    const url = String(fetchMock.mock.calls[0]![0])
     expect(url).toContain('botoverride-token/')
   })
 })
@@ -115,7 +115,7 @@ describe('settings cfdm sync', () => {
   })
 
   it('requests full sync from CFDM', async () => {
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn<typeof fetch>(async () =>
       Response.json({
         ok: true,
         count: 1,
@@ -141,9 +141,9 @@ describe('settings cfdm sync', () => {
     expect(res.json()).toMatchObject({ ok: true })
     expect((res.json() as { count: number }).count).toBeGreaterThanOrEqual(1)
 
-    const call = fetchMock.mock.calls[0] as [string, RequestInit] | undefined
+    const call = fetchMock.mock.calls[0]
     expect(call?.[0]).toBe('http://cfdm.test/api/v1/integrations/vps-tracker/sync')
-    expect((call?.[1].headers as Record<string, string>).Authorization).toBe(
+    expect((call?.[1]?.headers as Record<string, string>).Authorization).toBe(
       'Bearer shared-token',
     )
   })
@@ -154,7 +154,7 @@ describe('settings cfdm sync', () => {
       integrationToken: 'shared-token',
       cfdmApiUrl: 'http://cfdm.test',
     })
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn<typeof fetch>(async () =>
       Response.json({ ok: true, count: 0, bindings: [], fullSync: true }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -173,7 +173,7 @@ describe('settings cfdm sync', () => {
     })
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => {
+      vi.fn<typeof fetch>(async () => {
         throw new TypeError('fetch failed')
       }),
     )
@@ -211,18 +211,19 @@ describe('settings cfdm sync', () => {
             id: 'cfdm',
             name: 'CFDM',
             url: 'http://192.168.100.67:6363',
+            icon: 'cloud',
           },
         ],
       },
     })
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn<typeof fetch>(async () =>
       Response.json({ ok: true, count: 0, bindings: [], fullSync: true }),
     )
     vi.stubGlobal('fetch', fetchMock)
 
     const res = await app.inject({ method: 'POST', url: '/api/settings/cfdm/sync' })
     expect(res.statusCode).toBe(200)
-    const call = fetchMock.mock.calls[0] as [string] | undefined
+    const call = fetchMock.mock.calls[0]
     expect(call?.[0]).toBe('https://cfdm.prod.example/api/v1/integrations/vps-tracker/sync')
   })
 })

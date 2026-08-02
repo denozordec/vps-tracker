@@ -9,7 +9,12 @@ export interface SyncResult {
   vpsCount: number
   paymentsCount: number
   tariffsCount: number
-  balance: { balance?: number; currency?: string } | null
+  balance: {
+    balance?: number
+    currency?: string
+    enoughmoneyto?: string
+    realbalance?: string
+  } | null
   syncSummary: SyncSummary
   newTariffs: { name: string; price: string; providerId: string }[]
 }
