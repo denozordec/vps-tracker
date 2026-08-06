@@ -33,6 +33,7 @@ import { ProjectColorDot } from '@/components/project-color-dot'
 import { VpsBulkToolbar } from '@/components/domain/vps-bulk-toolbar'
 import { VpsDomainsCell, UnmatchedDomainsBanner } from '@/components/integrations/vps-domains-cell'
 import { VpsAccessSheet } from '@/components/vps-access-sheet'
+import { copyText } from '@/lib/clipboard'
 
 import type { Vps } from '@/types/entities'
 import { providerByIdMap, accountSelectLabel } from '@/lib/billmanager'
@@ -343,12 +344,30 @@ function VpsPage() {
       header: 'IP / DNS',
       icon: GlobeIcon,
       sortValue: (v) => v.ip || v.dns || '',
-      cell: (v) => dataGridCellStack(
-        <Button variant="link" className="h-auto p-0 font-normal" render={<Link to="/vps/$vpsId" params={{ vpsId: v.id }} />}>
-          {v.ip || '—'}
-        </Button>,
-        v.dns || undefined,
-      ),
+      cell: (v) =>
+        dataGridCellStack(
+          v.ip ? (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 font-normal"
+              onClick={() => void copyText(v.ip, 'IP скопирован')}
+            >
+              {v.ip}
+            </Button>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+          v.dns ? (
+            <Button
+              variant="link"
+              className="text-muted-foreground h-auto p-0 text-xs font-normal"
+              render={<Link to="/vps/$vpsId" params={{ vpsId: v.id }} />}
+            >
+              {v.dns}
+            </Button>
+          ) : undefined,
+        ),
     },
     {
       key: 'domains',

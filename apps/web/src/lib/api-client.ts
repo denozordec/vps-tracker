@@ -30,6 +30,16 @@ export class ApiError extends Error {
   }
 }
 
+export type SpaceVpsGrant = {
+  id: string
+  vpsId: string
+  fromSpaceId: string
+  toSpaceId: string
+  permission: 'read' | 'write' | string
+  grantedByUserId?: string | null
+  createdAt: string
+}
+
 async function handoffOnUnauthorized(): Promise<void> {
   clearToken()
   const cfg = await ensureAuthConfig()
@@ -296,9 +306,15 @@ export const api = {
 
   fetchSpaceGrants: (spaceId: string) =>
     fetchApi<{
-      incoming: unknown[]
-      outgoing: unknown[]
+      incoming: SpaceVpsGrant[]
+      outgoing: SpaceVpsGrant[]
     }>(`/api/spaces/${encodeURIComponent(spaceId)}/vps-grants`),
+
+  revokeVpsGrant: (spaceId: string, grantId: string) =>
+    fetchApi<void>(
+      `/api/spaces/${encodeURIComponent(spaceId)}/vps-grants/${encodeURIComponent(grantId)}`,
+      { method: 'DELETE' },
+    ),
 
   importBackupJson: (payload: unknown) =>
     fetchApi('/api/backup/json', { method: 'POST', body: JSON.stringify(payload) }),

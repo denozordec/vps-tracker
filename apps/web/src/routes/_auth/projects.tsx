@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import {
@@ -44,6 +44,7 @@ export const Route = createFileRoute('/_auth/projects')({
 })
 
 function ProjectsPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const settings = snapshot?.settings?.[0]
@@ -133,7 +134,7 @@ function ProjectsPage() {
       header: 'Проект',
       icon: FolderKanbanIcon,
       cell: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <ProjectColorDot color={row.color} />
           <Button
             variant="link"
@@ -184,18 +185,20 @@ function ProjectsPage() {
       sortable: false,
       className: 'w-24 text-right',
       cell: (row) => (
-        <RowActions
-          onEdit={() => openEdit(row)}
-          onDelete={() => {
-            if (row.vpsTotal > 0) {
-              toast.error(`Нельзя удалить: к проекту привязано ${row.vpsTotal} VPS`)
-              return
-            }
-            delMut.mutate(row.id)
-          }}
-          deleteTitle="Удалить проект?"
-          deleteDescription={`«${row.name}» будет удалён.`}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <RowActions
+            onEdit={() => openEdit(row)}
+            onDelete={() => {
+              if (row.vpsTotal > 0) {
+                toast.error(`Нельзя удалить: к проекту привязано ${row.vpsTotal} VPS`)
+                return
+              }
+              delMut.mutate(row.id)
+            }}
+            deleteTitle="Удалить проект?"
+            deleteDescription={`«${row.name}» будет удалён.`}
+          />
+        </div>
       ),
     },
   ]
@@ -296,6 +299,12 @@ function ProjectsPage() {
               data={rows}
               getRowId={(r) => r.id}
               pinLastColumn
+              onRowClick={(row) =>
+                void navigate({
+                  to: '/projects/$projectId',
+                  params: { projectId: row.id },
+                })
+              }
             />
           )}
         </div>

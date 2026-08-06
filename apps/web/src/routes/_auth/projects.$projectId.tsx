@@ -25,8 +25,15 @@ import { StatusBadge } from '@/components/status-badge'
 import { ProjectEditSheet, projectFormDefaults } from '@/components/domain/project-edit-sheet'
 import type { ProjectFormValues } from '@/lib/schemas'
 import { Button } from '@cfdm/ui/components/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@/components/reui/frame'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { copyText } from '@/lib/clipboard'
 import { KpiStatGridSkeleton, TableSkeleton } from '@/components/skeletons'
 import {
   formatCurrency,
@@ -129,15 +136,31 @@ function ProjectDetailPage() {
   const columns: DataGridColumn<Vps>[] = [
     {
       key: 'ip',
-      header: 'IP',
+      header: 'IP / DNS',
       cell: (v) => (
-        <Button
-          variant="link"
-          className="h-auto p-0 font-medium"
-          render={<Link to="/vps/$vpsId" params={{ vpsId: v.id }} />}
-        >
-          {v.ip || v.id}
-        </Button>
+        <div className="flex flex-col gap-0.5">
+          {v.ip ? (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto justify-start p-0 font-medium"
+              onClick={() => void copyText(v.ip, 'IP скопирован')}
+            >
+              {v.ip}
+            </Button>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+          {v.dns ? (
+            <Button
+              variant="link"
+              className="text-muted-foreground h-auto justify-start p-0 text-xs font-normal"
+              render={<Link to="/vps/$vpsId" params={{ vpsId: v.id }} />}
+            >
+              {v.dns}
+            </Button>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -292,14 +315,15 @@ function ProjectDetailPage() {
                 ]}
               />
               {project.notes?.trim() ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Заметки</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <Frame spacing="sm" className="w-full">
+                  <FrameHeader>
+                    <FrameTitle>Заметки</FrameTitle>
+                    <FrameDescription>Комментарии к проекту</FrameDescription>
+                  </FrameHeader>
+                  <FramePanel>
                     <p className="text-sm whitespace-pre-wrap">{project.notes}</p>
-                  </CardContent>
-                </Card>
+                  </FramePanel>
+                </Frame>
               ) : null}
               <ResourcePage
                 title="VPS проекта"
