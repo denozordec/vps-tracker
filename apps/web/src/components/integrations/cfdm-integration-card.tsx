@@ -107,7 +107,7 @@ export function CfdmIntegrationForm({
       <FieldGroup className="gap-0">
         <SettingRow
           title="Принимать синхронизацию"
-          description="Разрешить CFDM пушить домены и сервисы (авто-sync)"
+          description="Вкл.: push от CFDM + авто-pull доменов каждые 15 мин (нужны URL и токен)"
         >
           <Controller
             control={form.control}
@@ -183,8 +183,8 @@ export function CfdmIntegrationForm({
           title="Синхронизация"
           description={
             settings?.integrationLastSyncAt
-              ? `Последний sync: ${new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')}`
-              : 'Используются только сохранённые URL и токен'
+              ? `Последний sync: ${new Date(settings.integrationLastSyncAt).toLocaleString('ru-RU')} · авто каждые 15 мин`
+              : 'Авто каждые 15 мин при включённой интеграции; кнопка — ручной pull'
           }
           last
         >

@@ -6,6 +6,7 @@ import { resolveSyncAccount, getProviderAdapter, type SyncReadyAccount } from '.
 import { runAccountSync } from './providers/sync-job.js'
 import { runVpsUptimeChecks } from './uptime-check.js'
 import { notifyCfdmVpsEvent } from './cfdm-notify.js'
+import { requestCfdmFullSync } from './cfdm-sync.js'
 import { publishMany, publishNotification } from './notifications/engine.js'
 import {
   buildLowBalanceNotification,
@@ -15,10 +16,15 @@ import {
   buildVpsHealthNotification,
 } from './notifications/rules.js'
 
+/** Pull bindings from CFDM → vps_domains (domains on VPS). */
+export const CFDM_SYNC_INTERVAL_MINUTES = 15
+
 let syncIntervalId: ReturnType<typeof setInterval> | null = null
 let syncTariffsIntervalId: ReturnType<typeof setInterval> | null = null
 let notifyIntervalId: ReturnType<typeof setInterval> | null = null
 let uptimeIntervalId: ReturnType<typeof setInterval> | null = null
+let cfdmSyncIntervalId: ReturnType<typeof setInterval> | null = null
+let cfdmSyncInFlight = false
 
 type AccountRow = typeof schema.providerAccounts.$inferSelect
 type SettingsRow = typeof schema.settings.$inferSelect
@@ -201,6 +207,48 @@ export async function runScheduledUptimeChecks(): Promise<void> {
   }
 }
 
+function spaceHasCfdmPullConfig(settings: SettingsRow): boolean {
+  return (
+    Boolean(settings.integrationEnabled) &&
+    Boolean(settings.integrationToken?.trim()) &&
+    Boolean(settings.cfdmApiUrl?.trim())
+  )
+}
+
+/** Pull full CFDM bindings into local vps_domains for each configured space. */
+export async function runScheduledCfdmSync(): Promise<void> {
+  if (cfdmSyncInFlight) return
+  cfdmSyncInFlight = true
+  try {
+    for (const settings of allSettings()) {
+      if (!spaceHasCfdmPullConfig(settings)) continue
+      const spaceId = settings.spaceId || MAIN_SPACE_ID
+      try {
+        await runWithSpaceAsync(spaceId, async () => {
+          const result = await requestCfdmFullSync()
+          if (!result.ok) {
+            console.warn(
+              `CFDM scheduled sync [${spaceId}]:`,
+              result.error ?? 'unknown error',
+            )
+            return
+          }
+          console.log(
+            `CFDM scheduled sync [${spaceId}]: ${result.count ?? 0} bindings`,
+          )
+        })
+      } catch (err) {
+        console.warn(
+          `CFDM scheduled sync error [${spaceId}]:`,
+          err instanceof Error ? err.message : err,
+        )
+      }
+    }
+  } finally {
+    cfdmSyncInFlight = false
+  }
+}
+
 function pickSchedulerIntervals(rows: SettingsRow[]): {
   notifyInterval: number
   uptimeInterval: number
@@ -240,6 +288,8 @@ export function startScheduler(): void {
   notifyIntervalId = null
   if (uptimeIntervalId) clearInterval(uptimeIntervalId)
   uptimeIntervalId = null
+  if (cfdmSyncIntervalId) clearInterval(cfdmSyncIntervalId)
+  cfdmSyncIntervalId = null
 
   try {
     const rows = allSettings()
@@ -247,6 +297,7 @@ export function startScheduler(): void {
 
     const { notifyInterval, uptimeInterval, syncInterval, tariffsInterval } =
       pickSchedulerIntervals(rows)
+    const cfdmConfigured = rows.some(spaceHasCfdmPullConfig)
 
     notifyIntervalId = setInterval(() => void runNotificationTick(), notifyInterval * 60 * 1000)
     uptimeIntervalId = setInterval(
@@ -274,6 +325,13 @@ export function startScheduler(): void {
       parts.unshift(`tariffs every ${tariffsInterval} min`)
     }
 
+    if (cfdmConfigured) {
+      const cfdmMs = CFDM_SYNC_INTERVAL_MINUTES * 60 * 1000
+      cfdmSyncIntervalId = setInterval(() => void runScheduledCfdmSync(), cfdmMs)
+      void runScheduledCfdmSync()
+      parts.unshift(`cfdm every ${CFDM_SYNC_INTERVAL_MINUTES} min`)
+    }
+
     console.log(`Scheduler: ${parts.join(', ')}`)
   } catch {
     // ignore
@@ -289,6 +347,8 @@ export function stopScheduler(): void {
   notifyIntervalId = null
   if (uptimeIntervalId) clearInterval(uptimeIntervalId)
   uptimeIntervalId = null
+  if (cfdmSyncIntervalId) clearInterval(cfdmSyncIntervalId)
+  cfdmSyncIntervalId = null
 }
 
 export function restartScheduler(): void {

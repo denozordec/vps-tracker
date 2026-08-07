@@ -4,7 +4,7 @@
 Surface: **ReUI Frame**. Kit: `apps/web/src/components/reui-kit/`.  
 Иерархия: **ReUI PRO > shadcn primitives**.
 
-Карта: [llms.txt](https://reui.io/llms.txt) · [Styling](https://reui.io/docs/styling) · [License](https://reui.io/docs/license-setup) · [Blocks](https://reui.io/blocks) · [MCP](https://reui.io/docs/mcp)
+Карта: [docs](https://reui.io/docs) · [llms.txt](https://reui.io/llms.txt) · [Get Started](https://reui.io/docs/get-started) · [Styling](https://reui.io/docs/styling) · [Registry](https://reui.io/docs/registry) · [License](https://reui.io/docs/license-setup) · [Blocks](https://reui.io/blocks) · [MCP](https://reui.io/docs/mcp) · [Agent Skills](https://reui.io/docs/agent-skills)
 
 ## Surface
 

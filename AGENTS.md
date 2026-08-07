@@ -84,7 +84,7 @@ vps-tracker/
 ## Уведомления
 
 - **Движок:** `apps/api/src/services/notifications/` — rules, dedup, engine, channels
-- **Планировщик:** `apps/api/src/services/scheduler.ts` — sync отдельно; notify/uptime не зависят от `syncEnabled`
+- **Планировщик:** `apps/api/src/services/scheduler.ts` — sync отдельно; notify/uptime не зависят от `syncEnabled`; **CFDM pull** (домены → `vps_domains`) каждые **15 мин**, если включена интеграция + URL + токен (и при старте API)
 - **События:** `payment_expiry`, `sync_digest`, `low_balance`, `new_tariffs`, `vps_down`, `vps_up`
 - **Каналы:** Telegram (`telegram.ts`) и webhook (`webhook.ts`); webhook работает без Telegram
 - **Журнал:** таблица `notification_log`, API `GET /api/notifications/log`
@@ -105,7 +105,8 @@ pnpm --filter web test         # Vitest frontend
 
 - Registry: `@reui` в [`apps/web/components.json`](apps/web/components.json)
 - **Design contract:** [`docs/ui-design-contract.md`](docs/ui-design-contract.md) — surface `frame`, kit `reui-kit/`
-- AI-карта: [llms.txt](https://reui.io/llms.txt)
+- Docs: [Introduction](https://reui.io/docs) · [llms.txt](https://reui.io/llms.txt) · [Get Started](https://reui.io/docs/get-started) · [MCP](https://reui.io/docs/mcp) · [Agent Skills](https://reui.io/docs/agent-skills) · [Cursor](https://reui.io/docs/cursor)
+- Skill (локально): `.claude/skills/reui` / `.cursor/skills/reui` — версия `668fb463eb` (20 free components). Обновление: `curl.exe -fsSL https://mcp.reui.io/install | node -`
 - Установка: `cd apps/web && pnpm dlx shadcn@latest add @reui/<name>`
 - Правила: [`reui-mcp.mdc`](.cursor/rules/reui-mcp.mdc), [`shadcn-mcp.mdc`](.cursor/rules/shadcn-mcp.mdc)
 - Зависимости ReUI в `apps/web`: `@tanstack/react-table`, `@tanstack/react-virtual`, `@dnd-kit/*`, `date-fns`, `react-day-picker`

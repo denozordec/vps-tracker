@@ -11,10 +11,14 @@ alwaysApply: true
 
 | Документ | URL |
 |----------|-----|
+| **Introduction** | https://reui.io/docs |
 | **llms.txt** | https://reui.io/llms.txt |
 | **Get Started** | https://reui.io/docs/get-started |
 | **Styling** | https://reui.io/docs/styling |
+| **Registry** | https://reui.io/docs/registry |
 | **MCP** | https://reui.io/docs/mcp |
+| **Agent Skills** | https://reui.io/docs/agent-skills |
+| **Cursor MCP** | https://reui.io/docs/cursor |
 | **Blocks** | https://reui.io/blocks |
 | **Settings blocks** | https://reui.io/blocks/application/settings |
 | **License** | https://reui.io/docs/license-setup |
@@ -26,6 +30,10 @@ alwaysApply: true
 2. **`plugin-shadcn-shadcn`** — primitives `@shadcn`; для `@reui` — вторично
 
 **Обязательно** цитировать `previewUrl` + `docsUrl` для каждой UI-зоны.
+
+**Registry (актуально):** 20 free components — `alert`, `autocomplete`, `badge`, `data-grid`, `date-selector`, `event-calendar`, `filters`, `frame`, `gantt`, `icon-stack`, `icon-tile`, `kanban`, `number-field`, `phone-input`, `rating`, `scrollspy`, `sortable`, `stepper`, `timeline`, `tree` ([docs](https://reui.io/docs), [MCP](https://reui.io/docs/mcp)). Skill: `.claude/skills/reui` (v `668fb463eb`); обновление: `curl.exe -fsSL https://mcp.reui.io/install | node -` из корня проекта.
+
+**Важно:** skill описывает текущий registry (в т.ч. data-grid на TanStack Table v9). Установленный в проекте `@reui/data-grid` может оставаться на v8 до явного CLI upgrade — не ломать kit без миграции.
 
 ## Когда ReUI vs shadcn
 
@@ -39,7 +47,8 @@ alwaysApply: true
 | KPI | block [stats-12](https://reui.io/preview/base/stats-12) | `reui-kit/KpiStatGrid` — см. [`kpi-hybrid.mdc`](kpi-hybrid.mdc) |
 | Quick Actions | Frame tiles sibling KPI | `reui-kit/QuickActionGrid` |
 | Semantic badge / alert | `@reui` | `@/components/reui/badge`, `@/components/reui/alert` |
-| Number / date / autocomplete / color / kanban | `@reui` | `@/components/reui/*` |
+| Number / date / autocomplete / color / kanban / timeline / stepper / tree | `@reui` | `@/components/reui/*` |
+| Event Calendar / Gantt / Icon Tile (registry, 20 free) | `@reui` | CLI `@reui/<name>` → `@/components/reui/*` при установке |
 
 **Сложные списки** — `ResourcePage` (с Filters) или `FrameDataGrid` (простой CRUD Frame+DataGrid); не raw `<table>`, не Card shell.  
 **Quick Actions** — только `QuickActionGrid` (не Card / Button grid).
