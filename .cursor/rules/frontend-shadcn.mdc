@@ -36,7 +36,6 @@ Monorepo — [`frontend-monorepo.mdc`](frontend-monorepo.mdc). ReUI — [`reui-m
 | `PageShell` | `page-shell.tsx` |
 | `ResourcePage` | `reui-kit/resource-page.tsx` |
 | `OpsDashboard` / `KpiStatGrid` / `QuickActionGrid` | `reui-kit/ops-dashboard.tsx`, `kpi-stat-grid.tsx`, `quick-action-grid.tsx` |
-| `KanbanBoard` | `reui-kit/kanban-board.tsx` |
 | `DetailPanel` | `reui-kit/detail-panel.tsx` |
 | `SettingsShell` | `reui-kit/settings-shell.tsx` |
 | `EmptyState` | `empty-state.tsx` |

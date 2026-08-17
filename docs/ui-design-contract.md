@@ -28,7 +28,7 @@ Settings: секции через Frame + `gap` (без hairline `Separator` п�
 | Lists | `data-grid-filtering-2` | https://reui.io/preview/base/data-grid-filtering-2 |
 | Settings | `settings-16` + SettingRow | https://reui.io/preview/base/settings-16 |
 | Auth | `auth-13` | https://reui.io/preview/base/auth-13 |
-| Empty | `empty-state-12` | https://reui.io/preview/base/empty-state-12 |
+| Empty | `empty-state-14` (prefer) / `empty-state-12` | https://reui.io/preview/base/empty-state-14 · https://reui.io/preview/base/empty-state-12 |
 | Forms | `form-7` → Sheet/Drawer | https://reui.io/preview/base/form-7 |
 
 ## Kit API (`reui-kit/`)
@@ -76,9 +76,9 @@ Gating: DB `show_quick_actions` / `showQuickActions` / `ui_show_quick_actions` (
 
 NavUser (footer): avatar + name/email; dropdown — Настройки / Тема (segmented) / Выйти. Preview: [app-shell-1](https://reui.io/preview/base/app-shell-1).
 
-App Switcher: auth-portal `GET /api/v1/app-switcher`. Ids: `cfdm` · `vps` · `bgp` · `fw`. Admin: portal `/admin/apps`.
+App Switcher: auth-portal `GET /api/v1/app-switcher`. Ids: `cfdm` · `vps` · `bgp` · `fw` · `dns`. Admin: portal `/admin/apps`.
 
-QuickActionGrid / KPI icons: только semantic **text** (`text-info` / `text-primary` / …) на kit `bg-muted` — без solid fills.
+QuickActionGrid / KPI icons: только semantic **text** (`text-info` / `text-primary` / …) на `IconTile` `elevated` — без solid fills.
 
 ## System monitor
 

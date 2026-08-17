@@ -32,23 +32,29 @@ export function QueryState<T>({
   children,
 }: QueryStateProps<T>) {
   if (isLoading) {
-    return <>{skeleton ?? <DefaultSkeleton />}</>
+    return (
+      <div role="status" aria-live="polite" aria-busy="true">
+        {skeleton ?? <DefaultSkeleton />}
+      </div>
+    )
   }
   if (isError) {
     return (
-      <EmptyState
-        icon={<AlertCircle className="size-8" />}
-        title="Ошибка загрузки"
-        description={error instanceof Error ? error.message : 'Не удалось загрузить данные'}
-        action={
-          onRetry ? (
-            <Button variant="outline" size="sm" onClick={onRetry}>
-              <RefreshCwIcon data-icon="inline-start" />
-              Повторить
-            </Button>
-          ) : null
-        }
-      />
+      <div role="alert">
+        <EmptyState
+          icon={<AlertCircle className="size-8" />}
+          title="Ошибка загрузки"
+          description={error instanceof Error ? error.message : 'Не удалось загрузить данные'}
+          action={
+            onRetry ? (
+              <Button variant="outline" size="sm" onClick={onRetry}>
+                <RefreshCwIcon data-icon="inline-start" />
+                Повторить
+              </Button>
+            ) : null
+          }
+        />
+      </div>
     )
   }
   if (empty || data == null) {

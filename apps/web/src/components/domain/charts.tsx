@@ -17,13 +17,13 @@ import {
   type ChartConfig,
 } from '@cfdm/ui/components/chart'
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@cfdm/ui/components/card'
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@/components/reui/frame'
+import { cn } from '@cfdm/ui/lib/utils'
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 
@@ -57,6 +57,36 @@ function ChartEmpty({ message }: { message: string }) {
       className="min-h-72 w-full flex-1 py-0"
       stackedIcon
     />
+  )
+}
+
+/** Chart-15 Frame shell. Preview: https://reui.io/preview/base/chart-15 */
+function ChartShell({
+  title,
+  description,
+  action,
+  className,
+  children,
+}: {
+  title: string
+  description?: ReactNode
+  action?: ReactNode
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <Frame dense spacing="sm" className={cn('w-full', className)}>
+      <FrameHeader className={action ? 'flex-row items-start justify-between gap-3' : undefined}>
+        <div className="flex min-w-0 flex-col gap-px">
+          <FrameTitle>{title}</FrameTitle>
+          {description ? <FrameDescription>{description}</FrameDescription> : null}
+        </div>
+        {action}
+      </FrameHeader>
+      <FramePanel className="flex min-h-72 flex-1 flex-col items-center justify-center">
+        {children}
+      </FramePanel>
+    </Frame>
   )
 }
 
@@ -104,12 +134,11 @@ export function MonthlyExpenseChart({
     .slice(0, 10)
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description ?? `Топ-10 по monthly rate, в ${baseCurrency}`}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-h-72 flex-1 flex-col items-center justify-center">
+    <ChartShell
+      className={className}
+      title={title}
+      description={description ?? `Топ-10 по monthly rate, в ${baseCurrency}`}
+    >
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных для графика" />
         ) : (
@@ -123,8 +152,7 @@ export function MonthlyExpenseChart({
           </BarChart>
         </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </ChartShell>
   )
 }
 
@@ -168,12 +196,11 @@ export function PaymentsPieChart({
   }, [payments, baseCurrency, ratesData])
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>Платежи по типам</CardTitle>
-        <CardDescription>Структура в {baseCurrency}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-h-72 flex-1 flex-col items-center justify-center">
+    <ChartShell
+      className={className}
+      title="Платежи по типам"
+      description={`Структура в ${baseCurrency}`}
+    >
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных о платежах" />
         ) : (
@@ -196,8 +223,7 @@ export function PaymentsPieChart({
           </PieChart>
         </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </ChartShell>
   )
 }
 
@@ -244,11 +270,11 @@ function DashboardMonthlyBarChart({
   const hasData = data.some((row) => row.amount > 0)
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-        <CardAction>
+    <ChartShell
+      className={className}
+      title={title}
+      description={description}
+      action={
           <div className="flex flex-wrap items-center gap-2">
             <SelectField
               size="sm"
@@ -268,9 +294,8 @@ function DashboardMonthlyBarChart({
               options={years.map((y) => ({ value: String(y), label: String(y) }))}
             />
           </div>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex min-h-72 flex-1 flex-col items-center justify-center">
+      }
+    >
         {!hasData ? (
           <ChartEmpty message="Нет данных за выбранный период" />
         ) : (
@@ -289,8 +314,7 @@ function DashboardMonthlyBarChart({
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </ChartShell>
   )
 }
 
@@ -366,11 +390,11 @@ export function DashboardExpensesChart({
       : 'Списания и платежи за VPS по месяцам'
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>Расходы</CardTitle>
-        <CardDescription>{description}</CardDescription>
-        <CardAction>
+    <ChartShell
+      className={className}
+      title="Расходы"
+      description={description}
+      action={
           <div className="flex flex-wrap items-center gap-2">
             <SelectField
               size="sm"
@@ -390,9 +414,8 @@ export function DashboardExpensesChart({
               options={years.map((y) => ({ value: String(y), label: String(y) }))}
             />
           </div>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex min-h-72 flex-1 flex-col items-center justify-center">
+      }
+    >
         {!hasData ? (
           <ChartEmpty message="Нет данных за выбранный период" />
         ) : (
@@ -411,8 +434,7 @@ export function DashboardExpensesChart({
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </ChartShell>
   )
 }
 
@@ -443,12 +465,11 @@ export function MonthlyTrendChart({
   const trendConfig: ChartConfig = { amount: { label: 'Платежи', color: 'var(--chart-3)' } }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>Динамика платежей</CardTitle>
-        <CardDescription>Последние 12 месяцев, {baseCurrency}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-h-72 flex-1 flex-col items-center justify-center">
+    <ChartShell
+      className={className}
+      title="Динамика платежей"
+      description={`Последние 12 месяцев, ${baseCurrency}`}
+    >
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных за выбранный период" />
         ) : (
@@ -462,8 +483,7 @@ export function MonthlyTrendChart({
           </BarChart>
         </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </ChartShell>
   )
 }
 
@@ -513,12 +533,11 @@ export function ProjectExpenseChart({
   }, [data])
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>Расходы по проектам (мес)</CardTitle>
-        <CardDescription>Активные VPS, в {baseCurrency}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-h-72 flex-1 flex-col items-center justify-center">
+    <ChartShell
+      className={className}
+      title="Расходы по проектам (мес)"
+      description={`Активные VPS, в ${baseCurrency}`}
+    >
         {data.length === 0 ? (
           <ChartEmpty message="Нет данных для графика" />
         ) : (
@@ -544,7 +563,6 @@ export function ProjectExpenseChart({
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </ChartShell>
   )
 }

@@ -48,7 +48,6 @@ apps/web/src/components/  ← shared + domain + layout
   page-shell.tsx
   reui-kit/
     resource-page.tsx     ← list: Frame + line Tabs + Filters + DataGrid
-    kanban-board.tsx      ← kanban + KanbanBoardSkeleton
     detail-panel.tsx      ← detail: Frame header/metrics
     settings-shell.tsx
     ops-dashboard.tsx     ← KPI stats-12 + charts
@@ -70,8 +69,6 @@ apps/web/src/components/  ← shared + domain + layout
 |---------|--------|-----------|
 | Page wrapper | `PageShell` | — |
 | List page | `ResourcePage` | ReUI `Frame` + `data-grid` + `filters` + shadcn `Tabs` `variant="line"` |
-| Catalog / Board | `CatalogBoardToggle` + `ResourcePage` / `KanbanBoard` | `?view=board` на `/groups`, `/services` |
-| Kanban | `KanbanBoard` / `KanbanBoardSkeleton` | ReUI `kanban` + `Frame` |
 | Detail | `DetailPanel` | ReUI `Frame` |
 | Settings | `SettingsShell` | — |
 | Dashboard KPI | `OpsDashboard` / `KpiStatGrid` | ReUI Frame [stats-12](https://reui.io/preview/base/stats-12) hybrid |
@@ -95,7 +92,7 @@ apps/web/src/components/  ← shared + domain + layout
 
 Max 1 primary (`default`) на экран; остальные `outline` / `ghost`.
 
-Toggle «Доска» / «К каталогу» — всегда `outline` в `primaryAction` / `KanbanBoard.toolbarActions` (не отдельный Frame-shell).
+Max 1 primary (`default`) на экран; остальные `outline` / `ghost`.
 
 ## Line tabs (project standard)
 
@@ -115,17 +112,6 @@ Toggle «Доска» / «К каталогу» — всегда `outline` в `p
 - Count pill всегда `bg-muted`
 - Active state — Base UI `data-active`, не Radix `data-[state=active]`
 - Не трогать internals `reui/date-selector`
-
-## Catalog / Board (`/groups`, `/services`)
-
-| Режим | UI | Search |
-|-------|-----|--------|
-| Catalog (default) | `ResourcePage` + primary create | omit / `view=catalog` |
-| Board | `KanbanBoard` DnD | `?view=board` |
-
-- Groups tabs: Все / С доменами / Пустые
-- Services tabs: Все / Включены / Выключены / Без группы
-- DnD только на board; kanban hooks/cards не удалять
 
 ## Dashboard KPI
 
@@ -178,7 +164,7 @@ Shared chrome (vps-tracker / CFDM / EvoBGP): см. [`docs/ui-design-contract.md`
 
 Каждый блок: **default, hover, focus, disabled, empty, loading, error**.
 
-- **Loading** — `Skeleton` / `ResourcePage` skeleton / `KanbanBoardSkeleton` / `OpsDashboard` skeleton, не Spinner на странице
+- **Loading** — `Skeleton` / `ResourcePage` skeleton / `OpsDashboard` skeleton, не Spinner на странице
 - **Empty** — `EmptyState` с CTA
 - **Zero-results** — message внутри DataGrid (+ «Сбросить»)
 - **Error** — `QueryState` / `Alert` + `onRetry`

@@ -8,7 +8,7 @@ import {
   FrameTitle,
 } from '@/components/reui/frame'
 import { Badge } from '@/components/reui/badge'
-import { Item, ItemMedia } from '@cfdm/ui/components/item'
+import { IconTile } from '@/components/reui/icon-tile'
 import { cn } from '@cfdm/ui/lib/utils'
 import { kpiCols } from './kpi-cols'
 
@@ -35,16 +35,13 @@ function QuickActionBody({ action }: { action: QuickActionItem }) {
   return (
     <div className="relative z-10 flex h-full items-start gap-3">
       {action.icon ? (
-        <Item
-          className={cn(
-            'border-background bg-muted flex size-10.5 shrink-0 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-4',
-            action.iconClassName ?? DEFAULT_ICON_CLASS,
-          )}
+        <IconTile
+          variant="elevated"
+          aria-hidden="true"
+          className={cn('size-10.5', action.iconClassName ?? DEFAULT_ICON_CLASS)}
         >
-          <ItemMedia variant="icon" className="size-auto">
-            {action.icon}
-          </ItemMedia>
-        </Item>
+          {action.icon}
+        </IconTile>
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">

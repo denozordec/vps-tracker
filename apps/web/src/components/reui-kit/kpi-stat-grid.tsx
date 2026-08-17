@@ -5,7 +5,7 @@ import { Frame, FramePanel } from '@/components/reui/frame'
 import { Badge } from '@/components/reui/badge'
 import { cn } from '@cfdm/ui/lib/utils'
 import { kpiCols } from './kpi-cols'
-import { Item, ItemMedia } from '@cfdm/ui/components/item'
+import { IconTile } from '@/components/reui/icon-tile'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
 
 export type KpiStatVariant = 'default' | 'warning' | 'destructive'
@@ -83,16 +83,13 @@ function KpiStatCardBody({ item }: { item: KpiStatItem }) {
   return (
     <div className="relative z-10 flex h-full items-start gap-3">
       {item.icon ? (
-        <Item
-          className={cn(
-            'border-background bg-muted flex size-10.5 shrink-0 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-4',
-            item.iconClassName ?? DEFAULT_ICON_CLASS,
-          )}
+        <IconTile
+          variant="elevated"
+          aria-hidden="true"
+          className={cn('size-10.5', item.iconClassName ?? DEFAULT_ICON_CLASS)}
         >
-          <ItemMedia variant="icon" className="size-auto">
-            {item.icon}
-          </ItemMedia>
-        </Item>
+          {item.icon}
+        </IconTile>
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">

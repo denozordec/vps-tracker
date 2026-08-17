@@ -12,21 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@cfdm/ui/components/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@cfdm/ui/components/table'
 
 import { AutoCompleteInput } from '@/components/auto-complete-input'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PageHeader } from '@/components/page-header'
 import { PageShell } from '@/components/page-shell'
-import { QueryState } from '@/components/query-state'
 import { SettingsCard } from '@/components/reui-kit/settings-card'
+import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
+import type { DataGridColumn } from '@/components/data-grid-types'
 import { api } from '@/lib/api-client'
 import { useSpaceId } from '@/lib/space'
 import {
@@ -181,6 +174,140 @@ function SpacesPage() {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  const memberColumns: DataGridColumn<MemberRow>[] = useMemo(
+    () => [
+      {
+        key: 'user',
+        header: 'Пользователь',
+        cell: (m) => (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm">{userLabelById.get(m.userId) ?? m.userId}</span>
+            {!userLabelById.has(m.userId) ? (
+              <span className="text-muted-foreground font-mono text-xs">{m.userId}</span>
+            ) : null}
+          </div>
+        ),
+      },
+      { key: 'role', header: 'Роль', cell: (m) => m.role },
+      {
+        key: 'actions',
+        header: '',
+        className: 'w-36',
+        cell: (m) =>
+          canAdmin && m.role !== 'owner' ? (
+            <ConfirmDialog
+              title="Отозвать доступ?"
+              description="Пользователь потеряет доступ к этому пространству."
+              confirmLabel="Отозвать"
+              destructive
+              onConfirm={() => removeMutation.mutate(m.userId)}
+              trigger={
+                <Button variant="outline" size="sm">
+                  Отозвать
+                </Button>
+              }
+            />
+          ) : null,
+      },
+    ],
+    [canAdmin, removeMutation, userLabelById],
+  )
+
+  const trashColumns: DataGridColumn<(typeof trash)[number]>[] = useMemo(
+    () => [
+      { key: 'name', header: 'Название', cell: (s) => s.name },
+      {
+        key: 'deletedAt',
+        header: 'Удалено',
+        cell: (s) => (
+          <span className="text-muted-foreground text-sm">
+            {s.deletedAt ? new Date(s.deletedAt).toLocaleString('ru-RU') : '—'}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: '',
+        className: 'w-64',
+        cell: (s) => (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => restoreMutation.mutate(s.id)}
+              disabled={restoreMutation.isPending}
+            >
+              Восстановить
+            </Button>
+            <ConfirmDialog
+              title="Удалить навсегда?"
+              description="Безвозвратно: все данные пространства будут уничтожены."
+              confirmLabel="Удалить навсегда"
+              destructive
+              onConfirm={() => purgeMutation.mutate(s.id)}
+              trigger={
+                <Button size="sm" variant="destructive">
+                  Удалить навсегда
+                </Button>
+              }
+            />
+          </div>
+        ),
+      },
+    ],
+    [purgeMutation, restoreMutation],
+  )
+
+  const addMemberForm = canAdmin ? (
+    <div className="flex w-full flex-col gap-3 md:flex-row md:items-end">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <Label>Пользователь</Label>
+        <AutoCompleteInput
+          value={
+            selectedUserId
+              ? (userLabelById.get(selectedUserId) ?? userQuery)
+              : userQuery
+          }
+          onChange={(v) => {
+            const match = userOptions.find(
+              (o) => o.value === v || o.label === v,
+            )
+            if (match) {
+              setSelectedUserId(match.value)
+              setUserQuery(match.label)
+            } else {
+              setSelectedUserId('')
+              setUserQuery(v)
+            }
+          }}
+          options={userOptions}
+          placeholder="Имя или email…"
+          allowFreeText={false}
+          emptyText="Пользователи не найдены"
+        />
+      </div>
+      <div className="flex w-full flex-col gap-2 md:w-40">
+        <Label>Роль</Label>
+        <Select value={role} onValueChange={(v) => setRole(v ?? 'member')}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">admin</SelectItem>
+            <SelectItem value="member">member</SelectItem>
+            <SelectItem value="viewer">viewer</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Button
+        disabled={!selectedUserId.trim() || addMutation.isPending}
+        onClick={() => addMutation.mutate()}
+      >
+        Добавить
+      </Button>
+    </div>
+  ) : null
+
   return (
     <PageShell>
       <PageHeader
@@ -243,170 +370,34 @@ function SpacesPage() {
           </SettingsCard>
         ) : null}
 
-        <QueryState
-          data={membersQuery.data as MemberRow[] | undefined}
+        <ResourcePage
+          title="Участники"
+          description="Доступ к текущему пространству"
+          columns={columnDefFromDataGrid(memberColumns)}
+          data={membersQuery.data ?? []}
+          getRowId={(m) => `${m.spaceId}-${m.userId}`}
+          pagination={false}
+          pinLastColumn
           isLoading={membersQuery.isLoading}
           isError={membersQuery.isError}
-          error={membersQuery.error}
+          error={membersQuery.error as Error | null}
           onRetry={() => void membersQuery.refetch()}
-          empty={Boolean(membersQuery.data && membersQuery.data.length === 0)}
+          toolbarExtra={addMemberForm}
           emptyTitle="Нет участников"
           emptyDescription="Добавьте пользователя по имени или email"
-        >
-          {(members) => (
-            <SettingsCard title="Участники" description="Доступ к текущему пространству">
-              {canAdmin ? (
-                <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4 md:flex-row md:items-end">
-                  <div className="flex flex-1 flex-col gap-2">
-                    <Label>Пользователь</Label>
-                    <AutoCompleteInput
-                      value={
-                        selectedUserId
-                          ? (userLabelById.get(selectedUserId) ?? userQuery)
-                          : userQuery
-                      }
-                      onChange={(v) => {
-                        const match = userOptions.find(
-                          (o) => o.value === v || o.label === v,
-                        )
-                        if (match) {
-                          setSelectedUserId(match.value)
-                          setUserQuery(match.label)
-                        } else {
-                          setSelectedUserId('')
-                          setUserQuery(v)
-                        }
-                      }}
-                      options={userOptions}
-                      placeholder="Имя или email…"
-                      allowFreeText={false}
-                      emptyText="Пользователи не найдены"
-                    />
-                  </div>
-                  <div className="flex w-full flex-col gap-2 md:w-40">
-                    <Label>Роль</Label>
-                    <Select value={role} onValueChange={(v) => setRole(v ?? 'member')}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">admin</SelectItem>
-                        <SelectItem value="member">member</SelectItem>
-                        <SelectItem value="viewer">viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    disabled={!selectedUserId.trim() || addMutation.isPending}
-                    onClick={() => addMutation.mutate()}
-                  >
-                    Добавить
-                  </Button>
-                </div>
-              ) : null}
+        />
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Пользователь</TableHead>
-                    <TableHead>Роль</TableHead>
-                    <TableHead className="w-36" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((m) => (
-                    <TableRow key={`${m.spaceId}-${m.userId}`}>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm">
-                            {userLabelById.get(m.userId) ?? m.userId}
-                          </span>
-                          {!userLabelById.has(m.userId) ? (
-                            <span className="text-muted-foreground font-mono text-xs">
-                              {m.userId}
-                            </span>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell>{m.role}</TableCell>
-                      <TableCell>
-                        {canAdmin && m.role !== 'owner' ? (
-                          <ConfirmDialog
-                            title="Отозвать доступ?"
-                            description="Пользователь потеряет доступ к этому пространству."
-                            confirmLabel="Отозвать"
-                            destructive
-                            onConfirm={() => removeMutation.mutate(m.userId)}
-                            trigger={
-                              <Button variant="outline" size="sm">
-                                Отозвать
-                              </Button>
-                            }
-                          />
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </SettingsCard>
-          )}
-        </QueryState>
-
-        <SettingsCard
+        <ResourcePage
           title="Корзина"
           description="Удалённые пространства можно восстановить или удалить навсегда"
-        >
-          {trash.length === 0 ? (
-            <p className="text-muted-foreground px-5 py-4 text-sm">Корзина пуста</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Название</TableHead>
-                  <TableHead>Удалено</TableHead>
-                  <TableHead className="w-64" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {trash.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {s.deletedAt
-                        ? new Date(s.deletedAt).toLocaleString('ru-RU')
-                        : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => restoreMutation.mutate(s.id)}
-                          disabled={restoreMutation.isPending}
-                        >
-                          Восстановить
-                        </Button>
-                        <ConfirmDialog
-                          title="Удалить навсегда?"
-                          description="Безвозвратно: все данные пространства будут уничтожены."
-                          confirmLabel="Удалить навсегда"
-                          destructive
-                          onConfirm={() => purgeMutation.mutate(s.id)}
-                          trigger={
-                            <Button size="sm" variant="destructive">
-                              Удалить навсегда
-                            </Button>
-                          }
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </SettingsCard>
+          columns={columnDefFromDataGrid(trashColumns)}
+          data={trash}
+          getRowId={(s) => s.id}
+          pagination={false}
+          pinLastColumn
+          emptyTitle="Корзина пуста"
+          emptyDescription="Удалённых пространств нет"
+        />
       </div>
     </PageShell>
   )

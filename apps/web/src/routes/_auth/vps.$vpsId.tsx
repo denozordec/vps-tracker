@@ -18,8 +18,13 @@ import { StatusBadge } from '@/components/status-badge'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
+import {
+  Frame,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@/components/reui/frame'
 import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { getPaidUntilDate } from '@/lib/paid-until'
@@ -55,6 +60,30 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium">{value}</span>
     </div>
+  )
+}
+
+function DetailFrame({
+  title,
+  icon,
+  children,
+  className,
+}: {
+  title: string
+  icon?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <Frame dense spacing="sm" className={className}>
+      <FrameHeader>
+        <FrameTitle className="flex items-center gap-2 text-base">
+          {icon}
+          {title}
+        </FrameTitle>
+      </FrameHeader>
+      <FramePanel className="flex flex-col gap-3">{children}</FramePanel>
+    </Frame>
   )
 }
 
@@ -175,54 +204,29 @@ function VpsDetailPage() {
                 {row.environment ? <Badge variant="outline">{row.environment}</Badge> : null}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <GlobeIcon className="size-4" />
-                      Сеть
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-3">
+                <DetailFrame title="Сеть" icon={<GlobeIcon className="size-4" />}>
                     <InfoRow label="IP" value={row.ip || '—'} />
                     <InfoRow label="DNS" value={row.dns || '—'} />
                     <InfoRow label="IPv6" value={(row as Vps & { ipv6?: string }).ipv6 || '—'} />
                     <InfoRow label="SSH порт" value={(row as Vps & { sshPort?: number }).sshPort ?? 22} />
                     <InfoRow label="Локация" value={[row.country, row.city].filter(Boolean).join(', ') || '—'} />
                     <InfoRow label="Дата-центр" value={row.datacenter || '—'} />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <CpuIcon className="size-4" />
-                      Ресурсы
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-3">
+                </DetailFrame>
+                <DetailFrame title="Ресурсы" icon={<CpuIcon className="size-4" />}>
                     <InfoRow label="vCPU" value={row.vcpu} />
                     <InfoRow label="RAM" value={`${row.ramGb} GB`} />
                     <InfoRow label="Disk" value={`${row.diskGb} GB`} />
                     <InfoRow label="ОС" value={(row as Vps & { os?: string }).os || '—'} />
                     <InfoRow label="Хостер" value={provider?.name || '—'} />
-                  </CardContent>
-                </Card>
+                </DetailFrame>
                 {vpsDomains.length > 0 ? (
-                  <Card className="md:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="text-base">Домены (CFDM)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                  <DetailFrame title="Домены (CFDM)" className="md:col-span-2">
                       <VpsDomainsCell domains={vpsDomains} />
-                    </CardContent>
-                  </Card>
+                  </DetailFrame>
                 ) : null}
               </div>
               {customFieldRows.length > 0 ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Дополнительные поля</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-3">
+                <DetailFrame title="Дополнительные поля">
                     {customFieldRows.map(({ def, value }) => (
                       <InfoRow
                         key={def.key}
@@ -230,20 +234,12 @@ function VpsDetailPage() {
                         value={formatCustomFieldValue(def, value)}
                       />
                     ))}
-                  </CardContent>
-                </Card>
+                </DetailFrame>
               ) : null}
             </TabsContent>
 
             <TabsContent value="finance" className="flex flex-col gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <CreditCardIcon className="size-4" />
-                    Тариф
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
+              <DetailFrame title="Тариф" icon={<CreditCardIcon className="size-4" />}>
                   <InfoRow label="Тип" value={tariffTypeLabel(row.tariffType)} />
                   <InfoRow
                     label="Ставка"
@@ -259,8 +255,7 @@ function VpsDetailPage() {
                     label="Оплачено до"
                     value={paidUntil ? paidUntil.toLocaleDateString('ru-RU') : '—'}
                   />
-                </CardContent>
-              </Card>
+              </DetailFrame>
               <ResourcePage
                 title="Связанные платежи"
                 columns={columnDefFromDataGrid(paymentColumns)}
@@ -272,28 +267,13 @@ function VpsDetailPage() {
             </TabsContent>
 
             <TabsContent value="notes">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <StickyNoteIcon className="size-4" />
-                    Заметки
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+              <DetailFrame title="Заметки" icon={<StickyNoteIcon className="size-4" />}>
                   <p className="whitespace-pre-wrap text-sm">{row.notes?.trim() || 'Нет заметок'}</p>
-                </CardContent>
-              </Card>
+              </DetailFrame>
             </TabsContent>
 
             <TabsContent value="sync">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <RefreshCwIcon className="size-4" />
-                    Защита от перезаписи при синке
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+              <DetailFrame title="Защита от перезаписи при синке" icon={<RefreshCwIcon className="size-4" />}>
                   {overrides.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Все поля обновляются из BILLmanager</p>
                   ) : (
@@ -304,8 +284,7 @@ function VpsDetailPage() {
                       })}
                     </ul>
                   )}
-                </CardContent>
-              </Card>
+              </DetailFrame>
             </TabsContent>
           </Tabs>
         )}

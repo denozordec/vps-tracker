@@ -10,7 +10,12 @@ import { QueryState } from '@/components/query-state'
 import { KpiStatGrid } from '@/components/reui-kit'
 import { KpiStatGridSkeleton } from '@/components/skeletons'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
-import { Card, CardContent, CardHeader, CardTitle } from '@cfdm/ui/components/card'
+import {
+  Frame,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@/components/reui/frame'
 import { Badge } from '@cfdm/ui/components/badge'
 import { Button } from '@cfdm/ui/components/button'
 import { SelectField } from '@/components/select-field'
@@ -168,14 +173,14 @@ function RenewalsPage() {
               ]}
             />
             {grouped.map(([weekLabel, weekItems]) => (
-              <Card key={weekLabel}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
+              <Frame key={weekLabel} dense spacing="sm">
+                <FrameHeader>
+                  <FrameTitle className="flex items-center gap-2 text-base">
                     <CalendarIcon className="size-4" />
                     {weekLabel}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
+                  </FrameTitle>
+                </FrameHeader>
+                <FramePanel className="flex flex-col gap-2">
                   {weekItems.map((item) => (
                     <div
                       key={item.id}
@@ -197,8 +202,8 @@ function RenewalsPage() {
                       </div>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
+                </FramePanel>
+              </Frame>
             ))}
           </div>
         )}

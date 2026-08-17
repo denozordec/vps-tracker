@@ -5,12 +5,12 @@ import { z } from 'zod'
 import { appSwitcherConfigSchema } from '@cfdm/shared/contracts/app-switcher'
 
 import { Button } from '@cfdm/ui/components/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
 import { FieldGroup } from '@cfdm/ui/components/field'
 import { Input } from '@cfdm/ui/components/input'
 import { FormField } from '@/components/form-field'
 import { SelectField } from '@/components/select-field'
 import { LoadingButton } from '@/components/loading-button'
+import { SettingsCard } from '@/components/reui-kit/settings-card'
 import { APP_SWITCHER_ICONS, type AppSwitcherIconName } from '@/lib/app-switcher-config'
 
 const ICON_OPTIONS = (Object.keys(APP_SWITCHER_ICONS) as AppSwitcherIconName[]).map((icon) => ({
@@ -39,14 +39,12 @@ export function AppSwitcherEditor({ defaultValues, onSave, isSaving }: AppSwitch
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'apps' })
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Связанные приложения</CardTitle>
-        <CardDescription>URL для переключателя в sidebar и deep links</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SettingsCard
+      title="Связанные приложения"
+      description="URL для переключателя в sidebar и deep links"
+    >
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 px-5 py-4"
           onSubmit={(e) => void form.handleSubmit(onSave)(e)}
         >
           <FieldGroup>
@@ -110,7 +108,6 @@ export function AppSwitcherEditor({ defaultValues, onSave, isSaving }: AppSwitch
             Сохранить приложения
           </LoadingButton>
         </form>
-      </CardContent>
-    </Card>
+    </SettingsCard>
   )
 }

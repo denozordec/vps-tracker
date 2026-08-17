@@ -59,6 +59,7 @@ import {
   permissionForPath,
 } from '@/lib/auth'
 import { SpaceProvider, useSpaceId } from '@/lib/space'
+import { SKIP_TO_CONTENT_CLASS } from '@/lib/ui-surface'
 
 interface NavItem {
   to: string
@@ -175,6 +176,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           } as CSSProperties
         }
       >
+        <a href="#main-content" className={SKIP_TO_CONTENT_CLASS}>
+          К содержимому
+        </a>
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <AppSwitcher />
@@ -220,7 +224,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavUser />
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
+        <SidebarInset id="main-content">
           <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-4 md:px-6">
             <SidebarTrigger className="-ml-1" />
             <Separator
@@ -251,9 +255,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SystemMonitorPopover />
             </div>
           </header>
-          <main className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
+          <div className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
             <SpaceScopedMain>{children}</SpaceScopedMain>
-          </main>
+          </div>
         </SidebarInset>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       </SidebarProvider>

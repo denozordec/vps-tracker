@@ -12,7 +12,13 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@cfdm/ui/components/chart'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@cfdm/ui/components/card'
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from '@/components/reui/frame'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Tooltip as RechartsTooltip } from 'recharts'
 
@@ -103,12 +109,12 @@ function ResourcesPage() {
               ]}
             />
 
-            <Card className="flex flex-col">
-              <CardHeader>
-                <CardTitle>Ресурсы по хостерам</CardTitle>
-                <CardDescription>Только активные VPS</CardDescription>
-              </CardHeader>
-              <CardContent className="flex min-h-80 flex-1 flex-col items-center justify-center">
+            <Frame dense spacing="sm" className="flex flex-col">
+              <FrameHeader>
+                <FrameTitle>Ресурсы по хостерам</FrameTitle>
+                <FrameDescription>Только активные VPS</FrameDescription>
+              </FrameHeader>
+              <FramePanel className="flex min-h-80 flex-1 flex-col items-center justify-center">
                 {chartData.length === 0 ? (
                   <EmptyState title="Нет данных для графика" className="min-h-80 w-full flex-1 py-0" />
                 ) : (
@@ -124,8 +130,8 @@ function ResourcesPage() {
                   </BarChart>
                 </ChartContainer>
                 )}
-              </CardContent>
-            </Card>
+              </FramePanel>
+            </Frame>
           </>
         )
       }}

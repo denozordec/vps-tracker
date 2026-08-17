@@ -76,9 +76,9 @@ alwaysApply: true
 
 ## Установленные ReUI (apps/web)
 
-**Components:** `frame`, `data-grid/*`, `filters`, `kanban`, `badge`, `alert`, `autocomplete`, `number-field`, `date-selector`, `color-picker`, `timeline`, `rating`, `phone-input`, `icon-stack`
+**Components:** `frame`, `data-grid/*`, `filters`, `badge`, `alert`, `autocomplete`, `number-field`, `date-selector`, `color-picker`, `timeline`, `rating`, `phone-input`, `icon-stack`, `icon-tile`
 
-**Kit:** `ResourcePage`, `KpiStatGrid`, `QuickActionGrid`, `OpsDashboard`, `KanbanBoard`, `DetailPanel`, `SettingsShell`
+**Kit:** `ResourcePage`, `KpiStatGrid`, `QuickActionGrid`, `OpsDashboard`, `DetailPanel`, `SettingsShell`
 
 **Blocks (reference):** `stats-12`, `card-35`, `auth-13`, `app-shell-12`, `settings-16`, `settings-8`, `empty-state-12`, `form-7`, `data-grid-filtering-2`, `dashboard-1`, …
 

@@ -1,7 +1,7 @@
 /**
- * ReUI Empty + IconStack — adapted from empty-state-12.
- * Preview: https://reui.io/preview/base/empty-state-12
- * Docs: https://reui.io/blocks
+ * ReUI Empty + IconStack — Frame-friendly empty-state-14 / empty-state-12.
+ * Preview: https://reui.io/preview/base/empty-state-14 · https://reui.io/preview/base/empty-state-12
+ * Docs: https://reui.io/docs/components/base/icon-stack
  */
 import { InboxIcon, type LucideIcon } from 'lucide-react'
 import { IconStack } from '@/components/reui/icon-stack'
