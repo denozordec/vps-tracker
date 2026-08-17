@@ -5,7 +5,7 @@
 #   mkdir -p /opt/vps-tracker/data
 #   cp deploy/docker-compose.traefik.yml /opt/vps-tracker/docker-compose.yml
 #   cp deploy/env.traefik.example /opt/vps-tracker/.env   # fill secrets
-#   docker login ghcr.io   # or git.shts.su if using private registry
+#   docker login ghcr.io   # or git.shx.one if using private registry
 #   cd /opt/vps-tracker && docker compose pull && docker compose up -d
 
 services:

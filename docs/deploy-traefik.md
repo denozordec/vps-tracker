@@ -22,7 +22,7 @@ Internet → :80/:443 (Traefik) → vps-tracker:3001
 1. Зона домена в **Cloudflare**.
 2. **Linux** VPS с **Docker Engine** + плагин **Compose**.
 3. Свободные порты **80** и **443** на хосте (этот стек сам поднимает Traefik).
-4. Доступ к registry образа (`docker login ghcr.io` или `git.shts.su`).
+4. Доступ к registry образа (`docker login ghcr.io` или `git.shx.one`).
 
 > Если на сервере уже крутится другой Traefik/nginx на 80/443 — остановите его или смените `TRAEFIK_HTTP_PORT` / `TRAEFIK_HTTPS_PORT`. Два процесса на одних портах не запустятся.
 
@@ -101,7 +101,7 @@ AUTH_ISSUER=https://auth.shnt.top
 AUTH_PORTAL_URL=https://auth.shnt.top
 ```
 
-На стороне портала `VPS_DOMAIN` должен быть в `RETURN_TO_ALLOWLIST` (см. [auth-portal deploy-traefik](https://git.shts.su/denozord/auth-portal/src/branch/main/docs/deploy-traefik.md)).
+На стороне портала `VPS_DOMAIN` должен быть в `RETURN_TO_ALLOWLIST` (см. [auth-portal deploy-traefik](https://git.shx.one/denozord/auth-portal/src/branch/main/docs/deploy-traefik.md)).
 
 ---
 
@@ -113,7 +113,7 @@ cd /opt/vps-tracker
 # GHCR (публичный / с PAT):
 docker login ghcr.io
 # или приватный Gitea:
-# docker login git.shts.su
+# docker login git.shx.one
 
 docker compose pull
 docker compose up -d
