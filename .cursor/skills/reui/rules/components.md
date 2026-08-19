@@ -1,6 +1,6 @@
 # ReUI components
 
-The 20 ReUI building blocks: `alert`, `autocomplete`, `badge`, `data-grid`, `date-selector`, `event-calendar`, `filters`, `frame`, `gantt`, `icon-stack`, `icon-tile`, `kanban`, `number-field`, `phone-input`, `rating`, `scrollspy`, `sortable`, `stepper`, `timeline`, `tree`. Examples and blocks are composed from these.
+The 21 ReUI building blocks: `alert`, `autocomplete`, `badge`, `cascader`, `data-grid`, `date-selector`, `event-calendar`, `filters`, `frame`, `gantt`, `icon-stack`, `icon-tile`, `kanban`, `number-field`, `phone-input`, `rating`, `scrollspy`, `sortable`, `stepper`, `timeline`, `tree`. Examples and blocks are composed from these.
 
 **Rule one: never guess a component's API. Read it first.** Call **`get_component(name)`** for its inline `api` (props + usage, no web fetch), and **share the result's `docsUrl`** (the component's API documentation page) with the user whenever you work with that component's API, so they have the full reference (the `/llms.txt` index is a further fallback). Then call **`get_examples(name)`** to install a worked example and copy real composition. The contracts below are first-try orientation (required props, composition shape, the one gotcha); the inline `api` is the full reference. No single block fits? Compose: search the components you need, read each `get_component`, install a `get_examples` example per component, and adapt.
 
@@ -106,22 +106,60 @@ Common mistakes:
 
 ## filters
 
-**Required:** `filters` (`Filter[]`), `fields` (`FilterFieldConfig[]`), `onChange`
+**Required:** `fields` (`FilterField[]`). The value is ONE `FilterQuery` tree - `query` + `onQueryChange`, or uncontrolled `defaultQuery`.
 **Shape:**
 
 ```tsx
-const [filters, setFilters] = useState<Filter[]>([
-  createFilter("priority", "is_any_of", ["low"]),
-])
-const fields: FilterFieldConfig[] = [
-  { key: "priority", label: "Priority", type: "multiselect",
-    options: [{ value: "low", label: "Low" }, { value: "high", label: "High" }] },
+const fields: FilterField[] = [
+  { id: "title", label: "Title", type: "text" },
+  {
+    id: "status",
+    label: "Status",
+    type: "select",
+    options: [
+      { value: "active", label: "Active" },
+      { value: "archived", label: "Archived" },
+    ],
+  },
 ]
+const [query, setQuery] = useState<FilterQuery>(() => createFilterQuery())
 
-<Filters filters={filters} fields={fields} onChange={setFilters} />
+<Filters fields={fields} query={query} onQueryChange={setQuery} />
 ```
 
-**Gotcha:** always build initial filters with `createFilter(field, operator, values)` - it generates the required `id`. Never hand-construct a `Filter` object. Pairs naturally with `data-grid`.
+**Gotcha:** the state is a TREE, not a list of chips. `FilterQuery` is a group of rules joined by `and`/`or` and a group may hold another group, so `(A and B) or C` is expressible; a rule is `{ id, type: "rule", path: ["status"], operator, value }` and `path` is the whole nested attribute path, root first. The pre-rewrite API is GONE: there is no `filters`/`onChange` prop, no `FilterFieldConfig` (fields are `FilterField`, nested through their own `fields`, keyed `id` not `key`), and no `createFilter()` - it minted ids inside a pure function and broke hydration, so ids now come from `createFilterIdFactory(seed)` seeded off `useId`, and `createFilterQuery()` / `createFilterRule()` take one. Read the query back with `flattenFilterConditions` (`{ path, field, operator, values, negated }` per rule, incomplete rules skipped) and walk the tree yourself when the parentheses carry meaning - the primitive compiles nothing, no SQL, no query string.
+
+`variant` picks the chrome over that one query: `"basic"`, the default, is the flat chip row for a toolbar over a table; `"advanced"` is the condition builder, hung off a trigger or rendered in place with `advancedMode="inline"`. Both read and write the same tree, so a saved view built in one opens in the other. Other props worth knowing before you hand-roll them: `size` is two rungs, `"sm" | "default"`, resolved per style (there is no `lg`); `reorderable` turns on drag and Alt+Arrow row moves in the builder; `onBeforeQueryChange` is the ONE veto point for every write (return `false` to refuse, it cannot rewrite); `editors` registers custom value editors a field selects by `editor` name; `labels` / `operatorLabels` own every rendered string; `pathCollapse` + `maxPathSegments` shorten deep attribute paths; `renderChip` / `renderValue` / `renderEmpty` replace rendered parts. On a field, `loadOptions` supplies async options with paging and `resolveValues` renders a chip restored from a saved view whose option was never loaded. Pairs naturally with `data-grid`.
+
+## cascader
+
+**Required:** `items` (a tree of `{ value, label, children? }`), plus the panel parts inside `CascaderContent`.
+**Shape:**
+
+```tsx
+<Cascader items={items} value={value} onValueChange={setValue}>
+  <CascaderTrigger render={<Button variant="outline" />}>
+    <CascaderValue placeholder="Select an attribute" />
+  </CascaderTrigger>
+  <CascaderContent className="w-80">
+    <CascaderPanel>
+      <CascaderNav>
+        <CascaderBreadcrumb />
+        <CascaderInput />
+      </CascaderNav>
+      <CascaderEmpty />
+      <CascaderList maxHeight={288}>
+        <CascaderItems />
+      </CascaderList>
+      <CascaderStatus />
+    </CascaderPanel>
+  </CascaderContent>
+</Cascader>
+```
+
+**Gotcha:** pressing a branch NAVIGATES, it does not select - only leaves are selectable until you pass `selectable="any"` or a predicate, and once a branch is selectable its chevron becomes the only way to open it. `CascaderInput` must stay inside `CascaderContent` (Base UI refills the query from the selection when the input sits outside the popup). Always include `CascaderStatus`: it is the live region announcing level changes, which the visual breadcrumb does not provide to screen readers. Accepts a flat adjacency list via `getParent` as well as nested `children`. `searchScope="deep"` searches every level and annotates results with their path; `multiple` gives checkbox rows; `inline` + a bare `CascaderPanel` embeds it with no popover.
+
+The shape above is `mode="drill"`, the default. `mode="tree"` keeps the same parts (drop `CascaderBreadcrumb`, pass `showBack={false}`, drive expansion with `expanded`/`onExpandedChange`); `mode="columns"` REPLACES `CascaderList` + `CascaderItems` with a single `CascaderColumns`, and has no breadcrumb. Other props worth knowing before you hand-roll them: `cascade` (multi-select only, parent/child selection with indeterminate branches - pair it with `selectable="any"`, since a leaf-only tree can never cascade), `indicator={false}` to drop the single-select check and its gutter (visual only, no-op with `multiple`), `virtualize`/`virtualizeThreshold` plus `CascaderVirtualItems` for long levels, and `getChildren` for async levels with cursor paging, retry on failure and optional `prefetch`. `CascaderFooter` pins commands below the list (`actions` is the quick path) and `CascaderSubmenu` opens one as a side-anchored flyout with the full menu keyboard model. To head a run of rows use `CascaderGroup` wrapping a `CascaderLabel` - a bare label inside a listbox names nothing and is dropped from the accessibility tree - and `CascaderSeparator` for the rule between runs. Every rendered string comes from `labels`, and the panel is RTL-correct under a `DirectionProvider` or `dir="rtl"`.
 
 ## date-selector
 

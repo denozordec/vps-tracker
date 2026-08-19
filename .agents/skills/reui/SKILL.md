@@ -5,7 +5,7 @@ user-invocable: false
 allowed-tools: Bash(npx shadcn@latest *), Bash(pnpm dlx shadcn@latest *), Bash(bunx --bun shadcn@latest *)
 ---
 
-> **ReUI skill version `668fb463eb`.** If the ReUI MCP's `get_agent_skill` reports a newer `version`, re-run the ReUI installer (see `get_agent_skill` -> `install.recommended`) to update this skill. Cloud/tools-only agents have no local file and always read the latest - they can ignore this.
+> **ReUI skill version `3bdbad788a`.** If the ReUI MCP's `get_agent_skill` reports a newer `version`, re-run the ReUI installer (see `get_agent_skill` -> `install.recommended`) to update this skill. Cloud/tools-only agents have no local file and always read the latest - they can ignore this.
 
 # ReUI for Agents
 
