@@ -27,6 +27,7 @@ export interface NotificationPayload {
 export interface SettingsNotifyRow {
   telegramBotToken?: string | null
   telegramChatId?: string | null
+  telegramApiUrl?: string | null
   telegramMessageThreadId?: string | null
   webhookUrl?: string | null
   webhookEnabled?: number | boolean | null

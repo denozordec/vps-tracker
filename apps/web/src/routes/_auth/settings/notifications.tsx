@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { useMemo } from 'react'
 import { z } from 'zod'
+import { DEFAULT_TELEGRAM_API_URL } from '@cfdm/shared/contracts/settings'
 
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
@@ -41,6 +42,7 @@ export const Route = createFileRoute('/_auth/settings/notifications')({
 const notifySchema = z.object({
   telegramChatId: z.string().optional().default(''),
   telegramBotToken: z.string().optional().default(''),
+  telegramApiUrl: z.string().url('Невалидный URL').default(DEFAULT_TELEGRAM_API_URL),
   telegramMessageThreadId: z.string().optional().default(''),
   notifyPaymentExpiryEnabled: z.boolean().default(true),
   notifyNewTariffsEnabled: z.boolean().default(true),
@@ -78,6 +80,7 @@ function SettingsNotificationsPage() {
       ? {
           telegramChatId: formValues.telegramChatId ?? '',
           telegramBotToken: '',
+          telegramApiUrl: formValues.telegramApiUrl || DEFAULT_TELEGRAM_API_URL,
           telegramMessageThreadId: formValues.telegramMessageThreadId ?? '',
           notifyPaymentExpiryEnabled: formValues.notifyPaymentExpiryEnabled ?? true,
           notifyNewTariffsEnabled: formValues.notifyNewTariffsEnabled ?? true,
@@ -102,9 +105,11 @@ function SettingsNotificationsPage() {
         telegramChatId?: string
         telegramMessageThreadId?: string
         telegramBotToken?: string
+        telegramApiUrl?: string
       } = {
         telegramChatId: values.telegramChatId?.trim() || undefined,
         telegramMessageThreadId: values.telegramMessageThreadId ?? '',
+        telegramApiUrl: values.telegramApiUrl?.trim() || DEFAULT_TELEGRAM_API_URL,
       }
       if (token) payload.telegramBotToken = token
       return api.sendTelegramTest(payload)
@@ -204,6 +209,19 @@ function SettingsNotificationsPage() {
                       : '123456:ABC-DEF...'
                   }
                   {...form.register('telegramBotToken')}
+                />
+              </SettingRow>
+              <SettingRow
+                title="Bot API URL"
+                description="Свой telegram-bot-api: http://127.0.0.1:8081 или https://bots.example.com (Let's Encrypt на reverse proxy)"
+                labelFor="set-tg-api-url"
+                stacked
+              >
+                <Input
+                  id="set-tg-api-url"
+                  className="w-full"
+                  placeholder={DEFAULT_TELEGRAM_API_URL}
+                  {...form.register('telegramApiUrl')}
                 />
               </SettingRow>
               <SettingRow

@@ -2,7 +2,7 @@ import { useMemo, type CSSProperties, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
-  ListChecks,
+  Bell,
   RefreshCw,
   Server,
   Wallet,
@@ -103,6 +103,26 @@ function countCurrentSyncFailures(rows: SyncStatusRow[]): number {
   return failed
 }
 
+type NotifyLogRow = {
+  status?: string | null
+  createdAt?: string | null
+}
+
+const NOTIFY_FAIL_WINDOW_MS = 24 * 60 * 60 * 1000
+
+export function countRecentFailedNotifications(
+  rows: NotifyLogRow[],
+  maxAgeMs = NOTIFY_FAIL_WINDOW_MS,
+  now = Date.now(),
+): number {
+  return rows.filter((n) => {
+    if (String(n.status ?? '').toLowerCase() !== 'failed') return false
+    const ts = new Date(n.createdAt ?? '').getTime()
+    if (Number.isNaN(ts)) return false
+    return now - ts <= maxAgeMs
+  }).length
+}
+
 /** Live system monitor popover (app-shell pattern, VPS Tracker API data). */
 export function SystemMonitorPopover() {
   const statsQ = useQuery({ ...dashboardStatsQueryOptions(), refetchInterval: 30_000 })
@@ -133,9 +153,7 @@ export function SystemMonitorPopover() {
   const failedSyncCount = countCurrentSyncFailures(syncQ.data ?? [])
   const recentSyncFailed = failedSyncCount > 0
   const syncAlert = staleSync || recentSyncFailed
-  const failedNotifications = (notifyQ.data ?? []).filter(
-    (n) => String(n.status ?? '').toLowerCase() === 'failed',
-  ).length
+  const failedNotifications = countRecentFailedNotifications(notifyQ.data ?? [])
   const apiOk = Boolean(statsQ.data) || Boolean(snapQ.data)
 
   const metrics = useMemo<MonitorMetric[]>(
@@ -151,14 +169,14 @@ export function SystemMonitorPopover() {
         alert: syncAlert,
       },
       {
-        id: 'inventory',
-        label: 'Инвентарь',
-        value: String(issuesCount),
+        id: 'notifications',
+        label: 'Уведомления',
+        value: String(failedNotifications),
         unit: 'шт.',
-        percent: Math.min(100, issuesCount * 15),
-        icon: <ListChecks aria-hidden />,
-        tone: issuesCount > 0 ? 'warning' : 'success',
-        alert: issuesCount > 0,
+        percent: Math.min(100, failedNotifications * 15),
+        icon: <Bell aria-hidden />,
+        tone: failedNotifications > 0 ? 'warning' : 'success',
+        alert: failedNotifications > 0,
       },
       {
         id: 'runway',
@@ -184,10 +202,19 @@ export function SystemMonitorPopover() {
         alert: downCount > 0,
       },
     ],
-    [downCount, failedSyncCount, issuesCount, lowBalance, recentSyncFailed, runwayDays, runwayLow, syncAlert],
+    [
+      downCount,
+      failedNotifications,
+      failedSyncCount,
+      lowBalance,
+      recentSyncFailed,
+      runwayDays,
+      runwayLow,
+      syncAlert,
+    ],
   )
 
-  const spiking = metrics.some((m) => m.alert) || !apiOk || failedNotifications > 0
+  const spiking = metrics.some((m) => m.alert) || !apiOk
 
   return (
     <Popover>
@@ -247,10 +274,12 @@ export function SystemMonitorPopover() {
         </div>
         <div className="border-border text-muted-foreground border-t px-3 py-2 text-[11px]">
           API:{' '}
-          <span className="text-foreground font-medium">{apiOk ? 'OK' : '—'}</span>
+          <span className={cn('font-medium', apiOk ? 'text-foreground' : 'text-destructive')}>
+            {apiOk ? 'OK' : '—'}
+          </span>
           {' · '}
-          Уведомлений с ошибкой:{' '}
-          <span className="text-foreground font-medium tabular-nums">{failedNotifications}</span>
+          Инвентарь:{' '}
+          <span className="text-foreground font-medium tabular-nums">{issuesCount}</span>
           {stats?.lastGlobalSyncAt ? (
             <>
               {' · '}

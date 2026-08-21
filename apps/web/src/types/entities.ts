@@ -129,6 +129,7 @@ export interface Settings {
   webhookEnabled?: boolean
   telegramChatId?: string
   telegramBotToken?: string
+  telegramApiUrl?: string
   telegramMessageThreadId?: string
   telegramBotTokenSet?: boolean
   customFields?: CustomFieldDef[]

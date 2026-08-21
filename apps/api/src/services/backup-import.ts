@@ -117,6 +117,7 @@ export function importJsonSnapshot(data: BackupPayload): void {
           syncTariffsIntervalMinutes: Number(s.syncTariffsIntervalMinutes) || 1440,
           telegramBotToken: String(s.telegramBotToken ?? ''),
           telegramChatId: String(s.telegramChatId ?? ''),
+          telegramApiUrl: String(s.telegramApiUrl ?? ''),
           telegramMessageThreadId: String(s.telegramMessageThreadId ?? ''),
           notifyPaymentExpiryEnabled: s.notifyPaymentExpiryEnabled ? 1 : 0,
           notifyNewTariffsEnabled: s.notifyNewTariffsEnabled ? 1 : 0,

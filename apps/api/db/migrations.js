@@ -257,6 +257,11 @@ export const MIGRATIONS = [
         if (!e.message?.includes('duplicate column')) throw e
       }
       try {
+        db.exec('ALTER TABLE settings ADD COLUMN telegramApiUrl TEXT')
+      } catch (e) {
+        if (!e.message?.includes('duplicate column')) throw e
+      }
+      try {
         db.exec('ALTER TABLE settings ADD COLUMN notifyPaymentExpiryEnabled INTEGER')
       } catch (e) {
         if (!e.message?.includes('duplicate column')) throw e

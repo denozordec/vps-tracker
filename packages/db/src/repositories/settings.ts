@@ -3,6 +3,7 @@ import {
   appSwitcherConfigSchema,
   type AppSwitcherConfig,
 } from '@cfdm/shared/contracts/app-switcher'
+import { normalizeTelegramApiUrl } from '@cfdm/shared/contracts/settings'
 import { getDb, schema } from '../index.js'
 import {
   getCurrentSpaceId,
@@ -111,6 +112,7 @@ function toDto(row: Row | undefined): SettingsDto | undefined {
     webhookEnabled: Boolean(row.webhookEnabled),
     integrationEnabled: Boolean(row.integrationEnabled),
     showQuickActions: row.showQuickActions == null ? true : Boolean(row.showQuickActions),
+    telegramApiUrl: normalizeTelegramApiUrl(row.telegramApiUrl),
     notifyIntervalMinutes: Number(row.notifyIntervalMinutes) || 60,
     uptimeCheckIntervalMinutes: Number(row.uptimeCheckIntervalMinutes) || 5,
     customFields: Array.isArray(customFields) ? customFields : [],
@@ -135,6 +137,7 @@ interface SettingsInput {
   syncTariffsIntervalMinutes?: number
   telegramBotToken?: string
   telegramChatId?: string
+  telegramApiUrl?: string
   telegramMessageThreadId?: string
   notifyPaymentExpiryEnabled?: boolean
   notifyNewTariffsEnabled?: boolean
@@ -179,6 +182,10 @@ function buildValues(id: string, spaceId: string, existing: Row | undefined, r: 
         : existing?.telegramBotToken ?? '',
     telegramChatId:
       r.telegramChatId !== undefined ? r.telegramChatId || '' : existing?.telegramChatId ?? '',
+    telegramApiUrl:
+      r.telegramApiUrl !== undefined
+        ? normalizeTelegramApiUrl(r.telegramApiUrl)
+        : normalizeTelegramApiUrl(existing?.telegramApiUrl),
     telegramMessageThreadId:
       r.telegramMessageThreadId !== undefined
         ? r.telegramMessageThreadId || ''

@@ -9,7 +9,13 @@ export async function deliverTelegram(
   const token = settings.telegramBotToken?.trim()
   const chatId = settings.telegramChatId?.trim()
   if (!token || !chatId) return { ok: false, error: 'Telegram не настроен' }
-  return sendTelegramMessage(token, chatId, messageHtml, settings.telegramMessageThreadId)
+  return sendTelegramMessage(
+    token,
+    chatId,
+    messageHtml,
+    settings.telegramMessageThreadId,
+    settings.telegramApiUrl,
+  )
 }
 
 export async function deliverWebhook(

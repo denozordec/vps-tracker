@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { parseCustomFieldDefs } from '@cfdm/shared/contracts/custom-fields'
+import { DEFAULT_TELEGRAM_API_URL } from '@cfdm/shared/contracts/settings'
 import type { SettingsFormValues } from '@/lib/schemas'
 import type { Settings } from '@/types/entities'
 
@@ -18,6 +19,7 @@ export function settingsToFormValues(s: Settings): SettingsFormValues {
     syncTariffsIntervalMinutes: s.syncTariffsIntervalMinutes ?? 1440,
     telegramChatId: s.telegramChatId ?? '',
     telegramBotToken: '',
+    telegramApiUrl: s.telegramApiUrl || DEFAULT_TELEGRAM_API_URL,
     notifyPaymentExpiryEnabled: s.notifyPaymentExpiryEnabled !== false,
     notifyNewTariffsEnabled: s.notifyNewTariffsEnabled !== false,
     notifyLowBalanceEnabled: s.notifyLowBalanceEnabled !== false,

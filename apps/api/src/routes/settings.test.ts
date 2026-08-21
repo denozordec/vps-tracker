@@ -80,6 +80,33 @@ describe('settings telegram test', () => {
     const url = String(fetchMock.mock.calls[0]![0])
     expect(url).toContain('botoverride-token/')
   })
+
+  it('sends to a custom Bot API URL from the test body', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/settings/telegram/test',
+      payload: {
+        telegramApiUrl: 'http://127.0.0.1:8081',
+      },
+    })
+
+    expect(String(fetchMock.mock.calls[0]![0])).toBe(
+      'http://127.0.0.1:8081/botdb-token/sendMessage',
+    )
+  })
+
+  it('persists telegramApiUrl via PUT settings', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/settings/settings-main',
+      payload: { telegramApiUrl: 'https://bots.example.com' },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({ telegramApiUrl: 'https://bots.example.com' })
+  })
 })
 
 describe('settings cfdm sync', () => {

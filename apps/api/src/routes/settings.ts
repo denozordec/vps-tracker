@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { settingsIdForSpace, getCurrentSpaceId } from '@cfdm/db'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
-import { settingsSchema, telegramTestBodySchema } from '@cfdm/shared/contracts/settings'
+import { settingsSchema, telegramTestBodySchema, normalizeTelegramApiUrl } from '@cfdm/shared/contracts/settings'
 
 import { restartScheduler } from '../services/scheduler.js'
 import { sendTelegramMessage } from '../services/telegram.js'
@@ -51,6 +51,10 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
 
     const token = body.telegramBotToken?.trim() || settings?.telegramBotToken?.trim() || ''
     const chatId = body.telegramChatId?.trim() || settings?.telegramChatId?.trim() || ''
+    const apiUrl =
+      body.telegramApiUrl !== undefined
+        ? normalizeTelegramApiUrl(body.telegramApiUrl)
+        : settings?.telegramApiUrl
     const messageThreadId =
       body.telegramMessageThreadId !== undefined
         ? body.telegramMessageThreadId
@@ -64,6 +68,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       chatId,
       '✅ VPS Tracker: тестовое сообщение',
       messageThreadId,
+      apiUrl,
     )
     return result.ok ? { ok: true } : { ok: false, error: result.error ?? 'Ошибка Telegram API' }
   })

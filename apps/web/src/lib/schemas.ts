@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { apiTypeSchema as sharedApiTypeSchema } from '@cfdm/shared/contracts/provider'
 import { billingModeSchema as sharedBillingModeSchema } from '@cfdm/shared/contracts/provider-account'
 import { customFieldsSchema } from '@cfdm/shared/contracts/custom-fields'
+import { DEFAULT_TELEGRAM_API_URL } from '@cfdm/shared/contracts/settings'
 
 export const vpsStatusSchema = z.enum(['active', 'paused', 'archived'])
 export const tariffTypeSchema = z.enum(['daily', 'monthly'])
@@ -98,6 +99,11 @@ export const settingsSchema = z.object({
   uptimeCheckIntervalMinutes: z.coerce.number().min(1).optional().default(5),
   telegramChatId: z.string().optional().default(''),
   telegramBotToken: z.string().optional().default(''),
+  telegramApiUrl: z
+    .string()
+    .url('Невалидный URL')
+    .optional()
+    .default(DEFAULT_TELEGRAM_API_URL),
   telegramMessageThreadId: z.string().optional().default(''),
   notifyPaymentExpiryEnabled: z.boolean().optional().default(true),
   notifyNewTariffsEnabled: z.boolean().optional().default(true),

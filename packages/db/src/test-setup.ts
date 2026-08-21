@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS settings (
   customFields TEXT,
   telegramBotToken TEXT,
   telegramChatId TEXT,
+  telegramApiUrl TEXT,
   notifyPaymentExpiryEnabled INTEGER,
   notifyNewTariffsEnabled INTEGER,
   telegramMessageThreadId TEXT,

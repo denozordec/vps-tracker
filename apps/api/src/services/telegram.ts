@@ -2,6 +2,17 @@
  * Telegram Bot API — отправка уведомлений
  */
 
+import {
+  DEFAULT_TELEGRAM_API_URL,
+  normalizeTelegramApiUrl,
+} from '@cfdm/shared/contracts/settings'
+
+export { DEFAULT_TELEGRAM_API_URL, normalizeTelegramApiUrl }
+
+export function telegramSendMessageUrl(token: string, apiUrl?: string | null): string {
+  return `${normalizeTelegramApiUrl(apiUrl)}/bot${token.trim()}/sendMessage`
+}
+
 export interface TelegramSendResult {
   ok: boolean
   error?: string
@@ -55,6 +66,7 @@ export async function sendTelegramMessage(
   chatIds: string | string[],
   text: string,
   messageThreadId?: string | number | null,
+  apiUrl?: string | null,
 ): Promise<TelegramSendResult> {
   if (!token?.trim() || !text?.trim()) {
     return { ok: false, error: 'Пустой токен или текст' }
@@ -75,7 +87,7 @@ export async function sendTelegramMessage(
   }
   if (Number.isFinite(threadId)) payload.message_thread_id = threadId
 
-  const url = `https://api.telegram.org/bot${token.trim()}/sendMessage`
+  const url = telegramSendMessageUrl(token, apiUrl)
   const errors: string[] = []
   let anyOk = false
 

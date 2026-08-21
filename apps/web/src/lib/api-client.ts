@@ -162,6 +162,7 @@ export const api = {
   sendTelegramTest: (body?: {
     telegramBotToken?: string
     telegramChatId?: string
+    telegramApiUrl?: string
     telegramMessageThreadId?: string
   }) =>
     fetchApi<{ ok: boolean; error?: string }>('/api/settings/telegram/test', {

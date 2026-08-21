@@ -30,4 +30,16 @@ describe('settingsRepository', () => {
     })
     expect(settingsRepository.getRow('settings-main')?.telegramBotToken).toBe('new-token')
   })
+
+  it('defaults telegramApiUrl to cloud origin and persists a custom URL', () => {
+    const created = settingsRepository.upsert('settings-main', {
+      telegramChatId: '-100',
+    })
+    expect(created.telegramApiUrl).toBe('https://api.telegram.org')
+
+    const updated = settingsRepository.upsert('settings-main', {
+      telegramApiUrl: 'http://127.0.0.1:8081/',
+    })
+    expect(updated.telegramApiUrl).toBe('http://127.0.0.1:8081')
+  })
 })

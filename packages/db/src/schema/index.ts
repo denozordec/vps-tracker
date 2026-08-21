@@ -194,6 +194,7 @@ export const settings = sqliteTable('settings', {
   customFields: text('customFields'),
   telegramBotToken: text('telegramBotToken'),
   telegramChatId: text('telegramChatId'),
+  telegramApiUrl: text('telegramApiUrl'),
   notifyPaymentExpiryEnabled: integer('notifyPaymentExpiryEnabled'),
   notifyNewTariffsEnabled: integer('notifyNewTariffsEnabled'),
   telegramMessageThreadId: text('telegramMessageThreadId'),
