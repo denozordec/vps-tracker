@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
 export interface DataGridColumn<T> {
   key: string
   header: ReactNode
   cell: (row: T, index: number) => ReactNode
-  icon?: LucideIcon
+  icon?: LucideIcon | ComponentType<{ className?: string }>
   sortable?: boolean
   sortValue?: (row: T) => string | number
   /** TanStack v9 `sortFn`; для числовых sortValue — `'basic'`. */

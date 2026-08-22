@@ -24,7 +24,7 @@
     "@tanstack/react-router": "^1.130.2",
     "@tanstack/react-router-devtools": "^1.130.2",
     "@tanstack/react-table": "^9.1.2",
-    "@tanstack/react-virtual": "^3.14.4",
+    "@tanstack/react-virtual": "^3.14.10",
     "@xyflow/react": "^12.11.2",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
@@ -37,6 +37,7 @@
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.60.0",
     "recharts": "3.8.0",
+    "simple-icons": "^16.28.0",
     "sonner": "^1.7.0",
     "zod": "^3.25.0"
   },

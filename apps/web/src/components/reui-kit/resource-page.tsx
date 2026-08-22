@@ -9,9 +9,8 @@ import { CircleAlertIcon, FilterIcon, FilterXIcon } from 'lucide-react'
 
 import { CountedLineTabs } from '@/components/counted-line-tabs'
 import { Badge } from '@/components/reui/badge'
-import { DataGrid, dataGridFeatures } from '@/components/reui/data-grid/data-grid'
+import { DataGrid, DataGridContainer, dataGridFeatures } from '@/components/reui/data-grid/data-grid'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
-import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
 import {
   Filters,
@@ -38,6 +37,7 @@ import { EmptyState } from '@/components/empty-state'
 import { applyFiltersToData } from './filter-utils'
 import {
   FrameDataGrid,
+  kitDataGridTableLayout,
   type DataGridColumnDef,
   type FrameDataGridProps,
 } from './frame-data-grid'
@@ -65,6 +65,10 @@ type SimpleGridPassthrough<T extends object> = Pick<
   | 'columnVisibilityStorageKey'
   | 'initialColumnVisibility'
   | 'className'
+  | 'tableWidth'
+  | 'horizontalScroll'
+  | 'pinLeftColumnIds'
+  | 'columnPinControls'
 >
 
 export interface ResourcePageProps<T extends object> extends SimpleGridPassthrough<T> {
@@ -189,6 +193,10 @@ function ResourcePageSimple<T extends object>({
   columnVisibilityStorageKey,
   initialColumnVisibility,
   className,
+  tableWidth,
+  horizontalScroll,
+  pinLeftColumnIds,
+  columnPinControls,
 }: ResourcePageProps<T>) {
   if (isLoading) return <ResourcePageSkeleton />
   if (isError) return <ResourceLoadError error={error} onRetry={onRetry} />
@@ -233,6 +241,10 @@ function ResourcePageSimple<T extends object>({
         columnVisibilityStorageKey={columnVisibilityStorageKey}
         initialColumnVisibility={initialColumnVisibility}
         className={className}
+        tableWidth={tableWidth}
+        horizontalScroll={horizontalScroll}
+        pinLeftColumnIds={pinLeftColumnIds}
+        columnPinControls={columnPinControls}
       />
     </div>
   )
@@ -265,6 +277,8 @@ function ResourcePageFiltered<T extends object>({
   selectionToolbar,
   toolbarExtra,
   hideHeader = false,
+  pinLastColumn = false,
+  enableColumnVisibility = false,
 }: ResourcePageProps<T>) {
   const headerActions = primaryAction ?? actions
   const [internalTab, setInternalTab] = useState(tabs?.[0]?.id ?? 'all')
@@ -316,6 +330,13 @@ function ResourcePageFiltered<T extends object>({
 
   const selectedCount = selectedIds.length
 
+  const lastColId = pinLastColumn ? (columns[columns.length - 1]?.id ?? '') : ''
+  const enablePinning = Boolean(pinLastColumn && lastColId)
+  const columnPinning = {
+    start: [] as string[],
+    end: enablePinning ? [lastColId] : [],
+  }
+
   const clearSelection = useCallback(() => {
     setRowSelection({})
   }, [])
@@ -325,7 +346,13 @@ function ResourcePageFiltered<T extends object>({
     data: filteredData,
     columns,
     getRowId: (row) => getRowId(row),
-    state: { sorting, rowSelection, pagination },
+    state: {
+      sorting,
+      rowSelection,
+      pagination,
+      ...(enablePinning ? { columnPinning } : {}),
+    },
+    initialState: enablePinning ? { columnPinning } : undefined,
     enableRowSelection,
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
@@ -394,15 +421,12 @@ function ResourcePageFiltered<T extends object>({
         table={table}
         recordCount={filteredData.length}
         emptyMessage="Нет записей по выбранным фильтрам."
-        tableLayout={{
+        tableLayout={kitDataGridTableLayout({
           dense: true,
-          stripped: true,
-          rowBorder: true,
-          headerSticky: true,
-          headerBackground: true,
-          headerBorder: true,
-          width: 'auto',
-        }}
+          width: 'fixed',
+          columnsPinnable: enablePinning,
+          columnsVisibility: enableColumnVisibility,
+        })}
       >
         <Frame dense variant="default" spacing="sm" className="w-full">
           {!hideHeader ? (
@@ -488,9 +512,9 @@ function ResourcePageFiltered<T extends object>({
 
             {(showFilters || toolbarExtra || selectedCount > 0) ? <Separator /> : null}
 
-            <DataGridScrollArea>
+            <DataGridContainer border={false}>
               <DataGridTable />
-            </DataGridScrollArea>
+            </DataGridContainer>
 
             <Separator />
 

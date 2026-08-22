@@ -1,5 +1,3 @@
-"use client"
-
 import { useMemo, useState } from "react"
 import { Badge } from "@/components/reui/badge"
 import type { DataGridFeatures } from "@/components/reui/data-grid/data-grid"
@@ -14,7 +12,7 @@ import {
   PopoverTrigger,
 } from "@cfdm/ui/components/popover"
 import { Separator } from "@cfdm/ui/components/separator"
-import { CheckIcon, CirclePlusIcon } from "lucide-react"
+import { CirclePlusIcon, CheckIcon } from "lucide-react"
 
 interface DataGridColumnFilterProps<TData extends object, TValue> {
   column?: Column<DataGridFeatures, TData, TValue>

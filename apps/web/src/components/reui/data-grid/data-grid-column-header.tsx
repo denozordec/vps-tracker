@@ -25,7 +25,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@cfdm/ui/components/dropdown-menu"
-import { ArrowDownIcon, ArrowLeftIcon, ArrowLeftToLineIcon, ArrowRightIcon, ArrowRightToLineIcon, ArrowUpIcon, CheckIcon, ChevronsUpDownIcon, PinOffIcon, Settings2Icon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, CheckIcon, ArrowLeftToLineIcon, ArrowRightToLineIcon, ArrowLeftIcon, ArrowRightIcon, Settings2Icon, PinOffIcon } from "lucide-react"
 
 interface DataGridColumnHeaderProps<
   TData extends object,
@@ -35,7 +35,7 @@ interface DataGridColumnHeaderProps<
   /** When omitted, uses `column.columnDef.meta.headerTitle`, then a string `columnDef.header`, then `column.id`. */
   title?: string
   icon?: ReactNode
-  /** Reserved; pin controls are gated by tableLayout.columnsPinnable + column.getCanPin(). */
+  /** When true and tableLayout.columnsPinnable, show Pin/Unpin chrome. Default false (programmatic pin). */
   pinnable?: boolean
   filter?: ReactNode
   visibility?: boolean
@@ -48,6 +48,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
   className,
   filter,
   visibility = false,
+  pinnable = false,
 }: DataGridColumnHeaderProps<TData, TValue>) {
   const { isLoading, table, props } = useDataGrid()
   const resolvedTitle = title ?? getColumnHeaderLabel(column)
@@ -103,10 +104,13 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
       <ChevronsUpDownIcon className="mt-px size-3.25" aria-hidden="true" />
     ))
 
+  const pinChromeEnabled =
+    Boolean(pinnable) && Boolean(props.tableLayout?.columnsPinnable) && canPin
+
   const hasControls =
     props.tableLayout?.columnsMovable ||
     (props.tableLayout?.columnsVisibility && visibility) ||
-    (props.tableLayout?.columnsPinnable && canPin) ||
+    pinChromeEnabled ||
     filter
 
   const menuItems = useMemo(() => {
@@ -168,7 +172,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
     }
 
     // Pin section
-    if (props.tableLayout?.columnsPinnable && canPin) {
+    if (pinChromeEnabled) {
       if (hasPreviousSection) {
         items.push(<DropdownMenuSeparator key="sep-pin" />)
       }
@@ -276,6 +280,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
     isSorted,
     column,
     props.tableLayout?.columnsPinnable,
+    pinChromeEnabled,
     props.tableLayout?.columnsMovable,
     props.tableLayout?.columnsVisibility,
     canPin,
@@ -310,7 +315,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
             {menuItems}
           </DropdownMenuContent>
         </DropdownMenu>
-        {props.tableLayout?.columnsPinnable && canPin && isPinned && (
+        {pinChromeEnabled && isPinned && (
           <Button
             size="icon-sm"
             variant="ghost"

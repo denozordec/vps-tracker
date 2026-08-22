@@ -377,7 +377,6 @@ function SpacesPage() {
           data={membersQuery.data ?? []}
           getRowId={(m) => `${m.spaceId}-${m.userId}`}
           pagination={false}
-          pinLastColumn
           isLoading={membersQuery.isLoading}
           isError={membersQuery.isError}
           error={membersQuery.error as Error | null}
@@ -394,7 +393,6 @@ function SpacesPage() {
           data={trash}
           getRowId={(s) => s.id}
           pagination={false}
-          pinLastColumn
           emptyTitle="Корзина пуста"
           emptyDescription="Удалённых пространств нет"
         />

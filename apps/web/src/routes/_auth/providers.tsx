@@ -155,7 +155,6 @@ function ProvidersPage() {
           columns={columnDefFromDataGrid(columns)}
           data={snap.providers}
           getRowId={(p) => p.id}
-          pinLastColumn
         />
       )}
     </CrudListPage>

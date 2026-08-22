@@ -564,9 +564,4 @@ function DataGridContainer({
   )
 }
 
-export {
-  useDataGrid,
-  DataGridProvider,
-  DataGrid,
-  DataGridContainer,
-}
+export { useDataGrid, DataGridProvider, DataGrid, DataGridContainer }

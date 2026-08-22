@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { ServerIcon, ShieldAlertIcon } from 'lucide-react'
 
 import type { DataGridColumn } from '@/components/data-grid-types'
-import { dataGridCellStack } from '@/components/data-grid-cells'
+import { dataGridCellStack, dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { columnDefFromDataGrid, FrameDataGrid } from '@/components/reui-kit'
 import {
   collectProbeColumns,
@@ -11,8 +11,15 @@ import {
   resultByService,
   type BlockingServiceRow,
 } from './blocking-filters'
+import { resolveServiceIcon, ServiceGlyph } from './service-icons'
 import { StatusMatrixCell } from './status-matrix-cell'
 import type { CensorcheckRunDto } from './types'
+
+/** DNA data-grid-base-4: auto width + H-scroll + pin start. Preview: https://reui.io/preview/base/data-grid-base-4 */
+export const BLOCKING_MATRIX_GRID = {
+  tableWidth: 'auto' as const,
+  horizontalScroll: true,
+}
 
 const MATRIX_CELL = 'w-16 min-w-16 px-1 text-center'
 
@@ -63,12 +70,9 @@ export function BlockingVpsGrid({
       ...serviceCols.map(
         (svc): DataGridColumn<CensorcheckRunDto> => ({
           key: `svc:${svc.key}`,
-          header: (
-            <span className="block max-w-16 truncate" title={svc.title}>
-              {svc.label}
-            </span>
-          ),
+          header: svc.label,
           headerTitle: svc.title,
+          icon: resolveServiceIcon(svc.key),
           className: MATRIX_CELL,
           headerClassName: MATRIX_CELL,
           size: 72,
@@ -100,7 +104,7 @@ export function BlockingVpsGrid({
       dense
       pagination={runs.length > 10}
       pinLeftColumnIds={['vps']}
-      horizontalScroll
+      {...BLOCKING_MATRIX_GRID}
       emptyTitle="Нет проверок"
       emptyDescription="Запустите launcher на VPS, чтобы увидеть статусы блокировок."
       emptyAction={emptyAction}
@@ -135,16 +139,16 @@ export function BlockingServiceGrid({
         size: 180,
         minSize: 140,
         sortValue: (row) => row.serviceKey,
-        cell: (row) => dataGridCellStack(row.serviceLabel, row.category),
+        cell: (row) =>
+          dataGridCellWithIcon(
+            <ServiceGlyph serviceKey={row.serviceKey} />,
+            dataGridCellStack(row.serviceLabel, row.category),
+          ),
       },
       ...probeCols.map(
         (probe): DataGridColumn<BlockingServiceRow> => ({
           key: `probe:${probe.key}`,
-          header: (
-            <span className="block max-w-16 truncate" title={probe.title}>
-              {probe.label}
-            </span>
-          ),
+          header: probe.label,
           headerTitle: probe.title,
           className: MATRIX_CELL,
           headerClassName: MATRIX_CELL,
@@ -180,7 +184,7 @@ export function BlockingServiceGrid({
       dense
       pagination={groups.length > 10}
       pinLeftColumnIds={['service']}
-      horizontalScroll
+      {...BLOCKING_MATRIX_GRID}
       emptyTitle="Нет сервисов"
       emptyAction={emptyAction}
     />

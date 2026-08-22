@@ -1,4 +1,11 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import {
+  cloneElement,
+  isValidElement,
+  useState,
+  useEffect,
+  type ReactElement,
+  type ReactNode,
+} from 'react'
 import {
   useTable,
   flexRender,
@@ -89,6 +96,52 @@ export function dataGridColumnVisibilityOptions<T>(
     }))
 }
 
+/** v9 primitive defaults: headerBackground false, width fixed. Docs: https://reui.io/docs/components/base/data-grid */
+export function kitDataGridTableLayout(opts: {
+  dense?: boolean
+  width?: 'fixed' | 'auto'
+  columnsPinnable?: boolean
+  columnsVisibility?: boolean
+} = {}) {
+  return {
+    dense: opts.dense ?? true,
+    stripped: true,
+    rowBorder: true,
+    headerSticky: true,
+    headerBackground: false,
+    headerBorder: true,
+    width: opts.width ?? ('fixed' as const),
+    columnsVisibility: opts.columnsVisibility ?? false,
+    columnsResizable: false,
+    columnsPinnable: opts.columnsPinnable ?? false,
+    columnsMovable: false,
+    rowsDraggable: false,
+    rowsPinnable: false,
+  }
+}
+
+function applyColumnPinControls<T extends object>(
+  columns: DataGridColumnDef<T>[],
+  columnPinControls: boolean,
+): DataGridColumnDef<T>[] {
+  return columns.map((col) => {
+    const origHeader = col.header
+    if (typeof origHeader !== 'function') return col
+    return {
+      ...col,
+      header: (ctx) => {
+        const node = origHeader(ctx)
+        if (isValidElement(node) && node.type === DataGridColumnHeader) {
+          return cloneElement(node as ReactElement<{ pinnable?: boolean }>, {
+            pinnable: columnPinControls,
+          })
+        }
+        return node
+      },
+    } as DataGridColumnDef<T>
+  })
+}
+
 export interface FrameDataGridProps<TData extends object> {
   title?: ReactNode
   description?: ReactNode
@@ -140,6 +193,10 @@ export interface FrameDataGridProps<TData extends object> {
   pinLeftColumnIds?: string[]
   /** Горизонтальный скролл широкой матрицы. */
   horizontalScroll?: boolean
+  /** `table-layout`. CRUD default `fixed`; матрица — `auto`. Docs: https://reui.io/docs/components/base/data-grid */
+  tableWidth?: 'fixed' | 'auto'
+  /** Показать Pin/Unpin в header. По умолчанию скрыто при programmatic pin. */
+  columnPinControls?: boolean
 }
 
 function DataGridSectionHeader({
@@ -189,6 +246,7 @@ function FrameDataGridBody<TData extends object>({
   enableColumnVisibility,
   columnsPinnable,
   horizontalScroll,
+  tableWidth,
 }: {
   table: DataGridTableInstance<TData>
   data: TData[]
@@ -202,6 +260,7 @@ function FrameDataGridBody<TData extends object>({
   enableColumnVisibility: boolean
   columnsPinnable: boolean
   horizontalScroll: boolean
+  tableWidth: 'fixed' | 'auto'
 }) {
   const tableNode = virtualization ? (
     <DataGridTableVirtual height={height} footerContent={footerContent} />
@@ -209,27 +268,25 @@ function FrameDataGridBody<TData extends object>({
     <DataGridTable footerContent={footerContent} />
   )
 
+  const scrollOrientation =
+    virtualization && horizontalScroll
+      ? 'both'
+      : virtualization
+        ? 'vertical'
+        : 'horizontal'
+
   return (
     <DataGrid
       table={table}
       recordCount={data.length}
       onRowClick={onRowClick}
       emptyMessage={emptyTitle}
-      tableLayout={{
+      tableLayout={kitDataGridTableLayout({
         dense,
-        stripped: true,
-        rowBorder: true,
-        headerSticky: true,
-        headerBackground: true,
-        headerBorder: true,
-        width: 'auto',
-        columnsVisibility: enableColumnVisibility,
-        columnsResizable: false,
+        width: tableWidth,
         columnsPinnable,
-        columnsMovable: false,
-        rowsDraggable: false,
-        rowsPinnable: false,
-      }}
+        columnsVisibility: enableColumnVisibility,
+      })}
       tableClassNames={{
         header: 'text-xs font-medium text-muted-foreground',
       }}
@@ -237,8 +294,8 @@ function FrameDataGridBody<TData extends object>({
       <DataGridContainer border={false}>
         {virtualization || horizontalScroll ? (
           <DataGridScrollArea
-            orientation={virtualization && horizontalScroll ? 'both' : virtualization ? 'vertical' : 'both'}
-            style={virtualization ? { height } : { maxHeight: 'min(70vh, 40rem)' }}
+            orientation={scrollOrientation}
+            style={virtualization ? { height } : undefined}
           >
             {tableNode}
           </DataGridScrollArea>
@@ -283,6 +340,8 @@ export function FrameDataGrid<TData extends object>({
   getRowCanExpand,
   pinLeftColumnIds,
   horizontalScroll = false,
+  tableWidth = 'fixed',
+  columnPinControls = false,
 }: FrameDataGridProps<TData>) {
   const showPagination = pagination ?? true
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
@@ -340,11 +399,14 @@ export function FrameDataGrid<TData extends object>({
     },
   }
 
-  const tableColumns: DataGridColumnDef<TData>[] = [
-    ...(expandedContent ? [expandColumn] : []),
-    ...(enableRowSelection ? [selectColumn] : []),
-    ...columns,
-  ]
+  const tableColumns: DataGridColumnDef<TData>[] = applyColumnPinControls(
+    [
+      ...(expandedContent ? [expandColumn] : []),
+      ...(enableRowSelection ? [selectColumn] : []),
+      ...columns,
+    ],
+    columnPinControls,
+  )
 
   const lastColId = pinLastColumn ? tableColumns[tableColumns.length - 1]?.id ?? '' : ''
   const pinLeft = pinLeftColumnIds ?? []
@@ -444,6 +506,7 @@ export function FrameDataGrid<TData extends object>({
       enableColumnVisibility={enableColumnVisibility}
       columnsPinnable={enablePinning}
       horizontalScroll={horizontalScroll}
+      tableWidth={tableWidth}
     />
   )
 
@@ -460,7 +523,9 @@ export function FrameDataGrid<TData extends object>({
 /** Хелпер для конвертации DataGridColumn<T> → ColumnDef<T> с DataGridColumnHeader. */
 export function columnDefFromDataGrid<T extends object>(
   cols: DataGridColumn<T>[],
+  options?: { columnPinControls?: boolean },
 ): DataGridColumnDef<T>[] {
+  const pinnable = options?.columnPinControls ?? false
   return cols.map((c) => {
     const title = resolveHeaderTitle(c.header, c.headerTitle)
     const Icon = c.icon
@@ -482,6 +547,7 @@ export function columnDefFromDataGrid<T extends object>(
               column={column}
               title={title}
               icon={<Icon />}
+              pinnable={pinnable}
             />
           )
         : () => c.header,

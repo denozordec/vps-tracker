@@ -1,5 +1,3 @@
-"use client"
-
 import {
   Fragment,
   memo,
@@ -776,7 +774,6 @@ function DataGridTableHead({ children }: { children: ReactNode }) {
 
 function DataGridTableHeadRow({
   children,
-  rowId: _rowId,
 }: {
   children: ReactNode
   rowId: string

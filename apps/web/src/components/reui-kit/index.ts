@@ -15,6 +15,7 @@ export { QuickActionGrid, type QuickActionItem } from './quick-action-grid'
 export {
   FrameDataGrid,
   columnDefFromDataGrid,
+  kitDataGridTableLayout,
   loadStoredColumnVisibility,
   dataGridColumnVisibilityOptions,
   type FrameDataGridProps,

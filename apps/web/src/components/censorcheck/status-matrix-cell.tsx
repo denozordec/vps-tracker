@@ -1,20 +1,33 @@
+import type { LucideIcon } from 'lucide-react'
+import {
+  BanIcon,
+  CheckIcon,
+  CircleAlertIcon,
+  ClockIcon,
+  CornerUpRightIcon,
+  MinusIcon,
+  XIcon,
+} from 'lucide-react'
+
 import { Badge } from '@/components/reui/badge'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@cfdm/ui/components/tooltip'
-import { StatusBadge } from '@/components/status-badge'
 import { CENSORCHECK_STATUS_LABELS, formatCheckedAt } from './types'
 
 /** Compact timesheet-style cell — preview: https://reui.io/preview/base/data-grid-base-4 */
-const MATRIX_SHORT: Record<string, string> = {
-  available: 'ОК',
-  blocked: 'Блок',
-  denied: 'Отказ',
-  timeout: 'TO',
-  redirected: '3xx',
-  error: 'Err',
+export const MATRIX_STATUS: Record<
+  string,
+  { icon: LucideIcon; variant: 'success-light' | 'destructive-light' | 'destructive-outline' | 'warning-light' | 'info-light' | 'warning-outline' }
+> = {
+  available: { icon: CheckIcon, variant: 'success-light' },
+  blocked: { icon: XIcon, variant: 'destructive-light' },
+  denied: { icon: BanIcon, variant: 'destructive-outline' },
+  timeout: { icon: ClockIcon, variant: 'warning-light' },
+  redirected: { icon: CornerUpRightIcon, variant: 'info-light' },
+  error: { icon: CircleAlertIcon, variant: 'warning-outline' },
 }
 
 export function StatusMatrixCell({
@@ -32,8 +45,10 @@ export function StatusMatrixCell({
   checkedAt?: string
   onSelect?: () => void
 }) {
-  const short = status ? (MATRIX_SHORT[status] ?? status) : '—'
   const full = status ? (CENSORCHECK_STATUS_LABELS[status] ?? status) : 'Нет результата'
+  const mapped = status ? MATRIX_STATUS[status] : undefined
+  const Icon = mapped?.icon ?? MinusIcon
+  const variant = mapped?.variant ?? 'outline'
   const tip = [
     serviceLabel,
     vpsLabel,
@@ -44,11 +59,9 @@ export function StatusMatrixCell({
     .filter(Boolean)
     .join(' · ')
 
-  const badge = status ? (
-    <StatusBadge status={status} label={short} size="sm" />
-  ) : (
-    <Badge variant="outline" size="sm" className="text-muted-foreground">
-      —
+  const badge = (
+    <Badge variant={variant} size="sm" radius="full" aria-label={full}>
+      <Icon className="size-3" />
     </Badge>
   )
 
