@@ -66,6 +66,11 @@ services:
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
       AUTH_ISSUER: ${AUTH_ISSUER:-https://auth.shnt.top}
       AUTH_PORTAL_URL: ${AUTH_PORTAL_URL:-https://auth.shnt.top}
+      TRUST_PROXY: "1"
+      CENSORCHECK_INGEST_SECRET: ${CENSORCHECK_INGEST_SECRET:-}
+      CENSORCHECK_PUBLIC_URL: ${CENSORCHECK_PUBLIC_URL:-}
+      VPS_DOMAIN: ${VPS_DOMAIN:-vps.shnt.top}
+      VPS_LAUNCHER_DOMAIN: ${VPS_LAUNCHER_DOMAIN:-vt.shnt.top}
       # Import SQLite/JSON via UI (default in app: 100 MiB). Raise if DB is larger.
       BACKUP_BODY_LIMIT_BYTES: ${BACKUP_BODY_LIMIT_BYTES:-104857600}
     volumes:
@@ -75,7 +80,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=vps-tracker
-      - traefik.http.routers.vps-tracker.rule=Host(`${VPS_DOMAIN:-vps.shnt.top}`)
+      - traefik.http.routers.vps-tracker.rule=Host(`${VPS_DOMAIN:-vps.shnt.top}`) || Host(`${VPS_LAUNCHER_DOMAIN:-vt.shnt.top}`)
       - traefik.http.routers.vps-tracker.entrypoints=websecure
       - traefik.http.routers.vps-tracker.tls=true
       - traefik.http.routers.vps-tracker.tls.certresolver=letsencrypt

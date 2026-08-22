@@ -48,6 +48,7 @@ Internet → :80/:443 (Traefik) → vps-tracker:3001
 | Type | Name | Content | Proxy |
 |------|------|---------|-------|
 | `A` / `AAAA` | `vps` (или нужный поддомен) | IP вашего VPS | **DNS only** (серое облако) |
+| `A` / `AAAA` | `vt` (launcher `curl \| bash`) | тот же IP | **DNS only** (серое облако) |
 
 ```bash
 dig +short vps.example.com A
@@ -82,7 +83,8 @@ nano .env   # заполнить секреты и домен
 |------------|------------|
 | `CF_DNS_API_TOKEN` | Cloudflare token для ACME DNS-01 (env контейнера **Traefik**) |
 | `LETSENCRYPT_EMAIL` | Email для Let's Encrypt |
-| `VPS_DOMAIN` | Хост в Traefik `Host(…)` (например `vps.example.com`) |
+| `VPS_DOMAIN` | Хост UI в Traefik `Host(…)` (например `vps.example.com`) |
+| `VPS_LAUNCHER_DOMAIN` | Короткий хост launcher (`vt.example.com` → тот же контейнер, `GET /cc`) |
 
 Опционально:
 
@@ -91,6 +93,8 @@ nano .env   # заполнить секреты и домен
 | `VPS_TRACKER_IMAGE` / `VPS_TRACKER_IMAGE_TAG` | Образ и тег |
 | `TRAEFIK_IMAGE_TAG`, `TRAEFIK_HTTP_PORT`, `TRAEFIK_HTTPS_PORT` | Версия Traefik и порты |
 | `AUTH_REQUIRED`, `AUTH_JWT_SECRET`, `AUTH_ISSUER`, `AUTH_PORTAL_URL` | SSO через auth-portal |
+| `CENSORCHECK_INGEST_SECRET` | HMAC-секрет одноразовых токенов `GET /cc` (fallback: `AUTH_JWT_SECRET`) |
+| `CENSORCHECK_PUBLIC_URL` | URL в скрипте launcher, обычно `https://vt.example.com` |
 
 Для SSO с auth-portal:
 
@@ -135,6 +139,9 @@ docker compose logs -f --tail=100
 ```bash
 curl -fsS https://vps.example.com/health
 # {"ok":true}
+
+curl -fsS https://vt.example.com/cc | head
+# bash launcher (Cache-Control: no-store)
 
 echo | openssl s_client -connect vps.example.com:443 -servername vps.example.com 2>/dev/null \
   | openssl x509 -noout -issuer -dates -subject

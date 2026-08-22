@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 export const spaces = sqliteTable('spaces', {
@@ -363,5 +363,55 @@ export const topologyDiagrams = sqliteTable('topology_diagrams', {
   createdAt: text('createdAt').notNull(),
   updatedAt: text('updatedAt').notNull(),
 })
+
+export const censorcheckRuns = sqliteTable(
+  'censorcheck_runs',
+  {
+    id: text('id').primaryKey(),
+    spaceId: text('spaceId')
+      .notNull()
+      .default('space-main')
+      .references(() => spaces.id),
+    runId: text('runId').notNull(),
+    probePublicIp: text('probePublicIp').notNull(),
+    claimedPublicIp: text('claimedPublicIp'),
+    matchedVpsId: text('matchedVpsId').references(() => vps.id, { onDelete: 'set null' }),
+    status: text('status').notNull(),
+    schemaVersion: integer('schemaVersion').notNull().default(1),
+    launcherVersion: text('launcherVersion'),
+    censorcheckVersion: text('censorcheckVersion'),
+    summaryJson: text('summaryJson').notNull().default('{}'),
+    createdAt: text('createdAt').notNull(),
+    completedAt: text('completedAt').notNull(),
+    observedSourceIp: text('observedSourceIp'),
+  },
+  (t) => ({
+    runIdUniq: uniqueIndex('censorcheck_runs_runId').on(t.runId),
+    probeCreated: index('censorcheck_runs_probe_created').on(t.probePublicIp, t.createdAt),
+    matchedCreated: index('censorcheck_runs_matched_created').on(t.matchedVpsId, t.createdAt),
+    created: index('censorcheck_runs_created').on(t.createdAt),
+  }),
+)
+
+export const censorcheckResults = sqliteTable(
+  'censorcheck_results',
+  {
+    id: text('id').primaryKey(),
+    runId: text('runId')
+      .notNull()
+      .references(() => censorcheckRuns.id, { onDelete: 'cascade' }),
+    serviceKey: text('serviceKey').notNull(),
+    serviceLabel: text('serviceLabel').notNull(),
+    category: text('category').notNull(),
+    status: text('status').notNull(),
+    httpStatus: integer('httpStatus'),
+    detail: text('detail'),
+    rawJson: text('rawJson'),
+  },
+  (t) => ({
+    runIdx: index('censorcheck_results_runId').on(t.runId),
+    serviceStatus: index('censorcheck_results_service_status').on(t.serviceKey, t.status),
+  }),
+)
 
 export const now = sql`(datetime('now'))`

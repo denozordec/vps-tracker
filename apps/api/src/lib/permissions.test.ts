@@ -20,6 +20,7 @@ describe('hasPermission hierarchy', () => {
 describe('permissionForRequest', () => {
   it('maps vps CRUD', () => {
     expect(permissionForRequest('GET', '/api/vps')).toBe('vps:vps:read')
+    expect(permissionForRequest('GET', '/api/censorcheck/current')).toBe('vps:vps:read')
     expect(permissionForRequest('POST', '/api/vps')).toBe('vps:vps:write')
     expect(permissionForRequest('DELETE', '/api/vps/abc')).toBe('vps:vps:write')
   })

@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import sensible from '@fastify/sensible'
 import staticPlugin from '@fastify/static'
+import rateLimit from '@fastify/rate-limit'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -25,6 +26,8 @@ import { dashboardRoutes } from './routes/dashboard.js'
 import { auditRoutes } from './routes/audit.js'
 import { notificationsRoutes } from './routes/notifications.js'
 import { integrationsCfdmRoutes } from './routes/integrations-cfdm.js'
+import { censorcheckRoutes } from './routes/censorcheck.js'
+import { launcherRoutes } from './routes/launcher.js'
 import { appSwitcherRoutes } from './routes/app-switcher.js'
 import { startScheduler } from './services/scheduler.js'
 import { authPlugin } from './plugins/auth.js'
@@ -43,18 +46,28 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   if (opts.dbPath) process.env.DB_PATH = opts.dbPath
   getDb()
 
+  const trustProxy =
+    process.env.TRUST_PROXY === '1' ||
+    process.env.TRUST_PROXY === 'true' ||
+    (process.env.NODE_ENV === 'production' &&
+      process.env.TRUST_PROXY !== '0' &&
+      process.env.TRUST_PROXY !== 'false')
+
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? 'info',
     },
+    trustProxy,
   })
 
   await app.register(cors, { origin: true })
   await app.register(sensible)
+  await app.register(rateLimit, { global: false })
   await app.register(authPlugin)
   await app.register(spacePlugin)
 
   app.get('/health', async () => ({ ok: true }))
+  await app.register(launcherRoutes)
 
   await app.register(spacesRoutes)
   await app.register(portalUsersRoutes)
@@ -75,6 +88,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(auditRoutes)
   await app.register(notificationsRoutes)
   await app.register(integrationsCfdmRoutes)
+  await app.register(censorcheckRoutes)
   await app.register(appSwitcherRoutes)
 
   const staticDir = opts.staticDir ?? join(__dirname, '..', '..', 'web', 'dist')

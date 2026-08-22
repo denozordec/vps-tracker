@@ -90,6 +90,16 @@ vps-tracker/
 - **Журнал:** таблица `notification_log`, API `GET /api/notifications/log`
 - **Дедупликация:** `notification_state` — daily / fingerprint / state_transition
 
+## Статус блокировок (censorcheck)
+
+Ручная проверка с VPS: `curl -fsSL https://vt.shnt.top/cc | bash` (тот же контейнер, Traefik dual Host).
+
+- **Vendor:** `apps/api/scripts/censorcheck/censorcheck.sh` (pin SHA `12c5839`, MIT)
+- **Launcher:** `GET /cc` минтит HMAC ingest-токен (TTL 20 мин); `GET /cc/vendor` — скрипт
+- **Ingest:** `POST /api/integrations/censorcheck/runs` (без portal JWT)
+- **UI:** `/blocking` — текущие прогоны и история, группировка VPS / сервис
+- Env: `CENSORCHECK_INGEST_SECRET`, `CENSORCHECK_PUBLIC_URL`, `VPS_LAUNCHER_DOMAIN`
+
 ## Команды
 
 ```bash

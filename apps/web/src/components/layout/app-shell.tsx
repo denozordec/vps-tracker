@@ -14,6 +14,7 @@ import {
   HistoryIcon,
   UsersIcon,
   Network,
+  ShieldAlert,
 } from 'lucide-react'
 
 import {
@@ -82,6 +83,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Инфраструктура',
     items: [
       { to: '/vps', label: 'VPS', icon: Server },
+      { to: '/blocking', label: 'Статус блокировок', icon: ShieldAlert },
       { to: '/topology', label: 'Схема', icon: Network },
       { to: '/tariffs', label: 'Активные тарифы', icon: ServerCog },
       { to: '/providers', label: 'Хостеры', icon: Building2 },

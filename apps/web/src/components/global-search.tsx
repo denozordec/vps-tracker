@@ -8,6 +8,7 @@ import {
   FolderKanbanIcon,
   LayoutDashboardIcon,
   SearchIcon,
+  ShieldAlertIcon,
 } from 'lucide-react'
 
 import {
@@ -63,6 +64,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             <CommandItem onSelect={() => go('/vps')}>
               <ServerIcon />
               <span>Все VPS</span>
+            </CommandItem>
+            <CommandItem onSelect={() => go('/blocking')}>
+              <ShieldAlertIcon />
+              <span>Статус блокировок</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />

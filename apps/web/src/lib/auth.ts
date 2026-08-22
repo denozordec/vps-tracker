@@ -234,6 +234,7 @@ export function permissionForPath(pathname: string): string | null {
   if (pathname.startsWith('/dashboard')) return 'vps:dashboard:read'
   if (
     pathname.startsWith('/vps') ||
+    pathname.startsWith('/blocking') ||
     pathname.startsWith('/topology') ||
     pathname.startsWith('/tariffs') ||
     pathname.startsWith('/projects') ||

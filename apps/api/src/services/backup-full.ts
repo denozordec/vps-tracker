@@ -6,6 +6,8 @@ import {
 
 const TABLE_ORDER_DELETE = [
   'vps_grants',
+  'censorcheck_results',
+  'censorcheck_runs',
   'notification_log',
   'notification_state',
   'vps_health_checks',

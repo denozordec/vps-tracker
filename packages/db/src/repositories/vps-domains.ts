@@ -4,60 +4,15 @@ import type { CfdmBindingSyncItem } from '@cfdm/shared/contracts/integration-cfd
 import { getDb, schema } from '../index.js'
 import { getCurrentSpaceId } from '../space-context.js'
 import { generateId } from './utils.js'
+import { findVpsIdByIps, isIpLiteral } from './ip-match.js'
 import { vpsRepository } from './vps.js'
 
 type Row = typeof schema.vpsDomains.$inferSelect
 
 export type VpsDomainDto = Row
 
-function normalizeIp(ip: string): string {
-  return ip.trim().toLowerCase()
-}
-
 function normalizeHost(host: string): string {
   return host.trim().toLowerCase().replace(/\.+$/, '')
-}
-
-function isIpLiteral(value: string): boolean {
-  const v = value.trim()
-  if (!v) return false
-  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(v)) {
-    return v.split('.').every((p) => {
-      const n = Number(p)
-      return Number.isInteger(n) && n >= 0 && n <= 255
-    })
-  }
-  // грубый IPv6 — отсекает hostname вроде ihome.rkns.top
-  return v.includes(':') && !v.includes(' ')
-}
-
-function collectVpsIps(vps: { ip?: string | null; additionalIps?: string[] }): string[] {
-  const ips: string[] = []
-  if (vps.ip?.trim()) ips.push(normalizeIp(vps.ip))
-  for (const raw of vps.additionalIps ?? []) {
-    if (raw?.trim()) ips.push(normalizeIp(raw))
-  }
-  return ips
-}
-
-function findVpsIdByIps(
-  allVps: ReturnType<typeof vpsRepository.list>,
-  ips: string[],
-): string | null {
-  const normalized = [
-    ...new Set(ips.map(normalizeIp).filter((ip) => ip && isIpLiteral(ip))),
-  ]
-  if (normalized.length === 0) return null
-
-  const matches: string[] = []
-  for (const v of allVps) {
-    const vips = collectVpsIps(v)
-    if (normalized.some((ip) => vips.includes(ip))) {
-      matches.push(v.id)
-    }
-  }
-  if (matches.length === 1) return matches[0]!
-  return null
 }
 
 /** Точное совпадение hostname с полем VPS.dns. */

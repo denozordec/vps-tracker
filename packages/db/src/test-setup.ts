@@ -284,6 +284,35 @@ CREATE TABLE IF NOT EXISTS vps_health_checks (
   latencyMs INTEGER,
   error TEXT
 );
+
+CREATE TABLE IF NOT EXISTS censorcheck_runs (
+  id TEXT PRIMARY KEY,
+  spaceId TEXT NOT NULL DEFAULT 'space-main',
+  runId TEXT NOT NULL UNIQUE,
+  probePublicIp TEXT NOT NULL,
+  claimedPublicIp TEXT,
+  matchedVpsId TEXT,
+  status TEXT NOT NULL,
+  schemaVersion INTEGER NOT NULL DEFAULT 1,
+  launcherVersion TEXT,
+  censorcheckVersion TEXT,
+  summaryJson TEXT NOT NULL DEFAULT '{}',
+  createdAt TEXT NOT NULL,
+  completedAt TEXT NOT NULL,
+  observedSourceIp TEXT
+);
+
+CREATE TABLE IF NOT EXISTS censorcheck_results (
+  id TEXT PRIMARY KEY,
+  runId TEXT NOT NULL,
+  serviceKey TEXT NOT NULL,
+  serviceLabel TEXT NOT NULL,
+  category TEXT NOT NULL,
+  status TEXT NOT NULL,
+  httpStatus INTEGER,
+  detail TEXT,
+  rawJson TEXT
+);
 `
 
 export function resetTestDb(): void {

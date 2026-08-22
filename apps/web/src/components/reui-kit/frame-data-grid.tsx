@@ -4,14 +4,16 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getPaginationRowModel,
+  getExpandedRowModel,
   flexRender,
   type ColumnDef,
   type SortingState,
   type RowSelectionState,
   type VisibilityState,
+  type ExpandedState,
   type OnChangeFn,
 } from '@tanstack/react-table'
-import { Columns3Icon } from 'lucide-react'
+import { ChevronDownIcon, ChevronRightIcon, Columns3Icon } from 'lucide-react'
 
 import { Checkbox } from '@cfdm/ui/components/checkbox'
 import { Button } from '@cfdm/ui/components/button'
@@ -125,6 +127,9 @@ export interface FrameDataGridProps<TData extends object> {
   /** Начальная видимость колонок (перекрывает localStorage для отсутствующих ключей). */
   initialColumnVisibility?: VisibilityState
   className?: string
+  /** Expandable rows — c-data-grid-8 / https://reui.io/preview/base/components/c-data-grid-8 */
+  expandedContent?: (row: TData) => ReactNode
+  getRowCanExpand?: (row: TData) => boolean
 }
 
 function DataGridSectionHeader({
@@ -251,9 +256,12 @@ export function FrameDataGrid<TData extends object>({
   columnVisibilityStorageKey,
   initialColumnVisibility,
   className,
+  expandedContent,
+  getRowCanExpand,
 }: FrameDataGridProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [expanded, setExpanded] = useState<ExpandedState>({})
   const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(() => {
     const stored = columnVisibilityStorageKey
       ? loadStoredColumnVisibility(columnVisibilityStorageKey)
@@ -295,7 +303,42 @@ export function FrameDataGrid<TData extends object>({
     meta: { cellClassName: 'w-10' },
   }
 
-  const tableColumns = enableRowSelection ? [selectColumn, ...columns] : columns
+  const expandColumn: ColumnDef<TData, unknown> = {
+    id: 'expand',
+    header: () => null,
+    cell: ({ row }) =>
+      row.getCanExpand() ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="size-6 text-muted-foreground"
+          aria-label={row.getIsExpanded() ? 'Свернуть' : 'Развернуть'}
+          onClick={(event) => {
+            event.stopPropagation()
+            row.toggleExpanded()
+          }}
+        >
+          {row.getIsExpanded() ? (
+            <ChevronDownIcon className="size-4" />
+          ) : (
+            <ChevronRightIcon className="size-4" />
+          )}
+        </Button>
+      ) : null,
+    enableSorting: false,
+    enableHiding: false,
+    meta: {
+      cellClassName: 'w-10',
+      expandedContent,
+    },
+  }
+
+  const tableColumns = [
+    ...(expandedContent ? [expandColumn] : []),
+    ...(enableRowSelection ? [selectColumn] : []),
+    ...columns,
+  ]
 
   const lastColId = pinLastColumn ? tableColumns[tableColumns.length - 1]?.id ?? '' : ''
 
@@ -307,9 +350,11 @@ export function FrameDataGrid<TData extends object>({
     state: {
       sorting,
       columnVisibility,
+      expanded,
       ...(enableRowSelection ? { rowSelection } : {}),
     },
     onSortingChange: setSorting,
+    onExpandedChange: setExpanded,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: enableRowSelection
       ? (updater) => {
@@ -325,6 +370,7 @@ export function FrameDataGrid<TData extends object>({
       : undefined,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: expandedContent ? getExpandedRowModel() : undefined,
     getPaginationRowModel: showPagination ? getPaginationRowModel() : undefined,
     initialState: {
       ...(showPagination ? { pagination: { pageIndex: 0, pageSize } } : {}),
@@ -332,6 +378,9 @@ export function FrameDataGrid<TData extends object>({
     },
     getRowId: rowId
       ? (row, index) => rowId(row, index)
+      : undefined,
+    getRowCanExpand: expandedContent
+      ? (row) => (getRowCanExpand ? getRowCanExpand(row.original) : true)
       : undefined,
     enableColumnPinning: pinLastColumn,
     enableRowSelection,

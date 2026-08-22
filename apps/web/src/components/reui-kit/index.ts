@@ -20,6 +20,7 @@ export {
   type FrameDataGridProps,
   type DataGridColumnVisibilityOption,
 } from './frame-data-grid'
+export { ExpandableResourceGrid } from './expandable-resource-grid'
 export { OpsDashboard } from './ops-dashboard'
 export { DetailPanel, type DetailMetricCard } from './detail-panel'
 export { SettingsShell, type SettingsTabConfig } from './settings-shell'

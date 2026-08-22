@@ -157,6 +157,11 @@ export const vpsRepository = {
     return rows.map((r) => toDto(r)!) as VpsDto[]
   },
 
+  listAllSpaces(): VpsDto[] {
+    const rows = getDb().select().from(schema.vps).orderBy(desc(schema.vps.createdAt)).all()
+    return rows.map((r) => toDto(r)!) as VpsDto[]
+  },
+
   get(id: string): VpsDto | undefined {
     const row = getDb()
       .select()

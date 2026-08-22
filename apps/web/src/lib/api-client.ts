@@ -417,6 +417,37 @@ export const api = {
       actorUserId?: string | null
       createdAt: string
     }>>(`/api/audit?limit=${limit}`),
+
+  fetchCensorcheckCurrent: () =>
+    fetchApi<{ items: import('@/components/censorcheck/types').CensorcheckRunDto[] }>(
+      '/api/censorcheck/current',
+    ),
+
+  fetchCensorcheckRuns: (params: {
+    cursor?: string
+    limit?: number
+    q?: string
+    status?: string
+    matched?: boolean
+  } = {}) => {
+    const search = new URLSearchParams()
+    if (params.cursor) search.set('cursor', params.cursor)
+    if (params.limit) search.set('limit', String(params.limit))
+    if (params.q) search.set('q', params.q)
+    if (params.status) search.set('status', params.status)
+    if (params.matched === true) search.set('matched', '1')
+    if (params.matched === false) search.set('matched', '0')
+    const qs = search.toString()
+    return fetchApi<{
+      items: import('@/components/censorcheck/types').CensorcheckRunDto[]
+      nextCursor: string | null
+    }>(`/api/censorcheck/runs${qs ? `?${qs}` : ''}`)
+  },
+
+  fetchCensorcheckRun: (id: string) =>
+    fetchApi<import('@/components/censorcheck/types').CensorcheckRunDto>(
+      `/api/censorcheck/runs/${encodeURIComponent(id)}`,
+    ),
 }
 
 export type {
