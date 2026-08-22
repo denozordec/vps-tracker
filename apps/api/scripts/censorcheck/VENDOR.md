@@ -4,5 +4,6 @@ Vendor pin of https://github.com/vernette/censorcheck
 - Commit: `12c5839` (2026-08-11)
 - License: MIT (see upstream repository)
 - Keep Unix LF and the `display_help` here-doc intact (`is_installed` lives after it).
+- Local overlay: `show_progress` пишет бар в stderr даже при `--json`.
 
 Do not fetch this script from GitHub at runtime — some probe networks block github.com.

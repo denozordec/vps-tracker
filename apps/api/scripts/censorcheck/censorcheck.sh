@@ -95,23 +95,44 @@ show_progress() {
   local current=$1
   local total=$2
   local domain=$3
+  local width=24
+  local filled=0 pct=0 empty=0
+  local label="$domain"
+  local bar
 
-  if ! $JSON_OUTPUT; then
-    printf "\r\033[K%b[%d/%d] Checking:%b %b%s%b" \
-      "$COLOR_BLUE" \
-      "$current" \
-      "$total" \
-      "$COLOR_RESET" \
-      "$COLOR_WHITE" \
-      "$domain" \
-      "$COLOR_RESET" >&2
+  if [ "$total" -gt 0 ]; then
+    filled=$((current * width / total))
+    pct=$((current * 100 / total))
   fi
+  [ "$filled" -gt "$width" ] && filled=$width
+  empty=$((width - filled))
+
+  bar="$(printf '%*s' "$filled" '' | tr ' ' '=')"
+  if [ "$empty" -gt 0 ] && [ "$filled" -lt "$width" ]; then
+    bar="${bar}>"
+    empty=$((empty - 1))
+  fi
+  bar="${bar}$(printf '%*s' "$empty" '')"
+
+  if [ "${#label}" -gt 42 ]; then
+    label="${label:0:39}..."
+  fi
+
+  # stderr: JSON на stdout не ломаем даже в --json
+  printf "\r\033[K%b[%s]%b %3d%%  %d/%d  %b%s%b" \
+    "$COLOR_BLUE" \
+    "$bar" \
+    "$COLOR_RESET" \
+    "$pct" \
+    "$current" \
+    "$total" \
+    "$COLOR_WHITE" \
+    "$label" \
+    "$COLOR_RESET" >&2
 }
 
 clear_progress() {
-  if ! $JSON_OUTPUT; then
-    printf "\r%80s\r" " " >&2
-  fi
+  printf "\n" >&2
 }
 
 cleanup() {

@@ -5,7 +5,7 @@ set -euo pipefail
 
 VT_API_URL="${VT_API_URL:-__VT_API_URL__}"
 VT_INGEST_TOKEN="${VT_INGEST_TOKEN:-__VT_INGEST_TOKEN__}"
-LAUNCHER_VERSION="3"
+LAUNCHER_VERSION="4"
 VENDOR_SHA="12c5839"
 
 OS_ID="unknown"
@@ -209,20 +209,17 @@ RUN_ID="$(uuid4)"
 log "censorcheck launcher ${LAUNCHER_VERSION} (vendor ${VENDOR_SHA})"
 log "probe IP: ${PUBLIC_IP}"
 log "runId: ${RUN_ID}"
+log "Проверяю сайты (последовательно, несколько минут)..."
 
 set +e
-RAW_JSON="$(bash "$VENDOR" --mode both --json --no-header --no-dns 2>/tmp/vt-censorcheck-err.$$)"
+# stdout = JSON; stderr = прогресс-бар (не перехватывать)
+RAW_JSON="$(bash "$VENDOR" --mode both --json --no-header --no-dns)"
 CC_EXIT=$?
 set -e
 if [ "$CC_EXIT" -ne 0 ]; then
   log "censorcheck завершился с кодом ${CC_EXIT}" >&2
-  if [ -s /tmp/vt-censorcheck-err.$$ ]; then
-    cat /tmp/vt-censorcheck-err.$$ >&2 || true
-  fi
-  rm -f /tmp/vt-censorcheck-err.$$
   exit 1
 fi
-rm -f /tmp/vt-censorcheck-err.$$
 
 PAYLOAD="$TMPDIR/payload.json"
 printf '%s' "$RAW_JSON" | jq --arg runId "$RUN_ID" --arg ip "$PUBLIC_IP" --arg lv "$LAUNCHER_VERSION" '
