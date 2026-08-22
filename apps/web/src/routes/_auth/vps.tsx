@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@cfdm/ui/components/badge'
 import { ResourcePage, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/reui-kit'
-import type { VisibilityState } from '@tanstack/react-table'
+import type { ColumnVisibilityState } from '@tanstack/react-table'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
 import { CountryFlag } from '@/components/country-flag'
@@ -313,7 +313,7 @@ function VpsPage() {
     [customFieldDefs],
   )
 
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => ({
     ...(loadStoredColumnVisibility('vps-column-visibility') ?? {}),
   }))
 

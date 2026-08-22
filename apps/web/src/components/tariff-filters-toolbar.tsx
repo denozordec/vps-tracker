@@ -17,7 +17,7 @@ import {
   type FilterChip,
 } from '@/components/list-filters-bar'
 import type { DataGridColumnVisibilityOption } from '@/lib/data-grid-column-visibility'
-import type { VisibilityState } from '@tanstack/react-table'
+import type { ColumnVisibilityState } from '@tanstack/react-table'
 
 import {
   NumberField,
@@ -56,7 +56,7 @@ interface TariffsFiltersToolbarProps {
   shownCount: number
   totalCount: number
   columnVisibilityOptions?: DataGridColumnVisibilityOption[]
-  columnVisibility?: VisibilityState
+  columnVisibility?: ColumnVisibilityState
   onColumnVisibilityChange?: (columnId: string, visible: boolean) => void
 }
 

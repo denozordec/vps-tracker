@@ -18,6 +18,7 @@ export {
   loadStoredColumnVisibility,
   dataGridColumnVisibilityOptions,
   type FrameDataGridProps,
+  type DataGridColumnDef,
   type DataGridColumnVisibilityOption,
 } from './frame-data-grid'
 export { ExpandableResourceGrid } from './expandable-resource-grid'

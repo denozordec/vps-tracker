@@ -15,7 +15,7 @@ import { PlusIcon } from 'lucide-react'
 import { ListFiltersBar, type FilterChip } from '@/components/list-filters-bar'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import type { DataGridColumnVisibilityOption } from '@/lib/data-grid-column-visibility'
-import type { VisibilityState } from '@tanstack/react-table'
+import type { ColumnVisibilityState } from '@tanstack/react-table'
 
 import {
   DateSelector,
@@ -64,7 +64,7 @@ interface VpsFiltersToolbarProps {
   shownCount: number
   totalCount: number
   columnVisibilityOptions?: DataGridColumnVisibilityOption[]
-  columnVisibility?: VisibilityState
+  columnVisibility?: ColumnVisibilityState
   onColumnVisibilityChange?: (columnId: string, visible: boolean) => void
 }
 

@@ -23,7 +23,19 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   partial: 'warning',
 }
 
-export function StatusBadge({ status, label }: { status: string; label?: string }) {
+export function StatusBadge({
+  status,
+  label,
+  size = 'default',
+}: {
+  status: string
+  label?: string
+  size?: NonNullable<ComponentProps<typeof Badge>['size']>
+}) {
   const variant = STATUS_VARIANT[status] ?? 'outline'
-  return <Badge variant={variant}>{label ?? status}</Badge>
+  return (
+    <Badge variant={variant} size={size}>
+      {label ?? status}
+    </Badge>
+  )
 }

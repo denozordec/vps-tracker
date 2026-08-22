@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Filter } from '@/components/reui/filters'
-import { filterCensorcheckRuns, groupRunsByService } from './blocking-filters'
+import { filterCensorcheckRuns, groupRunsByService, collectServiceColumns, collectProbeColumns, shortHostLabel } from './blocking-filters'
 import type { CensorcheckRunDto } from './types'
 
 const run = (overrides: Partial<CensorcheckRunDto> = {}): CensorcheckRunDto => ({
@@ -95,5 +95,49 @@ describe('groupRunsByService', () => {
     const groups = groupRunsByService([run()])
     expect(groups.map((g) => g.serviceKey)).toEqual(['netflix.com', 'youtube.com'])
     expect(groups[1]?.probes[0]?.status).toBe('blocked')
+    expect(groups[1]?.probes[0]?.httpStatus).toBe(-1)
   })
 })
+
+describe('collectServiceColumns', () => {
+  it('ставит канонические сервисы первыми и custom в конец', () => {
+    const cols = collectServiceColumns([
+      run({
+        results: [
+          ...(run().results ?? []),
+          {
+            id: 'r3',
+            runId: 'ccrun-1',
+            serviceKey: 'custom.example',
+            serviceLabel: 'custom.example',
+            category: 'custom',
+            status: 'available',
+            httpStatus: 200,
+            detail: null,
+          },
+        ],
+      }),
+    ])
+    expect(cols[0]?.key).toBe('youtube.com')
+    expect(cols.map((c) => c.key)).toContain('netflix.com')
+    expect(cols.at(-1)?.key).toBe('custom.example')
+  })
+})
+
+describe('collectProbeColumns', () => {
+  it('берёт dns как короткий header', () => {
+    expect(collectProbeColumns([run()])[0]).toMatchObject({
+      key: 'ccrun-1',
+      label: 'edge.example',
+      title: 'edge.example.com',
+    })
+  })
+})
+
+describe('shortHostLabel', () => {
+  it('отрезает типичный TLD', () => {
+    expect(shortHostLabel('youtube.com')).toBe('youtube')
+    expect(shortHostLabel('api.telegram.org')).toBe('api.telegram')
+  })
+})
+

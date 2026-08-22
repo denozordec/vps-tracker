@@ -27,7 +27,7 @@ import { StatusBadge } from '@/components/status-badge'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { BlockingServiceGrid, BlockingVpsGrid } from './blocking-grid'
 import { CheckRunSheet } from './check-run-sheet'
-import { filterCensorcheckRuns, groupRunsByService } from './blocking-filters'
+import { filterCensorcheckRuns, serviceMatrixRows } from './blocking-filters'
 import {
   CENSORCHECK_STATUS_LABELS,
   LAUNCHER_CMD,
@@ -119,7 +119,7 @@ export function BlockingPage() {
 
   const runs = currentQuery.data?.items ?? []
   const filtered = useMemo(() => filterCensorcheckRuns(runs, filters), [runs, filters])
-  const serviceGroups = useMemo(() => groupRunsByService(filtered), [filtered])
+  const serviceGroups = useMemo(() => serviceMatrixRows(filtered), [filtered])
 
   const matched = filtered.filter((row) => row.matchedVpsId).length
   const blocked = filtered.reduce((sum, row) => sum + row.summary.blocked, 0)
@@ -230,7 +230,12 @@ export function BlockingPage() {
                   emptyAction={copyLauncher}
                 />
               ) : (
-                <BlockingServiceGrid groups={serviceGroups} emptyAction={copyLauncher} />
+                <BlockingServiceGrid
+                  groups={serviceGroups}
+                  runs={rows}
+                  onProbeClick={setSelected}
+                  emptyAction={copyLauncher}
+                />
               )
             }
           </QueryState>

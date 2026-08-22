@@ -8,12 +8,16 @@ export interface DataGridColumn<T> {
   icon?: LucideIcon
   sortable?: boolean
   sortValue?: (row: T) => string | number
-  /** TanStack sortingFn; для числовых sortValue — `'basic'`. */
+  /** TanStack v9 `sortFn`; для числовых sortValue — `'basic'`. */
   sortingFn?: 'auto' | 'alphanumeric' | 'basic' | 'text' | 'datetime'
   headerTitle?: string
   className?: string
   headerClassName?: string
   enableHiding?: boolean
+  size?: number
+  minSize?: number
+  maxSize?: number
+  enablePinning?: boolean
 }
 
 /** @deprecated Используйте DataGridColumn */

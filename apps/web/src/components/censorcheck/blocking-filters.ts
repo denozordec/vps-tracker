@@ -1,6 +1,15 @@
 import { getActiveFilters } from '@/components/reui-kit'
 import type { Filter } from '@/components/reui/filters'
-import { runSearchText, type CensorcheckRunDto } from './types'
+import {
+  CENSORCHECK_DPI_HOSTS,
+  CENSORCHECK_GEOBLOCK_HOSTS,
+  inferCensorcheckCategory,
+} from '@cfdm/shared/contracts/censorcheck'
+import {
+  runSearchText,
+  type CensorcheckResultDto,
+  type CensorcheckRunDto,
+} from './types'
 
 export function filterCensorcheckRuns(
   runs: CensorcheckRunDto[],
@@ -68,6 +77,7 @@ export type BlockingServiceRow = {
     dns: string
     country: string
     status: string
+    httpStatus: number | null
     createdAt: string
     vpsId: string | null
   }>
@@ -85,6 +95,7 @@ export function groupRunsByService(runs: CensorcheckRunDto[]): BlockingServiceRo
         dns: run.vps?.dns ?? '',
         country: run.vps?.country ?? '',
         status: result.status,
+        httpStatus: result.httpStatus,
         createdAt: run.createdAt,
         vpsId: run.matchedVpsId,
       }
@@ -102,4 +113,69 @@ export function groupRunsByService(runs: CensorcheckRunDto[]): BlockingServiceRo
     }
   }
   return [...map.values()].sort((a, b) => a.serviceKey.localeCompare(b.serviceKey))
+}
+
+export type MatrixColumn = {
+  key: string
+  label: string
+  title: string
+}
+
+export function shortHostLabel(value: string): string {
+  const host = value.trim().split('/')[0] ?? value
+  return host.replace(/\.(com|org|net|io|ag|is)$/i, '')
+}
+
+const CANONICAL_SERVICES = [...CENSORCHECK_DPI_HOSTS, ...CENSORCHECK_GEOBLOCK_HOSTS]
+
+export function collectServiceColumns(runs: CensorcheckRunDto[]): MatrixColumn[] {
+  const canonicalSet = new Set<string>(CANONICAL_SERVICES)
+  const extras = new Set<string>()
+  for (const run of runs) {
+    for (const result of run.results ?? []) {
+      if (!canonicalSet.has(result.serviceKey)) extras.add(result.serviceKey)
+    }
+  }
+  const keys = [
+    ...CANONICAL_SERVICES,
+    ...[...extras].sort((a, b) => a.localeCompare(b)),
+  ]
+  return keys.map((key) => ({
+    key,
+    label: shortHostLabel(key),
+    title: key,
+  }))
+}
+
+export function collectProbeColumns(runs: CensorcheckRunDto[]): MatrixColumn[] {
+  return runs.map((run) => {
+    const title = run.vps?.dns || run.probePublicIp
+    return {
+      key: run.id,
+      label: shortHostLabel(title),
+      title,
+    }
+  })
+}
+
+export function resultByService(
+  run: CensorcheckRunDto,
+  serviceKey: string,
+): CensorcheckResultDto | undefined {
+  return (run.results ?? []).find((row) => row.serviceKey === serviceKey)
+}
+
+export function serviceMatrixRows(runs: CensorcheckRunDto[]): BlockingServiceRow[] {
+  const grouped = new Map(groupRunsByService(runs).map((row) => [row.serviceKey, row]))
+  return collectServiceColumns(runs).map((col) => {
+    const existing = grouped.get(col.key)
+    if (existing) return existing
+    return {
+      id: col.key,
+      serviceKey: col.key,
+      serviceLabel: col.key,
+      category: inferCensorcheckCategory(col.key),
+      probes: [],
+    }
+  })
 }

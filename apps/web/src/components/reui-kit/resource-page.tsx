@@ -1,10 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
+  useTable,
   type PaginationState,
   type RowSelectionState,
   type SortingState,
@@ -13,7 +9,7 @@ import { CircleAlertIcon, FilterIcon, FilterXIcon } from 'lucide-react'
 
 import { CountedLineTabs } from '@/components/counted-line-tabs'
 import { Badge } from '@/components/reui/badge'
-import { DataGrid } from '@/components/reui/data-grid/data-grid'
+import { DataGrid, dataGridFeatures } from '@/components/reui/data-grid/data-grid'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
 import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
@@ -42,6 +38,7 @@ import { EmptyState } from '@/components/empty-state'
 import { applyFiltersToData } from './filter-utils'
 import {
   FrameDataGrid,
+  type DataGridColumnDef,
   type FrameDataGridProps,
 } from './frame-data-grid'
 
@@ -84,7 +81,7 @@ export interface ResourcePageProps<T extends object> extends SimpleGridPassthrou
   onFiltersChange?: (filters: Filter[]) => void
   onClearFilters?: () => void
   getFilterFieldValue?: (item: T, field: string) => unknown
-  columns: ColumnDef<T, unknown>[]
+  columns: DataGridColumnDef<T>[]
   data: T[]
   getRowId: (row: T, index?: number) => string
   isLoading?: boolean
@@ -323,7 +320,8 @@ function ResourcePageFiltered<T extends object>({
     setRowSelection({})
   }, [])
 
-  const table = useReactTable({
+  const table = useTable({
+    features: dataGridFeatures,
     data: filteredData,
     columns,
     getRowId: (row) => getRowId(row),
@@ -332,9 +330,6 @@ function ResourcePageFiltered<T extends object>({
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
   })
 
   const handleTabChange = useCallback(
@@ -399,7 +394,15 @@ function ResourcePageFiltered<T extends object>({
         table={table}
         recordCount={filteredData.length}
         emptyMessage="Нет записей по выбранным фильтрам."
-        tableLayout={{ dense: true }}
+        tableLayout={{
+          dense: true,
+          stripped: true,
+          rowBorder: true,
+          headerSticky: true,
+          headerBackground: true,
+          headerBorder: true,
+          width: 'auto',
+        }}
       >
         <Frame dense variant="default" spacing="sm" className="w-full">
           {!hideHeader ? (
@@ -495,7 +498,7 @@ function ResourcePageFiltered<T extends object>({
               <DataGridPagination
                 sizes={[5, 10, 20, 50]}
                 rowsPerPageLabel="Строк на странице"
-                info="{from} - {to} of {count}"
+                info="{from}–{to} из {count}"
                 previousPageLabel="Предыдущая"
                 nextPageLabel="Следующая"
               />

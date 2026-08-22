@@ -1,11 +1,11 @@
-import type { VisibilityState } from "@tanstack/react-table"
+import type { ColumnVisibilityState } from "@tanstack/react-table"
 import type { DataGridColumn } from "@/components/data-grid-types"
 
-export function loadStoredColumnVisibility(key: string): VisibilityState | undefined {
+export function loadStoredColumnVisibility(key: string): ColumnVisibilityState | undefined {
   try {
     const raw = localStorage.getItem(key)
     if (!raw) return undefined
-    return JSON.parse(raw) as VisibilityState
+    return JSON.parse(raw) as ColumnVisibilityState
   } catch {
     return undefined
   }

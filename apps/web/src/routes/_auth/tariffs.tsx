@@ -8,7 +8,7 @@ import { api, ApiError } from '@/lib/api-client'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
 import { Badge } from '@cfdm/ui/components/badge'
 import { ResourcePage, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/reui-kit'
-import type { VisibilityState } from '@tanstack/react-table'
+import type { ColumnVisibilityState } from '@tanstack/react-table'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
@@ -45,7 +45,7 @@ export const Route = createFileRoute('/_auth/tariffs')({
   component: TariffsPage,
 })
 
-const INITIAL_COLUMN_VISIBILITY: VisibilityState = {
+const INITIAL_COLUMN_VISIBILITY: ColumnVisibilityState = {
   location: false,
   country: false,
   datacenterName: false,
@@ -59,7 +59,7 @@ function TariffsPage() {
   const queryClient = useQueryClient()
   const { data: snapshot, isLoading, isError, error, refetch } = useQuery(snapshotQueryOptions())
   const [filters, setFilters] = useState<TariffFiltersState>(buildDefaultTariffFilters())
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => ({
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => ({
     ...INITIAL_COLUMN_VISIBILITY,
     ...(loadStoredColumnVisibility('tariffs-column-visibility') ?? {}),
   }))

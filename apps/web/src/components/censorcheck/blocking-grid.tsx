@@ -1,74 +1,31 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { GlobeIcon, MapPinIcon, ServerIcon, ShieldAlertIcon } from 'lucide-react'
+import { ServerIcon, ShieldAlertIcon } from 'lucide-react'
 
 import type { DataGridColumn } from '@/components/data-grid-types'
-import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
-import { CountryFlag } from '@/components/country-flag'
-import { StatusBadge } from '@/components/status-badge'
-import { columnDefFromDataGrid, ExpandableResourceGrid } from '@/components/reui-kit'
-import { Badge } from '@/components/reui/badge'
+import { dataGridCellStack } from '@/components/data-grid-cells'
+import { columnDefFromDataGrid, FrameDataGrid } from '@/components/reui-kit'
 import {
-  CENSORCHECK_STATUS_LABELS,
-  formatCheckedAt,
-  formatVpsResources,
-  type CensorcheckRunDto,
-} from './types'
-import type { BlockingServiceRow } from './blocking-filters'
+  collectProbeColumns,
+  collectServiceColumns,
+  resultByService,
+  type BlockingServiceRow,
+} from './blocking-filters'
+import { StatusMatrixCell } from './status-matrix-cell'
+import type { CensorcheckRunDto } from './types'
 
-function SummaryBadges({ run }: { run: CensorcheckRunDto }) {
-  const { summary } = run
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {summary.available > 0 ? (
-        <Badge variant="success" size="sm">{summary.available} ок</Badge>
-      ) : null}
-      {summary.blocked > 0 ? (
-        <Badge variant="destructive" size="sm">{summary.blocked} блок</Badge>
-      ) : null}
-      {summary.denied > 0 ? (
-        <Badge variant="destructive" size="sm">{summary.denied} отказ</Badge>
-      ) : null}
-      {summary.timeout > 0 ? (
-        <Badge variant="warning" size="sm">{summary.timeout} timeout</Badge>
-      ) : null}
-      {summary.error > 0 ? (
-        <Badge variant="outline" size="sm">{summary.error} err</Badge>
-      ) : null}
-    </div>
-  )
-}
+const MATRIX_CELL = 'w-16 min-w-16 px-1 text-center'
 
-function NestedList({
-  rows,
-}: {
-  rows: Array<{ key: string; primary: string; secondary?: string; status: string }>
-}) {
-  return (
-    <div className="bg-muted/30 flex flex-col gap-1 px-4 py-3">
-      {rows.map((row) => (
-        <div key={row.key} className="flex items-center justify-between gap-3 text-sm">
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate font-medium">{row.primary}</span>
-            {row.secondary ? (
-              <span className="text-muted-foreground truncate text-xs">{row.secondary}</span>
-            ) : null}
-          </div>
-          <StatusBadge
-            status={row.status}
-            label={CENSORCHECK_STATUS_LABELS[row.status] ?? row.status}
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-const vpsColumns: DataGridColumn<CensorcheckRunDto>[] = [
-  {
+function vpsIdentityColumn(): DataGridColumn<CensorcheckRunDto> {
+  return {
     key: 'vps',
     header: 'VPS / IP',
+    headerTitle: 'VPS / IP',
     icon: ServerIcon,
+    enableHiding: false,
+    enablePinning: true,
+    size: 220,
+    minSize: 180,
     sortValue: (row) => row.vps?.dns || row.probePublicIp,
     cell: (row) => {
       const title = row.vps?.dns || row.probePublicIp
@@ -87,68 +44,8 @@ const vpsColumns: DataGridColumn<CensorcheckRunDto>[] = [
       )
       return dataGridCellStack(link, ip)
     },
-  },
-  {
-    key: 'dns',
-    header: 'DNS',
-    icon: GlobeIcon,
-    sortValue: (row) => row.vps?.dns ?? '',
-    cell: (row) => row.vps?.dns || '—',
-  },
-  {
-    key: 'hoster',
-    header: 'Хостер',
-    sortValue: (row) => row.vps?.providerName ?? '',
-    cell: (row) => row.vps?.providerName || '—',
-  },
-  {
-    key: 'country',
-    header: 'Страна',
-    icon: MapPinIcon,
-    sortValue: (row) => row.vps?.country ?? '',
-    cell: (row) =>
-      row.vps?.country
-        ? dataGridCellWithFlag(<CountryFlag country={row.vps.country} />, row.vps.country)
-        : '—',
-  },
-  {
-    key: 'resources',
-    header: 'Ресурсы',
-    sortValue: (row) => row.vps?.vcpu ?? 0,
-    cell: (row) =>
-      row.vps
-        ? formatVpsResources(row.vps.vcpu, row.vps.ramGb, row.vps.diskGb)
-        : '—',
-  },
-  {
-    key: 'summary',
-    header: 'Сводка',
-    cell: (row) => <SummaryBadges run={row} />,
-  },
-  {
-    key: 'checked',
-    header: 'Проверено',
-    sortValue: (row) => row.createdAt,
-    cell: (row) => formatCheckedAt(row.createdAt),
-  },
-]
-
-const serviceColumns: DataGridColumn<BlockingServiceRow>[] = [
-  {
-    key: 'service',
-    header: 'Сервис',
-    icon: ShieldAlertIcon,
-    sortValue: (row) => row.serviceKey,
-    cell: (row) => dataGridCellStack(row.serviceLabel, row.category),
-  },
-  {
-    key: 'probes',
-    header: 'Пробы',
-    sortValue: (row) => row.probes.length,
-    sortingFn: 'basic',
-    cell: (row) => row.probes.length,
-  },
-]
+  }
+}
 
 export function BlockingVpsGrid({
   runs,
@@ -159,59 +56,133 @@ export function BlockingVpsGrid({
   onRowClick: (run: CensorcheckRunDto) => void
   emptyAction?: ReactNode
 }) {
+  const serviceCols = useMemo(() => collectServiceColumns(runs), [runs])
+  const columns = useMemo((): DataGridColumn<CensorcheckRunDto>[] => {
+    return [
+      vpsIdentityColumn(),
+      ...serviceCols.map(
+        (svc): DataGridColumn<CensorcheckRunDto> => ({
+          key: `svc:${svc.key}`,
+          header: (
+            <span className="block max-w-16 truncate" title={svc.title}>
+              {svc.label}
+            </span>
+          ),
+          headerTitle: svc.title,
+          className: MATRIX_CELL,
+          headerClassName: MATRIX_CELL,
+          size: 72,
+          minSize: 64,
+          sortable: true,
+          sortValue: (row) => resultByService(row, svc.key)?.status ?? '',
+          cell: (row) => {
+            const item = resultByService(row, svc.key)
+            return (
+              <StatusMatrixCell
+                status={item?.status}
+                serviceLabel={svc.title}
+                vpsLabel={row.vps?.dns || row.probePublicIp}
+                httpStatus={item?.httpStatus}
+                checkedAt={row.createdAt}
+              />
+            )
+          },
+        }),
+      ),
+    ]
+  }, [serviceCols])
+
   return (
-    <ExpandableResourceGrid
-      columns={columnDefFromDataGrid(vpsColumns)}
+    <FrameDataGrid
+      columns={columnDefFromDataGrid(columns)}
       data={runs}
       rowId={(row) => row.id}
       dense
       pagination={runs.length > 10}
+      pinLeftColumnIds={['vps']}
+      horizontalScroll
       emptyTitle="Нет проверок"
       emptyDescription="Запустите launcher на VPS, чтобы увидеть статусы блокировок."
       emptyAction={emptyAction}
       onRowClick={onRowClick}
-      getRowCanExpand={(row) => (row.results?.length ?? 0) > 0}
-      expandedContent={(row) => (
-        <NestedList
-          rows={(row.results ?? []).map((item) => ({
-            key: item.id,
-            primary: item.serviceLabel,
-            secondary: item.category,
-            status: item.status,
-          }))}
-        />
-      )}
     />
   )
 }
 
 export function BlockingServiceGrid({
   groups,
+  runs,
+  onProbeClick,
   emptyAction,
 }: {
   groups: BlockingServiceRow[]
+  runs: CensorcheckRunDto[]
+  onProbeClick: (run: CensorcheckRunDto) => void
   emptyAction?: ReactNode
 }) {
+  const probeCols = useMemo(() => collectProbeColumns(runs), [runs])
+  const runById = useMemo(() => new Map(runs.map((row) => [row.id, row])), [runs])
+
+  const columns = useMemo((): DataGridColumn<BlockingServiceRow>[] => {
+    return [
+      {
+        key: 'service',
+        header: 'Сервис',
+        headerTitle: 'Сервис',
+        icon: ShieldAlertIcon,
+        enableHiding: false,
+        enablePinning: true,
+        size: 180,
+        minSize: 140,
+        sortValue: (row) => row.serviceKey,
+        cell: (row) => dataGridCellStack(row.serviceLabel, row.category),
+      },
+      ...probeCols.map(
+        (probe): DataGridColumn<BlockingServiceRow> => ({
+          key: `probe:${probe.key}`,
+          header: (
+            <span className="block max-w-16 truncate" title={probe.title}>
+              {probe.label}
+            </span>
+          ),
+          headerTitle: probe.title,
+          className: MATRIX_CELL,
+          headerClassName: MATRIX_CELL,
+          size: 72,
+          minSize: 64,
+          sortable: true,
+          sortValue: (row) =>
+            row.probes.find((item) => item.runId === probe.key)?.status ?? '',
+          cell: (row) => {
+            const item = row.probes.find((probeRow) => probeRow.runId === probe.key)
+            const run = runById.get(probe.key)
+            return (
+              <StatusMatrixCell
+                status={item?.status}
+                serviceLabel={row.serviceKey}
+                vpsLabel={probe.title}
+                httpStatus={item?.httpStatus}
+                checkedAt={item?.createdAt}
+                onSelect={run ? () => onProbeClick(run) : undefined}
+              />
+            )
+          },
+        }),
+      ),
+    ]
+  }, [onProbeClick, probeCols, runById])
+
   return (
-    <ExpandableResourceGrid
-      columns={columnDefFromDataGrid(serviceColumns)}
+    <FrameDataGrid
+      columns={columnDefFromDataGrid(columns)}
       data={groups}
       rowId={(row) => row.id}
       dense
       pagination={groups.length > 10}
+      pinLeftColumnIds={['service']}
+      horizontalScroll
       emptyTitle="Нет сервисов"
       emptyAction={emptyAction}
-      getRowCanExpand={(row) => row.probes.length > 0}
-      expandedContent={(row) => (
-        <NestedList
-          rows={row.probes.map((probe) => ({
-            key: `${probe.runId}-${probe.probePublicIp}`,
-            primary: probe.dns || probe.probePublicIp,
-            secondary: `${probe.probePublicIp} · ${formatCheckedAt(probe.createdAt)}`,
-            status: probe.status,
-          }))}
-        />
-      )}
     />
   )
 }

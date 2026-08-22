@@ -1,28 +1,32 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getPaginationRowModel,
-  getExpandedRowModel,
+  useTable,
   flexRender,
   type ColumnDef,
   type SortingState,
   type RowSelectionState,
-  type VisibilityState,
+  type ColumnVisibilityState,
   type ExpandedState,
   type OnChangeFn,
+  type PaginationState,
 } from '@tanstack/react-table'
-import { ChevronDownIcon, ChevronRightIcon, Columns3Icon } from 'lucide-react'
+import { Columns3Icon } from 'lucide-react'
 
-import { Checkbox } from '@cfdm/ui/components/checkbox'
 import { Button } from '@cfdm/ui/components/button'
 import { cn } from '@cfdm/ui/lib/utils'
 import {
   DataGrid,
   DataGridContainer,
+  dataGridFeatures,
+  type DataGridFeatures,
+  type DataGridTableInstance,
 } from '@/components/reui/data-grid/data-grid'
-import { DataGridTable } from '@/components/reui/data-grid/data-grid-table'
+import {
+  DataGridTable,
+  DataGridTableRowExpand,
+  DataGridTableRowSelect,
+  DataGridTableRowSelectAll,
+} from '@/components/reui/data-grid/data-grid-table'
 import { DataGridTableVirtual } from '@/components/reui/data-grid/data-grid-table-virtual'
 import { DataGridScrollArea } from '@/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination'
@@ -39,14 +43,16 @@ import {
   FrameTitle,
 } from '@/components/reui/frame'
 
+export type DataGridColumnDef<TData extends object> = ColumnDef<
+  DataGridFeatures,
+  TData
+>
+
 const PAGINATION_LABELS = {
   rowsPerPageLabel: 'Строк на странице',
   info: '{from}–{to} из {count}',
   previousPageLabel: 'Предыдущая страница',
   nextPageLabel: 'Следующая страница',
-  pageLabel: 'Страница {page}',
-  previousPagesLabel: 'Предыдущие страницы',
-  nextPagesLabel: 'Следующие страницы',
 } as const
 
 function resolveHeaderTitle(header: ReactNode, headerTitle?: string): string {
@@ -55,11 +61,11 @@ function resolveHeaderTitle(header: ReactNode, headerTitle?: string): string {
   return ''
 }
 
-function loadStoredColumnVisibility(key: string): VisibilityState | undefined {
+function loadStoredColumnVisibility(key: string): ColumnVisibilityState | undefined {
   try {
     const raw = localStorage.getItem(key)
     if (!raw) return undefined
-    return JSON.parse(raw) as VisibilityState
+    return JSON.parse(raw) as ColumnVisibilityState
   } catch {
     return undefined
   }
@@ -87,7 +93,7 @@ export interface FrameDataGridProps<TData extends object> {
   title?: ReactNode
   description?: ReactNode
   actions?: ReactNode
-  columns: ColumnDef<TData, unknown>[]
+  columns: DataGridColumnDef<TData>[]
   data: TData[]
   /** Ключ строки — функция, возвращающая уникальный id. */
   rowId?: (row: TData, index: number) => string
@@ -118,18 +124,22 @@ export interface FrameDataGridProps<TData extends object> {
   /** Показать picker видимости колонок. */
   enableColumnVisibility?: boolean
   /** Управляемая видимость колонок (для внешнего UI, напр. тулбар «Вид»). */
-  columnVisibility?: VisibilityState
-  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+  columnVisibility?: ColumnVisibilityState
+  onColumnVisibilityChange?: OnChangeFn<ColumnVisibilityState>
   /** Показать встроенную кнопку «Колонки». По умолчанию true при enableColumnVisibility. */
   columnVisibilityTrigger?: boolean
   /** Ключ localStorage для сохранения видимости колонок. */
   columnVisibilityStorageKey?: string
   /** Начальная видимость колонок (перекрывает localStorage для отсутствующих ключей). */
-  initialColumnVisibility?: VisibilityState
+  initialColumnVisibility?: ColumnVisibilityState
   className?: string
   /** Expandable rows — c-data-grid-8 / https://reui.io/preview/base/components/c-data-grid-8 */
   expandedContent?: (row: TData) => ReactNode
   getRowCanExpand?: (row: TData) => boolean
+  /** Закрепить колонки слева (ids). Timesheet DNA: https://reui.io/preview/base/data-grid-base-4 */
+  pinLeftColumnIds?: string[]
+  /** Горизонтальный скролл широкой матрицы. */
+  horizontalScroll?: boolean
 }
 
 function DataGridSectionHeader({
@@ -177,8 +187,10 @@ function FrameDataGridBody<TData extends object>({
   footerContent,
   showPagination,
   enableColumnVisibility,
+  columnsPinnable,
+  horizontalScroll,
 }: {
-  table: ReturnType<typeof useReactTable<TData>>
+  table: DataGridTableInstance<TData>
   data: TData[]
   emptyTitle: string
   onRowClick?: (row: TData) => void
@@ -188,7 +200,15 @@ function FrameDataGridBody<TData extends object>({
   footerContent?: ReactNode
   showPagination: boolean
   enableColumnVisibility: boolean
+  columnsPinnable: boolean
+  horizontalScroll: boolean
 }) {
+  const tableNode = virtualization ? (
+    <DataGridTableVirtual height={height} footerContent={footerContent} />
+  ) : (
+    <DataGridTable footerContent={footerContent} />
+  )
+
   return (
     <DataGrid
       table={table}
@@ -205,7 +225,7 @@ function FrameDataGridBody<TData extends object>({
         width: 'auto',
         columnsVisibility: enableColumnVisibility,
         columnsResizable: false,
-        columnsPinnable: false,
+        columnsPinnable,
         columnsMovable: false,
         rowsDraggable: false,
         rowsPinnable: false,
@@ -215,12 +235,15 @@ function FrameDataGridBody<TData extends object>({
       }}
     >
       <DataGridContainer border={false}>
-        {virtualization ? (
-          <DataGridScrollArea orientation="vertical" style={{ height }}>
-            <DataGridTableVirtual height={height} footerContent={footerContent} />
+        {virtualization || horizontalScroll ? (
+          <DataGridScrollArea
+            orientation={virtualization && horizontalScroll ? 'both' : virtualization ? 'vertical' : 'both'}
+            style={virtualization ? { height } : { maxHeight: 'min(70vh, 40rem)' }}
+          >
+            {tableNode}
           </DataGridScrollArea>
         ) : (
-          <DataGridTable footerContent={footerContent} />
+          tableNode
         )}
       </DataGridContainer>
       {showPagination ? <DataGridPaginationBar /> : null}
@@ -258,11 +281,18 @@ export function FrameDataGrid<TData extends object>({
   className,
   expandedContent,
   getRowCanExpand,
+  pinLeftColumnIds,
+  horizontalScroll = false,
 }: FrameDataGridProps<TData>) {
+  const showPagination = pagination ?? true
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [expanded, setExpanded] = useState<ExpandedState>({})
-  const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(() => {
+  const [paginationState, setPaginationState] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: showPagination ? pageSize : Number.POSITIVE_INFINITY,
+  })
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<ColumnVisibilityState>(() => {
     const stored = columnVisibilityStorageKey
       ? loadStoredColumnVisibility(columnVisibilityStorageKey)
       : undefined
@@ -271,89 +301,73 @@ export function FrameDataGrid<TData extends object>({
 
   const isColumnVisibilityControlled = columnVisibilityProp !== undefined
   const columnVisibility = isColumnVisibilityControlled ? columnVisibilityProp : internalColumnVisibility
-  const setColumnVisibility: OnChangeFn<VisibilityState> = isColumnVisibilityControlled
+  const setColumnVisibility: OnChangeFn<ColumnVisibilityState> = isColumnVisibilityControlled
     ? (onColumnVisibilityChange ?? (() => undefined))
     : setInternalColumnVisibility
+
+  useEffect(() => {
+    setPaginationState((current) => ({
+      pageIndex: showPagination ? current.pageIndex : 0,
+      pageSize: showPagination ? pageSize : Number.POSITIVE_INFINITY,
+    }))
+  }, [pageSize, showPagination])
 
   useEffect(() => {
     if (isColumnVisibilityControlled || !columnVisibilityStorageKey) return
     localStorage.setItem(columnVisibilityStorageKey, JSON.stringify(columnVisibility))
   }, [columnVisibility, columnVisibilityStorageKey, isColumnVisibilityControlled])
 
-  const selectColumn: ColumnDef<TData, unknown> = {
+  const selectColumn: DataGridColumnDef<TData> = {
     id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Выбрать все"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Выбрать строку"
-        onClick={(e) => e.stopPropagation()}
-      />
-    ),
+    header: () => <DataGridTableRowSelectAll />,
+    cell: ({ row }) => <DataGridTableRowSelect row={row} />,
     enableSorting: false,
     enableHiding: false,
+    size: 40,
     meta: { cellClassName: 'w-10' },
   }
 
-  const expandColumn: ColumnDef<TData, unknown> = {
+  const expandColumn: DataGridColumnDef<TData> = {
     id: 'expand',
     header: () => null,
-    cell: ({ row }) =>
-      row.getCanExpand() ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="size-6 text-muted-foreground"
-          aria-label={row.getIsExpanded() ? 'Свернуть' : 'Развернуть'}
-          onClick={(event) => {
-            event.stopPropagation()
-            row.toggleExpanded()
-          }}
-        >
-          {row.getIsExpanded() ? (
-            <ChevronDownIcon className="size-4" />
-          ) : (
-            <ChevronRightIcon className="size-4" />
-          )}
-        </Button>
-      ) : null,
+    cell: ({ row }) => <DataGridTableRowExpand row={row} />,
     enableSorting: false,
     enableHiding: false,
+    size: 40,
     meta: {
       cellClassName: 'w-10',
       expandedContent,
     },
   }
 
-  const tableColumns = [
+  const tableColumns: DataGridColumnDef<TData>[] = [
     ...(expandedContent ? [expandColumn] : []),
     ...(enableRowSelection ? [selectColumn] : []),
     ...columns,
   ]
 
   const lastColId = pinLastColumn ? tableColumns[tableColumns.length - 1]?.id ?? '' : ''
+  const pinLeft = pinLeftColumnIds ?? []
+  const enablePinning = pinLastColumn || pinLeft.length > 0
+  const columnPinning = {
+    start: pinLeft,
+    end: pinLastColumn && lastColId ? [lastColId] : [],
+  }
 
-  const showPagination = pagination ?? true
-
-  const table = useReactTable<TData>({
+  const table = useTable({
+    features: dataGridFeatures,
     data,
     columns: tableColumns,
     state: {
       sorting,
+      pagination: paginationState,
       columnVisibility,
       expanded,
+      ...(enablePinning ? { columnPinning } : {}),
       ...(enableRowSelection ? { rowSelection } : {}),
     },
     onSortingChange: setSorting,
+    onPaginationChange: setPaginationState,
     onExpandedChange: setExpanded,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: enableRowSelection
@@ -368,21 +382,11 @@ export function FrameDataGrid<TData extends object>({
           })
         }
       : undefined,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getExpandedRowModel: expandedContent ? getExpandedRowModel() : undefined,
-    getPaginationRowModel: showPagination ? getPaginationRowModel() : undefined,
-    initialState: {
-      ...(showPagination ? { pagination: { pageIndex: 0, pageSize } } : {}),
-      ...(pinLastColumn && lastColId ? { columnPinning: { right: [lastColId] } } : {}),
-    },
-    getRowId: rowId
-      ? (row, index) => rowId(row, index)
-      : undefined,
+    initialState: enablePinning ? { columnPinning } : undefined,
+    getRowId: rowId ? (row, index) => rowId(row, index) : undefined,
     getRowCanExpand: expandedContent
       ? (row) => (getRowCanExpand ? getRowCanExpand(row.original) : true)
       : undefined,
-    enableColumnPinning: pinLastColumn,
     enableRowSelection,
     enableHiding: enableColumnVisibility,
   })
@@ -438,6 +442,8 @@ export function FrameDataGrid<TData extends object>({
       footerContent={footerContent}
       showPagination={showPagination}
       enableColumnVisibility={enableColumnVisibility}
+      columnsPinnable={enablePinning}
+      horizontalScroll={horizontalScroll}
     />
   )
 
@@ -452,9 +458,9 @@ export function FrameDataGrid<TData extends object>({
 }
 
 /** Хелпер для конвертации DataGridColumn<T> → ColumnDef<T> с DataGridColumnHeader. */
-export function columnDefFromDataGrid<T>(
+export function columnDefFromDataGrid<T extends object>(
   cols: DataGridColumn<T>[],
-): ColumnDef<T, unknown>[] {
+): DataGridColumnDef<T>[] {
   return cols.map((c) => {
     const title = resolveHeaderTitle(c.header, c.headerTitle)
     const Icon = c.icon
@@ -467,7 +473,7 @@ export function columnDefFromDataGrid<T>(
             accessorFn: c.sortValue
               ? (row: T) => c.sortValue!(row)
               : (row: T) => (row as Record<string, unknown>)[c.key] as string | number,
-            sortingFn: c.sortingFn ?? 'auto',
+            sortFn: c.sortingFn ?? 'auto',
           }
         : {}),
       header: Icon
@@ -482,6 +488,10 @@ export function columnDefFromDataGrid<T>(
       cell: ({ row }) => c.cell(row.original, row.index),
       enableSorting: sortable,
       enableHiding: c.enableHiding ?? true,
+      enablePinning: c.enablePinning,
+      size: c.size,
+      minSize: c.minSize,
+      maxSize: c.maxSize,
       meta: {
         headerTitle: title || undefined,
         cellClassName: c.className,
