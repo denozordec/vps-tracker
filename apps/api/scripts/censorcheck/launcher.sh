@@ -5,8 +5,12 @@ set -euo pipefail
 
 VT_API_URL="${VT_API_URL:-__VT_API_URL__}"
 VT_INGEST_TOKEN="${VT_INGEST_TOKEN:-__VT_INGEST_TOKEN__}"
-LAUNCHER_VERSION="1"
+LAUNCHER_VERSION="3"
 VENDOR_SHA="12c5839"
+
+OS_ID="unknown"
+OS_LIKE=""
+OS_NAME="unknown"
 
 trap 'exit 130' INT
 
@@ -17,9 +21,137 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Нужна команда '$1' (установите пакет и повторите)."
 }
 
+detect_os() {
+  OS_ID="unknown"
+  OS_LIKE=""
+  OS_NAME="unknown"
+  if [ -r /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    OS_ID="${ID:-unknown}"
+    OS_LIKE="${ID_LIKE:-}"
+    OS_NAME="${PRETTY_NAME:-$OS_ID}"
+  fi
+}
+
+detect_pkg_manager() {
+  case "$OS_ID" in
+    debian|ubuntu|linuxmint|pop|raspbian|kali|astra|devuan) printf 'apt'; return 0 ;;
+    alpine) printf 'apk'; return 0 ;;
+    arch|manjaro|endeavouros) printf 'pacman'; return 0 ;;
+    fedora) printf 'dnf'; return 0 ;;
+    rhel|centos|rocky|almalinux|ol)
+      if command -v dnf >/dev/null 2>&1; then printf 'dnf'; else printf 'yum'; fi
+      return 0
+      ;;
+  esac
+  case " $OS_LIKE " in
+    *" debian "*|*" ubuntu "*) printf 'apt'; return 0 ;;
+    *" rhel "*|*" fedora "*|*" centos "*)
+      if command -v dnf >/dev/null 2>&1; then printf 'dnf'; else printf 'yum'; fi
+      return 0
+      ;;
+    *" arch "*) printf 'pacman'; return 0 ;;
+    *" alpine "*) printf 'apk'; return 0 ;;
+  esac
+  if command -v apt-get >/dev/null 2>&1; then
+    printf 'apt'
+  elif command -v dnf >/dev/null 2>&1; then
+    printf 'dnf'
+  elif command -v yum >/dev/null 2>&1; then
+    printf 'yum'
+  elif command -v pacman >/dev/null 2>&1; then
+    printf 'pacman'
+  elif command -v apk >/dev/null 2>&1; then
+    printf 'apk'
+  else
+    return 1
+  fi
+}
+
+pkg_alts() {
+  local cmd="$1" pm="$2"
+  case "$pm:$cmd" in
+    *:jq) printf '%s\n' jq ;;
+    apt:dig) printf '%s\n' dnsutils bind9-dnsutils ;;
+    dnf:dig|yum:dig) printf '%s\n' bind-utils ;;
+    pacman:dig) printf '%s\n' bind ;;
+    apk:dig) printf '%s\n' bind-tools ;;
+    apt:column) printf '%s\n' bsdextrautils bsdmainutils ;;
+    dnf:column|yum:column|pacman:column) printf '%s\n' util-linux ;;
+    apk:column) printf '%s\n' util-linux-misc util-linux ;;
+    *) return 1 ;;
+  esac
+}
+
+root_prefix() {
+  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    return 0
+  fi
+  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+    printf 'sudo -n'
+    return 0
+  fi
+  return 1
+}
+
+install_one_package() {
+  local pm="$1" pkg="$2"
+  local prefix=""
+  prefix="$(root_prefix)" || die "Нужны права root, чтобы установить: ${pkg}"
+  # shellcheck disable=SC2086
+  case "$pm" in
+    apt)
+      $prefix env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y -qq "$pkg"
+      ;;
+    dnf) $prefix dnf install -y "$pkg" ;;
+    yum) $prefix yum install -y "$pkg" ;;
+    pacman) $prefix pacman -S --noconfirm --needed "$pkg" ;;
+    apk) $prefix apk add --no-cache "$pkg" ;;
+    *) return 1 ;;
+  esac
+}
+
+install_cmd() {
+  local pm="$1" cmd="$2" alt
+  while IFS= read -r alt; do
+    [ -n "$alt" ] || continue
+    log "  пакет ${alt} → команда ${cmd}"
+    if install_one_package "$pm" "$alt"; then
+      command -v "$cmd" >/dev/null 2>&1 && return 0
+    fi
+  done < <(pkg_alts "$cmd" "$pm")
+  return 1
+}
+
+ensure_cmds() {
+  local missing=() cmd pm prefix=""
+  detect_os
+  pm="$(detect_pkg_manager)" || pm=""
+  log "ОС: ${OS_NAME} (id=${OS_ID}${OS_LIKE:+ like=${OS_LIKE}}, pkg=${pm:-unknown})"
+
+  for cmd in "$@"; do
+    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+  done
+  [ "${#missing[@]}" -eq 0 ] && return 0
+  [ -n "$pm" ] || die "Не удалось определить пакетный менеджер (${OS_NAME}). Установите вручную: ${missing[*]}"
+  log "Отсутствуют команды: ${missing[*]}. Устанавливаю..."
+
+  if [ "$pm" = apt ]; then
+    prefix="$(root_prefix)" || die "Нужны права root, чтобы установить: ${missing[*]}"
+    # shellcheck disable=SC2086
+    $prefix env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -qq
+  fi
+
+  for cmd in "${missing[@]}"; do
+    install_cmd "$pm" "$cmd" || die "Не удалось установить зависимость для '$cmd' (${OS_NAME})"
+    command -v "$cmd" >/dev/null 2>&1 || die "Команда '$cmd' так и не появилась после установки"
+  done
+}
+
 require_cmd curl
-require_cmd jq
 require_cmd bash
+ensure_cmds jq dig column
 
 detect_public_ip() {
   local ip=""

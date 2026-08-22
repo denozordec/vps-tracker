@@ -15,6 +15,10 @@ export function censorcheckPublicUrl(env: NodeJS.ProcessEnv = process.env): stri
   return `https://${host}`
 }
 
+function unixText(body: string): string {
+  return body.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
 function sendPlain(reply: FastifyReply, body: string, cache: 'no-store' | 'public'): void {
   void reply
     .header('Content-Type', 'text/plain; charset=utf-8')
@@ -22,7 +26,7 @@ function sendPlain(reply: FastifyReply, body: string, cache: 'no-store' | 'publi
       'Cache-Control',
       cache === 'no-store' ? 'no-store, no-cache, must-revalidate' : 'public, max-age=3600',
     )
-    .send(body)
+    .send(unixText(body))
 }
 
 export const launcherRoutes: FastifyPluginAsync = async (app) => {
