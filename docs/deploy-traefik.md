@@ -84,7 +84,7 @@ nano .env   # заполнить секреты и домен
 | `CF_DNS_API_TOKEN` | Cloudflare token для ACME DNS-01 (env контейнера **Traefik**) |
 | `LETSENCRYPT_EMAIL` | Email для Let's Encrypt |
 | `VPS_DOMAIN` | Хост UI в Traefik `Host(…)` (например `vps.example.com`) |
-| `VPS_LAUNCHER_DOMAIN` | Короткий хост launcher (`vt.example.com` → тот же контейнер, `GET /cc`) |
+| `VPS_LAUNCHER_DOMAIN` | Короткий хост launcher (`vt.example.com` → тот же контейнер, `GET /cc`, `/cc.rsc`, `/ic`, `/ic.rsc`) |
 
 Опционально:
 

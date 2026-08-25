@@ -1,2 +1,4 @@
 apps/api/scripts/censorcheck/*.sh text eol=lf
+apps/api/scripts/censorcheck/*.rsc text eol=lf
 apps/api/scripts/ipregion/*.sh text eol=lf
+apps/api/scripts/ipregion/*.rsc text eol=lf

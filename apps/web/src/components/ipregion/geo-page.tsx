@@ -5,6 +5,7 @@ import {
   CopyIcon,
   GlobeIcon,
   MapPinIcon,
+  RouterIcon,
   ServerIcon,
   ShieldAlertIcon,
 } from 'lucide-react'
@@ -45,6 +46,8 @@ import {
   IPREGION_STATUS_LABELS,
   LAUNCHER_CMD,
   LAUNCHER_CMD_DAILY,
+  LAUNCHER_CMD_ROS,
+  LAUNCHER_CMD_ROS_DAILY,
   formatCheckedAt,
   type IpregionRunDto,
 } from './types'
@@ -167,6 +170,22 @@ export function GeoPage() {
         <CalendarClockIcon data-icon="inline-start" />
         Раз в день
       </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD_ROS, 'Команда MikroTik скопирована')}
+      >
+        <RouterIcon data-icon="inline-start" />
+        MikroTik
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD_ROS_DAILY, 'Команда MikroTik для ежедневного запуска скопирована')}
+      >
+        <RouterIcon data-icon="inline-start" />
+        MikroTik · день
+      </Button>
     </>
   )
 
@@ -174,7 +193,7 @@ export function GeoPage() {
     <PageShell>
       <PageHeader
         title="GeoIP"
-        description="Страны по GeoIP-сервисам с VPS через ipregion."
+        description="Страны по GeoIP-сервисам с VPS или MikroTik 7.22+."
         actions={copyLauncher}
       />
       <KpiStatGrid
@@ -258,7 +277,7 @@ export function GeoPage() {
             onRetry={() => void currentQuery.refetch()}
             empty={filtered.length === 0}
             emptyTitle="Пока нет проверок"
-            emptyDescription={`На VPS выполните: ${LAUNCHER_CMD}`}
+            emptyDescription={`На VPS: ${LAUNCHER_CMD}. На MikroTik 7.22+: ${LAUNCHER_CMD_ROS}`}
             emptyAction={copyLauncher}
             skeleton={<TableSkeleton />}
           >
@@ -295,7 +314,7 @@ export function GeoPage() {
           onRowClick={setSelected}
           emptyState={{
             title: 'История пуста',
-            description: `На VPS выполните: ${LAUNCHER_CMD}`,
+            description: `На VPS: ${LAUNCHER_CMD}. На MikroTik 7.22+: ${LAUNCHER_CMD_ROS}`,
             action: copyLauncher,
           }}
         />

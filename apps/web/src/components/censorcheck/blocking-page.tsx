@@ -5,6 +5,7 @@ import {
   CalendarClockIcon,
   CopyIcon,
   GlobeIcon,
+  RouterIcon,
   ServerIcon,
   ShieldAlertIcon,
 } from 'lucide-react'
@@ -40,6 +41,8 @@ import {
   CENSORCHECK_STATUS_LABELS,
   LAUNCHER_CMD,
   LAUNCHER_CMD_DAILY,
+  LAUNCHER_CMD_ROS,
+  LAUNCHER_CMD_ROS_DAILY,
   formatCheckedAt,
   type CensorcheckRunDto,
 } from './types'
@@ -162,6 +165,22 @@ export function BlockingPage() {
         <CalendarClockIcon data-icon="inline-start" />
         Раз в день
       </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD_ROS, 'Команда MikroTik скопирована')}
+      >
+        <RouterIcon data-icon="inline-start" />
+        MikroTik
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD_ROS_DAILY, 'Команда MikroTik для ежедневного запуска скопирована')}
+      >
+        <RouterIcon data-icon="inline-start" />
+        MikroTik · день
+      </Button>
     </>
   )
 
@@ -169,7 +188,7 @@ export function BlockingPage() {
     <PageShell>
       <PageHeader
         title="Статус блокировок"
-        description="Проверки DPI и геоблокировок с VPS через censorcheck."
+        description="Проверки DPI и геоблокировок с VPS или MikroTik 7.22+."
         actions={copyLauncher}
       />
       <KpiStatGrid
@@ -253,7 +272,7 @@ export function BlockingPage() {
             onRetry={() => void currentQuery.refetch()}
             empty={filtered.length === 0}
             emptyTitle="Пока нет проверок"
-            emptyDescription={`На VPS выполните: ${LAUNCHER_CMD}`}
+            emptyDescription={`На VPS: ${LAUNCHER_CMD}. На MikroTik 7.22+: ${LAUNCHER_CMD_ROS}`}
             emptyAction={copyLauncher}
             skeleton={<TableSkeleton />}
           >
@@ -290,7 +309,7 @@ export function BlockingPage() {
           onRowClick={setSelected}
           emptyState={{
             title: 'История пуста',
-            description: `На VPS выполните: ${LAUNCHER_CMD}`,
+            description: `На VPS: ${LAUNCHER_CMD}. На MikroTik 7.22+: ${LAUNCHER_CMD_ROS}`,
             action: copyLauncher,
           }}
         />

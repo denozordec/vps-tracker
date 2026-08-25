@@ -31,6 +31,10 @@ function sendPlain(reply: FastifyReply, body: string, cache: 'no-store' | 'publi
 
 const IPREGION_SCRIPT_DIR = join(__dirname, '..', '..', 'scripts', 'ipregion')
 
+function truthyQuery(value: string | undefined): boolean {
+  return value === '1' || value === 'true' || value === 'yes'
+}
+
 function mintLauncherScript(
   reply: FastifyReply,
   secret: string | undefined,
@@ -56,6 +60,38 @@ function mintLauncherScript(
   sendPlain(reply, script, 'no-store')
 }
 
+type RosQuery = { daily?: string; remove?: string }
+
+function mintRosLauncher(
+  reply: FastifyReply,
+  secret: string | undefined,
+  scriptDir: string,
+  missingSecretMessage: string,
+  query: RosQuery,
+): void {
+  if (!secret) {
+    void reply.code(503).send(missingSecretMessage)
+    return
+  }
+  const remove = query.remove === 'daily' || truthyQuery(query.remove)
+  const daily = !remove && truthyQuery(query.daily)
+  const apiUrl = censorcheckPublicUrl()
+  const token = mintIngestToken(secret)
+  let template: string
+  try {
+    template = readFileSync(join(scriptDir, 'launcher.rsc'), 'utf8')
+  } catch {
+    void reply.code(500).send('launcher template missing\n')
+    return
+  }
+  const script = template
+    .replaceAll('__VT_API_URL__', apiUrl)
+    .replaceAll('__VT_INGEST_TOKEN__', token)
+    .replaceAll('__VT_DAILY__', daily ? 'yes' : 'no')
+    .replaceAll('__VT_REMOVE_DAILY__', remove ? 'yes' : 'no')
+  sendPlain(reply, script, 'no-store')
+}
+
 function sendVendor(reply: FastifyReply, filePath: string): void {
   try {
     const body = readFileSync(filePath, 'utf8')
@@ -77,6 +113,20 @@ export const launcherRoutes: FastifyPluginAsync = async (app) => {
     mintLauncherScript(reply, secret, SCRIPT_DIR, 'censorcheck ingest is not configured\n')
   })
 
+  app.get<{ Querystring: RosQuery }>(
+    '/cc.rsc',
+    ccOpts,
+    async (request: FastifyRequest<{ Querystring: RosQuery }>, reply: FastifyReply) => {
+      mintRosLauncher(
+        reply,
+        secret,
+        SCRIPT_DIR,
+        'censorcheck ingest is not configured\n',
+        request.query,
+      )
+    },
+  )
+
   app.get('/cc/vendor', async (_request, reply) => {
     sendVendor(reply, join(SCRIPT_DIR, 'censorcheck.sh'))
   })
@@ -84,6 +134,20 @@ export const launcherRoutes: FastifyPluginAsync = async (app) => {
   app.get('/ic', ccOpts, async (_request: FastifyRequest, reply: FastifyReply) => {
     mintLauncherScript(reply, secret, IPREGION_SCRIPT_DIR, 'ipregion ingest is not configured\n')
   })
+
+  app.get<{ Querystring: RosQuery }>(
+    '/ic.rsc',
+    ccOpts,
+    async (request: FastifyRequest<{ Querystring: RosQuery }>, reply: FastifyReply) => {
+      mintRosLauncher(
+        reply,
+        secret,
+        IPREGION_SCRIPT_DIR,
+        'ipregion ingest is not configured\n',
+        request.query,
+      )
+    },
+  )
 
   app.get('/ic/vendor', async (_request, reply) => {
     sendVendor(reply, join(IPREGION_SCRIPT_DIR, 'ipregion.sh'))

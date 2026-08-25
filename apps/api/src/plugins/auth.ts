@@ -74,8 +74,8 @@ function isPublicPath(url: string): boolean {
   const path = url.split('?')[0] ?? url
   if (path === '/health' || path === '/ready') return true
   if (path === '/api/auth/config') return true
-  if (path === '/cc' || path.startsWith('/cc/')) return true
-  if (path === '/ic' || path.startsWith('/ic/')) return true
+  if (path === '/cc' || path === '/cc.rsc' || path.startsWith('/cc/')) return true
+  if (path === '/ic' || path === '/ic.rsc' || path.startsWith('/ic/')) return true
   if (path.startsWith('/api/integrations/cfdm')) return true
   if (path.startsWith('/api/integrations/censorcheck')) return true
   if (path.startsWith('/api/integrations/ipregion')) return true

@@ -103,3 +103,137 @@ describe('GET /ic launcher', () => {
     expect(res.body).not.toContain('\r')
   })
 })
+
+describe('GET /cc.rsc RouterOS launcher', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    process.env.CENSORCHECK_INGEST_SECRET = 'launcher-secret-key'
+    process.env.CENSORCHECK_PUBLIC_URL = 'https://vt.shnt.top'
+    process.env.CENSORCHECK_RATE_LIMIT = '0'
+    resetTestDb()
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    closeDb()
+  })
+
+  it('отдаёт .rsc с токеном и no-store', async () => {
+    const res = await app.inject({ method: 'GET', url: '/cc.rsc' })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toMatch(/text\/plain/)
+    expect(res.headers['cache-control']).toMatch(/no-store/)
+    expect(res.body).toContain('https://vt.shnt.top')
+    expect(res.body).toContain('/tool fetch')
+    expect(res.body).toContain('/api/integrations/censorcheck/runs')
+    expect(res.body).toContain('ros-1')
+    expect(res.body).toContain(':local vtDaily "no"')
+    expect(res.body).toContain(':local vtRemove "no"')
+    expect(res.body).toContain('/system scheduler')
+    expect(res.body).toContain('youtube.com')
+    expect(res.body).not.toContain('\r')
+    expect(res.body).not.toContain('__VT_API_URL__')
+    expect(res.body).not.toContain('__VT_INGEST_TOKEN__')
+    expect(res.body).not.toContain('__VT_DAILY__')
+    expect(res.body).not.toContain('__VT_REMOVE_DAILY__')
+  })
+
+  it('?daily=1 включает установку scheduler', async () => {
+    const res = await app.inject({ method: 'GET', url: '/cc.rsc?daily=1' })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain(':local vtDaily "yes"')
+    expect(res.body).toContain(':local vtRemove "no"')
+    expect(res.body).toContain('/system scheduler add')
+  })
+
+  it('?remove=daily снимает scheduler без проб', async () => {
+    const res = await app.inject({ method: 'GET', url: '/cc.rsc?remove=daily' })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain(':local vtRemove "yes"')
+    expect(res.body).toContain(':local vtDaily "no"')
+    expect(res.body).toContain('Ежедневная проверка снята')
+  })
+})
+
+describe('GET /ic.rsc RouterOS launcher', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    process.env.CENSORCHECK_INGEST_SECRET = 'launcher-secret-key'
+    process.env.CENSORCHECK_PUBLIC_URL = 'https://vt.shnt.top'
+    process.env.CENSORCHECK_RATE_LIMIT = '0'
+    resetTestDb()
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    closeDb()
+  })
+
+  it('отдаёт .rsc с токеном и no-store', async () => {
+    const res = await app.inject({ method: 'GET', url: '/ic.rsc' })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toMatch(/text\/plain/)
+    expect(res.headers['cache-control']).toMatch(/no-store/)
+    expect(res.body).toContain('https://vt.shnt.top')
+    expect(res.body).toContain('/tool fetch')
+    expect(res.body).toContain('/api/integrations/ipregion/runs')
+    expect(res.body).toContain('ros-1')
+    expect(res.body).toContain(':local vtDaily "no"')
+    expect(res.body).toContain('ipinfo.io')
+    expect(res.body).toContain('cloudflare cdn')
+    expect(res.body).not.toContain('\r')
+    expect(res.body).not.toContain('__VT_API_URL__')
+    expect(res.body).not.toContain('__VT_INGEST_TOKEN__')
+  })
+
+  it('?daily=1 включает установку scheduler', async () => {
+    const res = await app.inject({ method: 'GET', url: '/ic.rsc?daily=1' })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain(':local vtDaily "yes"')
+    expect(res.body).toContain('/system scheduler add')
+  })
+})
+
+describe('GET /cc.rsc without ingest secret', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  const prevNodeEnv = process.env.NODE_ENV
+  const prevAuthRequired = process.env.AUTH_REQUIRED
+  const prevCc = process.env.CENSORCHECK_INGEST_SECRET
+  const prevAuth = process.env.AUTH_JWT_SECRET
+  const prevJwt = process.env.JWT_SECRET
+
+  beforeEach(async () => {
+    process.env.NODE_ENV = 'production'
+    process.env.AUTH_REQUIRED = 'false'
+    delete process.env.CENSORCHECK_INGEST_SECRET
+    delete process.env.AUTH_JWT_SECRET
+    delete process.env.JWT_SECRET
+    process.env.CENSORCHECK_RATE_LIMIT = '0'
+    resetTestDb()
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    closeDb()
+    process.env.NODE_ENV = prevNodeEnv
+    if (prevAuthRequired === undefined) delete process.env.AUTH_REQUIRED
+    else process.env.AUTH_REQUIRED = prevAuthRequired
+    if (prevCc === undefined) delete process.env.CENSORCHECK_INGEST_SECRET
+    else process.env.CENSORCHECK_INGEST_SECRET = prevCc
+    if (prevAuth === undefined) delete process.env.AUTH_JWT_SECRET
+    else process.env.AUTH_JWT_SECRET = prevAuth
+    if (prevJwt === undefined) delete process.env.JWT_SECRET
+    else process.env.JWT_SECRET = prevJwt
+  })
+
+  it('отвечает 503', async () => {
+    const res = await app.inject({ method: 'GET', url: '/cc.rsc' })
+    expect(res.statusCode).toBe(503)
+    expect(res.body).toMatch(/not configured/)
+  })
+})
