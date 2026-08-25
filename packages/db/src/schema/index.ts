@@ -415,4 +415,54 @@ export const censorcheckResults = sqliteTable(
   }),
 )
 
+export const ipregionRuns = sqliteTable(
+  'ipregion_runs',
+  {
+    id: text('id').primaryKey(),
+    spaceId: text('spaceId')
+      .notNull()
+      .default('space-main')
+      .references(() => spaces.id),
+    runId: text('runId').notNull(),
+    probePublicIp: text('probePublicIp').notNull(),
+    claimedPublicIp: text('claimedPublicIp'),
+    matchedVpsId: text('matchedVpsId').references(() => vps.id, { onDelete: 'set null' }),
+    status: text('status').notNull(),
+    schemaVersion: integer('schemaVersion').notNull().default(1),
+    launcherVersion: text('launcherVersion'),
+    ipregionVersion: text('ipregionVersion'),
+    summaryJson: text('summaryJson').notNull().default('{}'),
+    createdAt: text('createdAt').notNull(),
+    completedAt: text('completedAt').notNull(),
+    observedSourceIp: text('observedSourceIp'),
+    detectedHoster: text('detectedHoster'),
+  },
+  (t) => ({
+    runIdUniq: uniqueIndex('ipregion_runs_runId').on(t.runId),
+    probeCreated: index('ipregion_runs_probe_created').on(t.probePublicIp, t.createdAt),
+    matchedCreated: index('ipregion_runs_matched_created').on(t.matchedVpsId, t.createdAt),
+    created: index('ipregion_runs_created').on(t.createdAt),
+  }),
+)
+
+export const ipregionResults = sqliteTable(
+  'ipregion_results',
+  {
+    id: text('id').primaryKey(),
+    runId: text('runId')
+      .notNull()
+      .references(() => ipregionRuns.id, { onDelete: 'cascade' }),
+    serviceKey: text('serviceKey').notNull(),
+    serviceLabel: text('serviceLabel').notNull(),
+    serviceGroup: text('group').notNull(),
+    countryIpv4: text('countryIpv4'),
+    countryIpv6: text('countryIpv6'),
+    status: text('status').notNull(),
+  },
+  (t) => ({
+    runIdx: index('ipregion_results_runId').on(t.runId),
+    serviceStatus: index('ipregion_results_service_status').on(t.serviceKey, t.status),
+  }),
+)
+
 export const now = sql`(datetime('now'))`

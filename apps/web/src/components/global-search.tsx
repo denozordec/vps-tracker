@@ -9,6 +9,7 @@ import {
   LayoutDashboardIcon,
   SearchIcon,
   ShieldAlertIcon,
+  GlobeIcon,
 } from 'lucide-react'
 
 import {
@@ -68,6 +69,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             <CommandItem onSelect={() => go('/blocking')}>
               <ShieldAlertIcon />
               <span>Статус блокировок</span>
+            </CommandItem>
+            <CommandItem onSelect={() => go('/geo')}>
+              <GlobeIcon />
+              <span>GeoIP</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />

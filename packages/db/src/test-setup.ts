@@ -314,6 +314,35 @@ CREATE TABLE IF NOT EXISTS censorcheck_results (
   detail TEXT,
   rawJson TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ipregion_runs (
+  id TEXT PRIMARY KEY,
+  spaceId TEXT NOT NULL DEFAULT 'space-main',
+  runId TEXT NOT NULL UNIQUE,
+  probePublicIp TEXT NOT NULL,
+  claimedPublicIp TEXT,
+  matchedVpsId TEXT,
+  status TEXT NOT NULL,
+  schemaVersion INTEGER NOT NULL DEFAULT 1,
+  launcherVersion TEXT,
+  ipregionVersion TEXT,
+  summaryJson TEXT NOT NULL DEFAULT '{}',
+  createdAt TEXT NOT NULL,
+  completedAt TEXT NOT NULL,
+  observedSourceIp TEXT,
+  detectedHoster TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ipregion_results (
+  id TEXT PRIMARY KEY,
+  runId TEXT NOT NULL,
+  serviceKey TEXT NOT NULL,
+  serviceLabel TEXT NOT NULL,
+  "group" TEXT NOT NULL,
+  countryIpv4 TEXT,
+  countryIpv6 TEXT,
+  status TEXT NOT NULL
+);
 `
 
 export function resetTestDb(): void {

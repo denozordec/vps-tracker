@@ -316,6 +316,38 @@ const CORE_TABLE_MIGRATIONS: string[] = [
   `CREATE INDEX IF NOT EXISTS censorcheck_runs_created ON censorcheck_runs(createdAt)`,
   `CREATE INDEX IF NOT EXISTS censorcheck_results_runId ON censorcheck_results(runId)`,
   `CREATE INDEX IF NOT EXISTS censorcheck_results_service_status ON censorcheck_results(serviceKey, status)`,
+  `CREATE TABLE IF NOT EXISTS ipregion_runs (
+    id TEXT PRIMARY KEY,
+    spaceId TEXT NOT NULL DEFAULT 'space-main' REFERENCES spaces(id),
+    runId TEXT NOT NULL UNIQUE,
+    probePublicIp TEXT NOT NULL,
+    claimedPublicIp TEXT,
+    matchedVpsId TEXT REFERENCES vps(id) ON DELETE SET NULL,
+    status TEXT NOT NULL,
+    schemaVersion INTEGER NOT NULL DEFAULT 1,
+    launcherVersion TEXT,
+    ipregionVersion TEXT,
+    summaryJson TEXT NOT NULL DEFAULT '{}',
+    createdAt TEXT NOT NULL,
+    completedAt TEXT NOT NULL,
+    observedSourceIp TEXT,
+    detectedHoster TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS ipregion_results (
+    id TEXT PRIMARY KEY,
+    runId TEXT NOT NULL REFERENCES ipregion_runs(id) ON DELETE CASCADE,
+    serviceKey TEXT NOT NULL,
+    serviceLabel TEXT NOT NULL,
+    "group" TEXT NOT NULL,
+    countryIpv4 TEXT,
+    countryIpv6 TEXT,
+    status TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ipregion_runs_probe_created ON ipregion_runs(probePublicIp, createdAt)`,
+  `CREATE INDEX IF NOT EXISTS ipregion_runs_matched_created ON ipregion_runs(matchedVpsId, createdAt)`,
+  `CREATE INDEX IF NOT EXISTS ipregion_runs_created ON ipregion_runs(createdAt)`,
+  `CREATE INDEX IF NOT EXISTS ipregion_results_runId ON ipregion_results(runId)`,
+  `CREATE INDEX IF NOT EXISTS ipregion_results_service_status ON ipregion_results(serviceKey, status)`,
 ]
 
 /** Additive columns for DBs created before spaces / notifications / etc. */

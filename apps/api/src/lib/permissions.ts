@@ -52,7 +52,8 @@ const RULES: Rule[] = [
       p.startsWith('/api/projects') ||
       p.startsWith('/api/topology') ||
       p.startsWith('/api/data') ||
-      p.startsWith('/api/censorcheck'),
+      p.startsWith('/api/censorcheck') ||
+      p.startsWith('/api/ipregion'),
     permission: 'vps:vps:read',
   },
   {

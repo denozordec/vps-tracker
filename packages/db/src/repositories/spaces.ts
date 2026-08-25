@@ -25,6 +25,8 @@ const ROLE_RANK: Record<SpaceRole, number> = {
 /** Tables with spaceId column — purge order (children first). */
 const SPACE_DATA_TABLES = [
   'vps_grants',
+  'ipregion_results',
+  'ipregion_runs',
   'censorcheck_results',
   'censorcheck_runs',
   'notification_log',

@@ -1,4 +1,8 @@
-import type { CensorcheckRunDto } from './types'
+export type SnapshotRun = {
+  id: string
+  createdAt: string
+  probePublicIp: string
+}
 
 export type BlockingSnapshotTick = {
   key: string
@@ -24,18 +28,18 @@ export function formatSnapshotTickLabel(dayKey: string): string {
   })
 }
 
-export function mergeCensorcheckRuns(
-  current: CensorcheckRunDto[],
-  history: CensorcheckRunDto[],
-): CensorcheckRunDto[] {
-  const map = new Map<string, CensorcheckRunDto>()
+export function mergeCensorcheckRuns<T extends { id: string }>(
+  current: T[],
+  history: T[],
+): T[] {
+  const map = new Map<string, T>()
   for (const run of history) map.set(run.id, run)
   for (const run of current) map.set(run.id, run)
   return [...map.values()]
 }
 
-export function collectSnapshotTicks(runs: CensorcheckRunDto[]): BlockingSnapshotTick[] {
-  const byDay = new Map<string, CensorcheckRunDto[]>()
+export function collectSnapshotTicks(runs: SnapshotRun[]): BlockingSnapshotTick[] {
+  const byDay = new Map<string, SnapshotRun[]>()
   for (const run of runs) {
     const key = snapshotDayKey(run.createdAt)
     const list = byDay.get(key)
@@ -56,12 +60,12 @@ export function collectSnapshotTicks(runs: CensorcheckRunDto[]): BlockingSnapsho
 }
 
 /** Latest run per probe IP at or before `asOf`. */
-export function latestRunsAsOf(
-  runs: CensorcheckRunDto[],
+export function latestRunsAsOf<T extends SnapshotRun>(
+  runs: T[],
   asOf: string,
-): CensorcheckRunDto[] {
+): T[] {
   if (!asOf) return []
-  const byIp = new Map<string, CensorcheckRunDto>()
+  const byIp = new Map<string, T>()
   for (const run of runs) {
     if (run.createdAt > asOf) continue
     const previous = byIp.get(run.probePublicIp)

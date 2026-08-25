@@ -448,6 +448,37 @@ export const api = {
     fetchApi<import('@/components/censorcheck/types').CensorcheckRunDto>(
       `/api/censorcheck/runs/${encodeURIComponent(id)}`,
     ),
+
+  fetchIpregionCurrent: () =>
+    fetchApi<{ items: import('@/components/ipregion/types').IpregionRunDto[] }>(
+      '/api/ipregion/current',
+    ),
+
+  fetchIpregionRuns: (params: {
+    cursor?: string
+    limit?: number
+    q?: string
+    status?: string
+    matched?: boolean
+  } = {}) => {
+    const search = new URLSearchParams()
+    if (params.cursor) search.set('cursor', params.cursor)
+    if (params.limit) search.set('limit', String(params.limit))
+    if (params.q) search.set('q', params.q)
+    if (params.status) search.set('status', params.status)
+    if (params.matched === true) search.set('matched', '1')
+    if (params.matched === false) search.set('matched', '0')
+    const qs = search.toString()
+    return fetchApi<{
+      items: import('@/components/ipregion/types').IpregionRunDto[]
+      nextCursor: string | null
+    }>(`/api/ipregion/runs${qs ? `?${qs}` : ''}`)
+  },
+
+  fetchIpregionRun: (id: string) =>
+    fetchApi<import('@/components/ipregion/types').IpregionRunDto>(
+      `/api/ipregion/runs/${encodeURIComponent(id)}`,
+    ),
 }
 
 export type {

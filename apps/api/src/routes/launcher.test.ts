@@ -50,3 +50,47 @@ describe('GET /cc launcher', () => {
     expect(res.body).not.toContain('\r')
   })
 })
+
+describe('GET /ic launcher', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    process.env.CENSORCHECK_INGEST_SECRET = 'launcher-secret-key'
+    process.env.CENSORCHECK_PUBLIC_URL = 'https://vt.shnt.top'
+    process.env.CENSORCHECK_RATE_LIMIT = '0'
+    resetTestDb()
+    app = await buildApp()
+  })
+
+  afterEach(async () => {
+    await app.close()
+    closeDb()
+  })
+
+  it('отдаёт bash-скрипт с токеном и no-store', async () => {
+    const res = await app.inject({ method: 'GET', url: '/ic' })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toMatch(/text\/plain/)
+    expect(res.headers['cache-control']).toMatch(/no-store/)
+    expect(res.body).toContain('https://vt.shnt.top')
+    expect(res.body).toContain('VT_INGEST_TOKEN')
+    expect(res.body).toContain('ensure_cmds jq dig column nslookup')
+    expect(res.body).toContain('detect_hoster')
+    expect(res.body).toContain('--json --ipv4')
+    expect(res.body).toContain('/api/integrations/ipregion/runs')
+    expect(res.body).toContain('/ic/vendor')
+    expect(res.body).toContain('7d1c25c')
+    expect(res.body).not.toContain('\r')
+    expect(res.body).not.toContain('__VT_API_URL__')
+    expect(res.body).not.toContain('__VT_INGEST_TOKEN__')
+  })
+
+  it('отдаёт vendor-скрипт ipregion', async () => {
+    const res = await app.inject({ method: 'GET', url: '/ic/vendor' })
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toContain('#!/usr/bin/env bash')
+    expect(res.body).toContain('SCRIPT_NAME="ipregion.sh"')
+    expect(res.body).toContain('finalize_json')
+    expect(res.body).not.toContain('\r')
+  })
+})

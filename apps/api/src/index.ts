@@ -27,6 +27,7 @@ import { auditRoutes } from './routes/audit.js'
 import { notificationsRoutes } from './routes/notifications.js'
 import { integrationsCfdmRoutes } from './routes/integrations-cfdm.js'
 import { censorcheckRoutes } from './routes/censorcheck.js'
+import { ipregionRoutes } from './routes/ipregion.js'
 import { launcherRoutes } from './routes/launcher.js'
 import { appSwitcherRoutes } from './routes/app-switcher.js'
 import { startScheduler } from './services/scheduler.js'
@@ -89,6 +90,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(notificationsRoutes)
   await app.register(integrationsCfdmRoutes)
   await app.register(censorcheckRoutes)
+  await app.register(ipregionRoutes)
   await app.register(appSwitcherRoutes)
 
   const staticDir = opts.staticDir ?? join(__dirname, '..', '..', 'web', 'dist')

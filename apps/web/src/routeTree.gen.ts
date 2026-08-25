@@ -23,6 +23,7 @@ import { Route as AuthRenewalsRouteImport } from './routes/_auth/renewals'
 import { Route as AuthProvidersRouteImport } from './routes/_auth/providers'
 import { Route as AuthProjectsRouteImport } from './routes/_auth/projects'
 import { Route as AuthPaymentsRouteImport } from './routes/_auth/payments'
+import { Route as AuthGeoRouteImport } from './routes/_auth/geo'
 import { Route as AuthDashboardRouteImport } from './routes/_auth/dashboard'
 import { Route as AuthBlockingRouteImport } from './routes/_auth/blocking'
 import { Route as AuthBalanceRouteImport } from './routes/_auth/balance'
@@ -105,6 +106,11 @@ const AuthPaymentsRoute = AuthPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthGeoRoute = AuthGeoRouteImport.update({
+  id: '/geo',
+  path: '/geo',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthDashboardRoute = AuthDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/balance': typeof AuthBalanceRoute
   '/blocking': typeof AuthBlockingRoute
   '/dashboard': typeof AuthDashboardRoute
+  '/geo': typeof AuthGeoRoute
   '/payments': typeof AuthPaymentsRoute
   '/projects': typeof AuthProjectsRouteWithChildren
   '/providers': typeof AuthProvidersRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/balance': typeof AuthBalanceRoute
   '/blocking': typeof AuthBlockingRoute
   '/dashboard': typeof AuthDashboardRoute
+  '/geo': typeof AuthGeoRoute
   '/payments': typeof AuthPaymentsRoute
   '/projects': typeof AuthProjectsRouteWithChildren
   '/providers': typeof AuthProvidersRoute
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/_auth/balance': typeof AuthBalanceRoute
   '/_auth/blocking': typeof AuthBlockingRoute
   '/_auth/dashboard': typeof AuthDashboardRoute
+  '/_auth/geo': typeof AuthGeoRoute
   '/_auth/payments': typeof AuthPaymentsRoute
   '/_auth/projects': typeof AuthProjectsRouteWithChildren
   '/_auth/providers': typeof AuthProvidersRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/balance'
     | '/blocking'
     | '/dashboard'
+    | '/geo'
     | '/payments'
     | '/projects'
     | '/providers'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/balance'
     | '/blocking'
     | '/dashboard'
+    | '/geo'
     | '/payments'
     | '/projects'
     | '/providers'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/_auth/balance'
     | '/_auth/blocking'
     | '/_auth/dashboard'
+    | '/_auth/geo'
     | '/_auth/payments'
     | '/_auth/projects'
     | '/_auth/providers'
@@ -438,6 +450,13 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/payments'
       preLoaderRoute: typeof AuthPaymentsRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/geo': {
+      id: '/_auth/geo'
+      path: '/geo'
+      fullPath: '/geo'
+      preLoaderRoute: typeof AuthGeoRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/dashboard': {
@@ -574,6 +593,7 @@ interface AuthRouteChildren {
   AuthBalanceRoute: typeof AuthBalanceRoute
   AuthBlockingRoute: typeof AuthBlockingRoute
   AuthDashboardRoute: typeof AuthDashboardRoute
+  AuthGeoRoute: typeof AuthGeoRoute
   AuthPaymentsRoute: typeof AuthPaymentsRoute
   AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
   AuthProvidersRoute: typeof AuthProvidersRoute
@@ -594,6 +614,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthBalanceRoute: AuthBalanceRoute,
   AuthBlockingRoute: AuthBlockingRoute,
   AuthDashboardRoute: AuthDashboardRoute,
+  AuthGeoRoute: AuthGeoRoute,
   AuthPaymentsRoute: AuthPaymentsRoute,
   AuthProjectsRoute: AuthProjectsRouteWithChildren,
   AuthProvidersRoute: AuthProvidersRoute,

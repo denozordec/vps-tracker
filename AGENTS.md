@@ -100,6 +100,15 @@ vps-tracker/
 - **UI:** `/blocking` — текущие прогоны и история, группировка VPS / сервис
 - Env: `CENSORCHECK_INGEST_SECRET`, `CENSORCHECK_PUBLIC_URL`, `VPS_LAUNCHER_DOMAIN`
 
+## GeoIP (ipregion)
+
+Ручная проверка с VPS: `curl -fsSL https://vt.shnt.top/ic | bash`.
+
+- **Vendor:** `apps/api/scripts/ipregion/ipregion.sh` (pin SHA `7d1c25c`, MIT, [vernette/ipregion](https://github.com/vernette/ipregion))
+- **Launcher:** `GET /ic` минтит HMAC ingest-токен (тот же `CENSORCHECK_INGEST_SECRET`); `GET /ic/vendor` — pinned скрипт (LF)
+- **Ingest:** `POST /api/integrations/ipregion/runs` (без portal JWT)
+- **UI:** `/geo` — матрица ISO-стран VPS × сервисы (primary / custom / cdn)
+
 ## Команды
 
 ```bash
