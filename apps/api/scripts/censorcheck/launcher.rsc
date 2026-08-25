@@ -1,12 +1,12 @@
 # VPS Tracker — blocking launcher for RouterOS 7.22+
-# /tool fetch url="__VT_API_URL__/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc
+# First run: :global vtIface "ether1"; /tool fetch url="__VT_API_URL__/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc
 # HTTPS GET only (no DPI/SNI). Ingest: POST /api/integrations/censorcheck/runs
 
 :local vtApi "__VT_API_URL__"
 :local vtToken "__VT_INGEST_TOKEN__"
 :local vtDaily "__VT_DAILY__"
 :local vtRemove "__VT_REMOVE_DAILY__"
-:local launcherVer "ros-1"
+:local launcherVer "ros-2"
 :local schedName "vt-cc"
 :local dstFile "vt-cc.rsc"
 
@@ -34,10 +34,43 @@
 
 :put ("censorcheck launcher " . $launcherVer . " (RouterOS)")
 
+:global vtIface
+:if (([:typeof $vtIface] != "str") or ([:len $vtIface] = 0)) do={
+  :put "Задайте интерфейс и повторите импорт:"
+  :put ":global vtIface \"ether1\""
+  :put "Интерфейсы:"
+  /interface print
+  :error "vtIface не задан"
+}
+:if ([:len [/interface find where name=$vtIface]] = 0) do={
+  :put "Интерфейсы:"
+  /interface print
+  :error ("Нет интерфейса " . $vtIface)
+}
+
+:local srcIp ""
+:local addrRaw
+:local slash
+:foreach a in=[/ip address find where interface=$vtIface] do={
+  :if ([:len $srcIp] = 0) do={
+    :set addrRaw [/ip address get $a address]
+    :set slash [:find $addrRaw "/"]
+    :if ([:typeof $slash] != "nil") do={
+      :set srcIp [:pick $addrRaw 0 $slash]
+    } else={
+      :set srcIp $addrRaw
+    }
+  }
+}
+:if ([:len $srcIp] = 0) do={
+  :error ("Нет IPv4 на интерфейсе " . $vtIface)
+}
+:put ("интерфейс: " . $vtIface . " src=" . $srcIp)
+
 :local r
 :local publicIp ""
 :do {
-  :set r [/tool fetch url="https://api.ipify.org" output=user as-value]
+  :set r [/tool fetch url="https://api.ipify.org" src-address=$srcIp output=user as-value]
   :if (($r->"status") = "finished") do={
     :set publicIp ($r->"data")
   }
@@ -48,7 +81,7 @@
 :if ([:typeof $lf] != "nil") do={ :set publicIp [:pick $publicIp 0 $lf] }
 :if ([:len $publicIp] = 0) do={
   :do {
-    :set r [/tool fetch url="https://ifconfig.me/ip" output=user as-value]
+    :set r [/tool fetch url="https://ifconfig.me/ip" src-address=$srcIp output=user as-value]
     :if (($r->"status") = "finished") do={
       :set publicIp ($r->"data")
     }
@@ -64,7 +97,7 @@
 
 :local hoster ""
 :do {
-  :set r [/tool fetch url=("https://ipwho.is/" . $publicIp) output=user as-value]
+  :set r [/tool fetch url=("https://ipwho.is/" . $publicIp) src-address=$srcIp output=user as-value]
   :if (($r->"status") = "finished") do={
     :local j [:deserialize from=json value=($r->"data")]
     :local isp ($j->"connection"->"isp")
@@ -105,7 +138,7 @@
 :foreach host in=$hosts do={
   :set code 0
   :do {
-    :set r [/tool fetch url=("https://" . $host . "/") output=user-with-headers as-value]
+    :set r [/tool fetch url=("https://" . $host . "/") src-address=$srcIp output=user-with-headers as-value]
     :if (($r->"status") != "finished") do={
       :set code -1
     } else={
@@ -150,7 +183,7 @@
 :local hdrs ("Content-Type: application/json,Authorization: Bearer " . $vtToken)
 :put "Отправляю ingest..."
 :do {
-  :set r [/tool fetch url=($vtApi . "/api/integrations/censorcheck/runs") http-method=post http-header-field=$hdrs http-data=$json output=user as-value]
+  :set r [/tool fetch url=($vtApi . "/api/integrations/censorcheck/runs") src-address=$srcIp http-method=post http-header-field=$hdrs http-data=$json output=user as-value]
   :put ($r->"data")
 } on-error={
   :put "API недоступен (fetch error)"
@@ -166,7 +199,7 @@
   :if ($hour < 10) do={ :set hh ("0" . $hour) }
   :if ($minute < 10) do={ :set mm ("0" . $minute) }
   :local startTime ($hh . ":" . $mm . ":00")
-  :local ev ("/tool fetch url=" . $vtApi . "/cc.rsc dst-path=" . $dstFile . "; /import file-name=" . $dstFile)
+  :local ev (":global vtIface \"" . $vtIface . "\"; /tool fetch url=" . $vtApi . "/cc.rsc dst-path=" . $dstFile . "; /import file-name=" . $dstFile)
   :do { /system scheduler remove [find name=$schedName] } on-error={}
   /system scheduler add name=$schedName interval=1d start-time=$startTime on-event=$ev policy=read,write,test,policy comment="vps-tracker vt-cc"
   :put ("Ежедневная проверка: каждый день в " . $startTime . " (" . $schedName . ")")
