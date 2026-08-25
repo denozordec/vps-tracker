@@ -291,14 +291,17 @@ function FrameDataGridBody<TData extends object>({
         header: 'text-xs font-medium text-muted-foreground',
       }}
     >
-      <DataGridContainer border={false}>
+      <DataGridContainer border={false} className={horizontalScroll ? 'min-w-0' : undefined}>
         {virtualization || horizontalScroll ? (
-          <DataGridScrollArea
-            orientation={scrollOrientation}
-            style={virtualization ? { height } : undefined}
-          >
-            {tableNode}
-          </DataGridScrollArea>
+          <div className="min-w-0 w-full">
+            <DataGridScrollArea
+              className="min-w-0 w-full"
+              orientation={scrollOrientation}
+              style={virtualization ? { height } : undefined}
+            >
+              {tableNode}
+            </DataGridScrollArea>
+          </div>
         ) : (
           tableNode
         )}
@@ -481,7 +484,7 @@ export function FrameDataGrid<TData extends object>({
 
   if (data.length === 0) {
     return (
-      <Frame dense variant="default" spacing="sm" className={cn('w-full', className)}>
+      <Frame dense variant="default" spacing="sm" className={cn('w-full min-w-0', className)}>
         {hasHeader ? (
           <DataGridSectionHeader title={title} description={description} actions={headerActions} />
         ) : null}
@@ -511,7 +514,7 @@ export function FrameDataGrid<TData extends object>({
   )
 
   return (
-    <Frame dense variant="default" spacing="sm" className={cn('w-full', className)}>
+    <Frame dense variant="default" spacing="sm" className={cn('w-full min-w-0', className)}>
       {hasHeader ? (
         <DataGridSectionHeader title={title} description={description} actions={headerActions} />
       ) : null}

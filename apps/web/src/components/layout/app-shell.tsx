@@ -257,7 +257,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SystemMonitorPopover />
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
             <SpaceScopedMain>{children}</SpaceScopedMain>
           </div>
         </SidebarInset>
@@ -272,7 +272,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function SpaceScopedMain({ children }: { children: ReactNode }) {
   const { spaceId } = useSpaceId()
   return (
-    <div key={spaceId ?? 'default'} className="flex flex-1 flex-col gap-4 md:gap-6">
+    <div key={spaceId ?? 'default'} className="flex min-w-0 flex-1 flex-col gap-4 md:gap-6">
       {children}
     </div>
   )
