@@ -1,14 +1,17 @@
 # VPS Tracker — GeoIP launcher for RouterOS 7.22+
 # First run: :global vtIface "ether1"; /tool fetch url="__VT_API_URL__/ic.rsc" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc
+# Optional: :global vtGw "x.x.x.x" if the WAN gateway is not DHCP / not .1 of the subnet.
 # Primary GeoIP JSON + Cloudflare CDN. Ingest: POST /api/integrations/ipregion/runs
 
 :local vtApi "__VT_API_URL__"
 :local vtToken "__VT_INGEST_TOKEN__"
 :local vtDaily "__VT_DAILY__"
 :local vtRemove "__VT_REMOVE_DAILY__"
-:local launcherVer "ros-2"
+:local launcherVer "ros-3"
 :local schedName "vt-ic"
 :local dstFile "vt-ic.rsc"
+:local rtName "vt-ic"
+:local rtComment "vt-ic-probe"
 
 :local ver [/system resource get version]
 :local dot [:find $ver "."]
@@ -29,6 +32,10 @@
 
 :if ($vtRemove = "yes") do={
   :do { /system scheduler remove [find name=$schedName] } on-error={}
+  :do { /ip firewall mangle remove [find comment=$rtComment] } on-error={}
+  :do { /ip firewall nat remove [find comment=$rtComment] } on-error={}
+  :do { /routing rule remove [find comment=$rtComment] } on-error={}
+  :do { /ip route remove [find comment=$rtComment] } on-error={}
   :put ("Ежедневная проверка снята (" . $schedName . ")")
 } else={
 
@@ -51,12 +58,15 @@
 :local srcIp ""
 :local addrRaw
 :local slash
+:local pfxLen 0
+:local net
 :foreach a in=[/ip address find where interface=$vtIface] do={
   :if ([:len $srcIp] = 0) do={
     :set addrRaw [/ip address get $a address]
     :set slash [:find $addrRaw "/"]
     :if ([:typeof $slash] != "nil") do={
       :set srcIp [:pick $addrRaw 0 $slash]
+      :set pfxLen [:tonum [:pick $addrRaw ($slash + 1) [:len $addrRaw]]]
     } else={
       :set srcIp $addrRaw
     }
@@ -67,11 +77,100 @@
 }
 :put ("интерфейс: " . $vtIface . " src=" . $srcIp)
 
+:local gw ""
+:local itype ""
+:local igw
+:local needle
+:local fnd
+:local gwy
+:local failMsg ""
+:local after
+:do { /ip firewall mangle remove [find comment=$rtComment] } on-error={}
+:do { /ip firewall nat remove [find comment=$rtComment] } on-error={}
+:do { /routing rule remove [find comment=$rtComment] } on-error={}
+:do { /ip route remove [find comment=$rtComment] } on-error={}
+:do { /routing table add name=$rtName fib } on-error={}
+:if ([:len [/ip dhcp-client find where interface=$vtIface]] > 0) do={
+  :do { :set gw [/ip dhcp-client get [find interface=$vtIface] gateway] } on-error={}
+}
+:if ([:len $gw] = 0) do={
+  :foreach rte in=[/ip route find where active] do={
+    :if ([:len $gw] = 0) do={
+      :set igw [/ip route get $rte immediate-gw]
+      :if ([:typeof $igw] = "str") do={
+        :set needle ("%" . $vtIface)
+        :set fnd [:find $igw $needle]
+        :if ([:typeof $fnd] != "nil") do={
+          :set after ($fnd + [:len $needle])
+          :if (($after = [:len $igw]) or ([:pick $igw $after ($after + 1)] = " ")) do={
+            :set gw [:pick $igw 0 $fnd]
+          }
+        }
+      }
+      :if ([:len $gw] = 0) do={
+        :set gwy [/ip route get $rte gateway]
+        :if (([:typeof $gwy] = "str") and ($gwy = $vtIface)) do={
+          :set gw $vtIface
+        }
+      }
+    }
+  }
+}
+:if ([:len $gw] = 0) do={
+  :do { :set itype [/interface get [find name=$vtIface] type] } on-error={}
+  :if (($itype = "pppoe-out") or ($itype = "pptp-out") or ($itype = "l2tp-out") or ($itype = "sstp-out") or ($itype = "ovpn-out") or ($itype = "wireguard")) do={
+    :set gw $vtIface
+  }
+}
+:if (([:len $gw] = 0) and ($pfxLen > 0) and ($pfxLen <= 30)) do={
+  :foreach a in=[/ip address find where interface=$vtIface] do={
+    :if ([:len $gw] = 0) do={
+      :do {
+        :set net [/ip address get $a network]
+        :set gw [:tostr ([:toip $net] + 1)]
+      } on-error={}
+    }
+  }
+}
+:global vtGw
+:if (([:typeof $vtGw] = "str") and ([:len $vtGw] > 0)) do={
+  :set gw $vtGw
+}
+:if ([:len $gw] = 0) do={
+  :set gw $vtIface
+}
+:put ("шлюз: " . $gw)
+:do {
+  /ip route add dst-address=0.0.0.0/0 gateway=$gw routing-table=$rtName pref-src=$srcIp comment=$rtComment
+} on-error={
+  :do {
+    /ip route add dst-address=0.0.0.0/0 gateway=($gw . "%" . $vtIface) routing-table=$rtName pref-src=$srcIp comment=$rtComment
+  } on-error={
+    :set failMsg ("Не удалось добавить маршрут через " . $gw)
+  }
+}
+:if ([:len $failMsg] = 0) do={
+  :do {
+    /ip firewall mangle add chain=output action=mark-routing new-routing-mark=$rtName src-address=$srcIp passthrough=no comment=$rtComment place-before=0
+  } on-error={
+    /ip firewall mangle add chain=output action=mark-routing new-routing-mark=$rtName src-address=$srcIp passthrough=no comment=$rtComment
+  }
+  :do {
+    /routing rule add src-address=($srcIp . "/32") action=lookup-only-in-table table=$rtName comment=$rtComment
+  } on-error={}
+  :do {
+    /ip firewall nat add chain=srcnat action=accept src-address=$srcIp comment=$rtComment place-before=0
+  } on-error={
+    /ip firewall nat add chain=srcnat action=accept src-address=$srcIp comment=$rtComment
+  }
+}
+
 :local r
 :local j
 :local isp
 :local org
 :local publicIp ""
+:if ([:len $failMsg] = 0) do={
 :do {
   :set r [/tool fetch url="https://api.ipify.org" src-address=$srcIp output=user as-value]
   :if (($r->"status") = "finished") do={
@@ -95,8 +194,8 @@
   :if ([:typeof $lf] != "nil") do={ :set publicIp [:pick $publicIp 0 $lf] }
 }
 :if ([:len $publicIp] = 0) do={
-  :error "Не удалось определить публичный IP"
-}
+  :set failMsg "Не удалось определить публичный IP"
+} else={
 
 :local hoster ""
 :do {
@@ -114,6 +213,9 @@
 
 :local runId ("mt-" . [:rndstr length=16])
 :put ("probe IP: " . $publicIp)
+:if ($publicIp != $srcIp) do={
+  :put ("внимание: probe IP " . $publicIp . " != src " . $srcIp)
+}
 :if ([:len $hoster] > 0) do={ :put ("хостер: " . $hoster) }
 :put ("runId: " . $runId)
 :put "Проверяю GeoIP (JSON, IPv4)..."
@@ -322,5 +424,15 @@
   :put ("Ежедневная проверка: каждый день в " . $startTime . " (" . $schedName . ")")
   :put ("Снять: /tool fetch url=" . $vtApi . "/ic.rsc?remove=daily dst-path=" . $dstFile . "; /import file-name=" . $dstFile)
 }
+
+}
+
+}
+
+:do { /ip firewall mangle remove [find comment=$rtComment] } on-error={}
+:do { /ip firewall nat remove [find comment=$rtComment] } on-error={}
+:do { /routing rule remove [find comment=$rtComment] } on-error={}
+:do { /ip route remove [find comment=$rtComment] } on-error={}
+:if ([:len $failMsg] > 0) do={ :error $failMsg }
 
 }
