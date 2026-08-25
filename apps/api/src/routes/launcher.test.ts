@@ -28,6 +28,8 @@ describe('GET /cc launcher', () => {
     expect(res.body).toContain('VT_INGEST_TOKEN')
     expect(res.body).toContain('ensure_cmds jq dig column')
     expect(res.body).toContain('detect_os')
+    expect(res.body).toContain('detect_hoster')
+    expect(res.body).toContain('ipwho.is')
     expect(res.body).toContain('/etc/os-release')
     expect(res.body).toContain('apt-get install -y -qq')
     expect(res.body).toContain('Проверяю сайты')

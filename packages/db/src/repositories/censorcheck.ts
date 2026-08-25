@@ -54,6 +54,7 @@ export type CensorcheckRunDto = {
   createdAt: string
   completedAt: string
   observedSourceIp: string | null
+  detectedHoster: string | null
   vps: CensorcheckVpsInfo | null
   results?: CensorcheckResultDto[]
 }
@@ -80,6 +81,7 @@ export type CensorcheckInsertRun = {
   censorcheckVersion: string | null
   summary: CensorcheckSummary
   observedSourceIp: string | null
+  detectedHoster: string | null
   results: CensorcheckInsertResult[]
 }
 
@@ -175,6 +177,7 @@ function toRunDto(row: RunRow, includeResults = false): CensorcheckRunDto {
     createdAt: row.createdAt,
     completedAt: row.completedAt,
     observedSourceIp: row.observedSourceIp ?? null,
+    detectedHoster: row.detectedHoster ?? null,
     vps: hydrateVps(row.matchedVpsId ?? null),
   }
   if (includeResults) {
@@ -248,6 +251,7 @@ export const censorcheckRepository = {
           createdAt: now,
           completedAt: now,
           observedSourceIp: input.observedSourceIp,
+          detectedHoster: input.detectedHoster,
         })
         .run()
       for (const result of input.results) {
@@ -304,6 +308,7 @@ export const censorcheckRepository = {
           like(schema.censorcheckRuns.probePublicIp, pattern),
           like(schema.censorcheckRuns.claimedPublicIp, pattern),
           like(schema.censorcheckRuns.runId, pattern),
+          like(schema.censorcheckRuns.detectedHoster, pattern),
         )!,
       )
     }

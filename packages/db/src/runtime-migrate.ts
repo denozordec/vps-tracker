@@ -297,7 +297,8 @@ const CORE_TABLE_MIGRATIONS: string[] = [
     summaryJson TEXT NOT NULL DEFAULT '{}',
     createdAt TEXT NOT NULL,
     completedAt TEXT NOT NULL,
-    observedSourceIp TEXT
+    observedSourceIp TEXT,
+    detectedHoster TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS censorcheck_results (
     id TEXT PRIMARY KEY,
@@ -366,6 +367,7 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE sync_log ADD COLUMN summary TEXT`,
   `ALTER TABLE active_tariffs ADD COLUMN spaceId TEXT`,
   `ALTER TABLE tariff_sync_options ADD COLUMN spaceId TEXT`,
+  `ALTER TABLE censorcheck_runs ADD COLUMN detectedHoster TEXT`,
 ]
 
 const SPACE_BACKFILL_TABLES = [

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { GlobeIcon, MapPinIcon, ServerIcon, ShieldAlertIcon } from 'lucide-react'
+import { Building2Icon, GlobeIcon, MapPinIcon, ServerIcon, ShieldAlertIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 
 import {
@@ -16,6 +16,7 @@ import {
   CENSORCHECK_STATUS_LABELS,
   formatCheckedAt,
   formatVpsResources,
+  runHosterLabel,
   type CensorcheckRunDto,
 } from './types'
 
@@ -66,6 +67,12 @@ export function CheckRunSheet({ run, open, onOpenChange }: CheckRunSheetProps) {
                       Открыть карточку
                     </Link>
                   ) : undefined,
+                },
+                {
+                  id: 'hoster',
+                  icon: <Building2Icon />,
+                  label: 'Хостер',
+                  description: runHosterLabel(detail) || '—',
                 },
                 {
                   id: 'geo',

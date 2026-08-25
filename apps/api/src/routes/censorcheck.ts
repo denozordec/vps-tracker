@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
-import { censorcheckIngestBodySchema } from '@cfdm/shared/contracts/censorcheck'
+import { canonicalizeHoster, censorcheckIngestBodySchema } from '@cfdm/shared/contracts/censorcheck'
 import { censorcheckRepository } from '@cfdm/db/repositories/censorcheck'
 import { actorFromRequest } from '../lib/audit-actor.js'
 import {
@@ -82,6 +82,7 @@ export const censorcheckRoutes: FastifyPluginAsync = async (app) => {
         censorcheckVersion: parsed.data.censorcheck?.version ?? null,
         summary,
         observedSourceIp: observed ?? null,
+        detectedHoster: canonicalizeHoster(parsed.data.probe.hoster),
         results,
       })
 

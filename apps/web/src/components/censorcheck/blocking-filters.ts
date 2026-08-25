@@ -39,7 +39,7 @@ export function filterCensorcheckRuns(
         continue
       }
       if (filter.field === 'hoster') {
-        const name = (run.vps?.providerName ?? '').toLowerCase()
+        const name = `${run.vps?.providerName ?? ''} ${run.detectedHoster ?? ''}`.toLowerCase()
         const hit = values.some((value) => name.includes(value.toLowerCase()) || name === value.toLowerCase())
         if (!hit) return false
         continue

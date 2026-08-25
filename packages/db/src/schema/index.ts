@@ -384,6 +384,7 @@ export const censorcheckRuns = sqliteTable(
     createdAt: text('createdAt').notNull(),
     completedAt: text('completedAt').notNull(),
     observedSourceIp: text('observedSourceIp'),
+    detectedHoster: text('detectedHoster'),
   },
   (t) => ({
     runIdUniq: uniqueIndex('censorcheck_runs_runId').on(t.runId),

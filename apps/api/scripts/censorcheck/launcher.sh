@@ -5,7 +5,7 @@ set -euo pipefail
 
 VT_API_URL="${VT_API_URL:-__VT_API_URL__}"
 VT_INGEST_TOKEN="${VT_INGEST_TOKEN:-__VT_INGEST_TOKEN__}"
-LAUNCHER_VERSION="4"
+LAUNCHER_VERSION="5"
 VENDOR_SHA="12c5839"
 
 OS_ID="unknown"
@@ -165,6 +165,88 @@ detect_public_ip() {
   printf '%s' "$ip"
 }
 
+# Короткий таймаут: на обычном VPS link-local просто не ответит.
+curl_meta() {
+  curl -fsS --connect-timeout 1 --max-time 1 "$@" 2>/dev/null || true
+}
+
+detect_cloud_hoster() {
+  local body=""
+  body="$(curl_meta http://169.254.169.254/hetzner/v1/metadata)"
+  if [ -n "$body" ]; then
+    printf 'Hetzner'
+    return 0
+  fi
+  body="$(curl_meta http://169.254.169.254/metadata/v1/id)"
+  if [ -n "$body" ]; then
+    printf 'DigitalOcean'
+    return 0
+  fi
+  body="$(curl_meta http://169.254.169.254/v1/instanceid)"
+  if [ -n "$body" ]; then
+    printf 'Vultr'
+    return 0
+  fi
+  body="$(curl_meta http://169.254.169.254/linode/v1/instance-id)"
+  if [ -n "$body" ]; then
+    printf 'Linode'
+    return 0
+  fi
+  body="$(curl_meta -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/id)"
+  if [ -n "$body" ]; then
+    printf 'Google Cloud'
+    return 0
+  fi
+  body="$(curl_meta -H 'Metadata: true' 'http://169.254.169.254/metadata/instance?api-version=2021-02-01')"
+  if [ -n "$body" ]; then
+    printf 'Azure'
+    return 0
+  fi
+  body="$(curl_meta http://169.254.169.254/latest/meta-data/instance-id)"
+  if [ -n "$body" ]; then
+    printf 'AWS'
+    return 0
+  fi
+  return 1
+}
+
+detect_asn_org() {
+  local ip="$1" json="" org=""
+  json="$(curl -fsS --connect-timeout 4 --max-time 8 "https://ipwho.is/${ip}" 2>/dev/null || true)"
+  if [ -n "$json" ]; then
+    org="$(printf '%s' "$json" | jq -r '.connection.org // .org // empty' 2>/dev/null || true)"
+    if [ -n "$org" ] && [ "$org" != "null" ]; then
+      printf '%s' "$org"
+      return 0
+    fi
+  fi
+  json="$(curl -fsS --connect-timeout 4 --max-time 8 "https://ipinfo.io/${ip}/json" 2>/dev/null || true)"
+  if [ -n "$json" ]; then
+    org="$(printf '%s' "$json" | jq -r '.org // empty' 2>/dev/null || true)"
+    if [ -n "$org" ] && [ "$org" != "null" ]; then
+      printf '%s' "$org"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+detect_ptr_hint() {
+  local ip="$1" ptr=""
+  command -v dig >/dev/null 2>&1 || return 1
+  ptr="$(dig +short -x "$ip" 2>/dev/null | awk 'NF{print; exit}' | tr -d '\r' | sed 's/\.$//')"
+  [ -n "$ptr" ] || return 1
+  printf '%s' "$ptr"
+}
+
+detect_hoster() {
+  local ip="$1" value=""
+  value="$(detect_cloud_hoster)" && { printf '%s' "$value"; return 0; }
+  value="$(detect_asn_org "$ip")" && { printf '%s' "$value"; return 0; }
+  value="$(detect_ptr_hint "$ip")" && { printf '%s' "$value"; return 0; }
+  return 1
+}
+
 write_vendor() {
   local dest="$1"
   if [ -n "${CENSORCHECK_VENDOR_B64:-}" ]; then
@@ -203,11 +285,14 @@ chmod +x "$VENDOR"
 PUBLIC_IP="$(detect_public_ip)"
 [ -n "$PUBLIC_IP" ] || die "Не удалось определить публичный IP"
 
+HOSTER="$(detect_hoster "$PUBLIC_IP" || true)"
+
 RUN_ID="$(uuid4)"
 [ -n "$RUN_ID" ] || die "Не удалось сгенерировать runId"
 
 log "censorcheck launcher ${LAUNCHER_VERSION} (vendor ${VENDOR_SHA})"
 log "probe IP: ${PUBLIC_IP}"
+log "хостер: ${HOSTER:-не определён}"
 log "runId: ${RUN_ID}"
 log "Проверяю сайты (последовательно, несколько минут)..."
 
@@ -222,11 +307,11 @@ if [ "$CC_EXIT" -ne 0 ]; then
 fi
 
 PAYLOAD="$TMPDIR/payload.json"
-printf '%s' "$RAW_JSON" | jq --arg runId "$RUN_ID" --arg ip "$PUBLIC_IP" --arg lv "$LAUNCHER_VERSION" '
+printf '%s' "$RAW_JSON" | jq --arg runId "$RUN_ID" --arg ip "$PUBLIC_IP" --arg lv "$LAUNCHER_VERSION" --arg hoster "$HOSTER" '
   {
     schemaVersion: 1,
     runId: $runId,
-    probe: { publicIp: $ip },
+    probe: ({ publicIp: $ip } + if ($hoster | length) > 0 then { hoster: $hoster } else {} end),
     launcherVersion: $lv,
     censorcheck: {
       version: ((.version | tostring) // "1"),

@@ -299,7 +299,8 @@ CREATE TABLE IF NOT EXISTS censorcheck_runs (
   summaryJson TEXT NOT NULL DEFAULT '{}',
   createdAt TEXT NOT NULL,
   completedAt TEXT NOT NULL,
-  observedSourceIp TEXT
+  observedSourceIp TEXT,
+  detectedHoster TEXT
 );
 
 CREATE TABLE IF NOT EXISTS censorcheck_results (

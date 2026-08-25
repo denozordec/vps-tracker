@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Filter } from '@/components/reui/filters'
 import { filterCensorcheckRuns, groupRunsByService, collectServiceColumns, collectProbeColumns, shortHostLabel } from './blocking-filters'
-import type { CensorcheckRunDto } from './types'
+import { runHosterLabel, type CensorcheckRunDto } from './types'
 
 const run = (overrides: Partial<CensorcheckRunDto> = {}): CensorcheckRunDto => ({
   id: 'ccrun-1',
@@ -87,6 +87,37 @@ describe('filterCensorcheckRuns', () => {
         { id: '1', field: 'q', operator: 'contains', values: ['missing'] },
       ]),
     ).toHaveLength(0)
+  })
+
+  it('фильтрует по хостеру из прогона, если инвентарь пуст', () => {
+    const unmatched = run({
+      matchedVpsId: null,
+      vps: null,
+      detectedHoster: 'DigitalOcean',
+    })
+    expect(
+      filterCensorcheckRuns([unmatched], [
+        { id: '1', field: 'hoster', operator: 'contains', values: ['digital'] },
+      ]),
+    ).toHaveLength(1)
+    expect(
+      filterCensorcheckRuns([unmatched], [
+        { id: '1', field: 'hoster', operator: 'contains', values: ['hetzner'] },
+      ]),
+    ).toHaveLength(0)
+  })
+})
+
+describe('runHosterLabel', () => {
+  it('предпочитает имя из инвентаря', () => {
+    expect(runHosterLabel(run())).toBe('Hoster')
+    expect(runHosterLabel(run({ detectedHoster: 'Hetzner' }))).toBe('Hoster')
+  })
+
+  it('берёт detectedHoster если VPS не сматчен', () => {
+    expect(runHosterLabel(run({ matchedVpsId: null, vps: null, detectedHoster: 'Hetzner' }))).toBe(
+      'Hetzner',
+    )
   })
 })
 

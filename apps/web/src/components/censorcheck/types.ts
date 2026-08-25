@@ -40,6 +40,7 @@ export type CensorcheckRunDto = {
   createdAt: string
   completedAt: string
   observedSourceIp: string | null
+  detectedHoster?: string | null
   vps: CensorcheckVpsInfo | null
   results?: CensorcheckResultDto[]
 }
@@ -67,12 +68,19 @@ export function formatCheckedAt(iso: string): string {
   return date.toLocaleString('ru-RU')
 }
 
+export function runHosterLabel(run: CensorcheckRunDto): string {
+  const inventory = run.vps?.providerName?.trim() ?? ''
+  if (inventory) return inventory
+  return run.detectedHoster?.trim() ?? ''
+}
+
 export function runSearchText(run: CensorcheckRunDto): string {
   const parts = [
     run.probePublicIp,
     run.claimedPublicIp ?? '',
     run.vps?.dns ?? '',
     run.vps?.providerName ?? '',
+    run.detectedHoster ?? '',
     run.vps?.country ?? '',
     ...(run.results ?? []).map((row) => `${row.serviceKey} ${row.serviceLabel}`),
   ]

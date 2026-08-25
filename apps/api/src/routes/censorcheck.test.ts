@@ -161,4 +161,44 @@ describe('censorcheck ingest + reads', () => {
     expect(detail.statusCode).toBe(200)
     expect(detail.json().results).toHaveLength(1)
   })
+
+  it('сохраняет хостер из probe и канонизирует ASN', async () => {
+    const res = await post(
+      ingestPayload({
+        runId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        probe: { publicIp: '203.0.113.10', hoster: 'AS14061 DigitalOcean, LLC' },
+      }),
+    )
+    expect(res.statusCode).toBe(200)
+    const current = await app.inject({ method: 'GET', url: '/api/censorcheck/current' })
+    expect(current.json().items[0].detectedHoster).toBe('DigitalOcean')
+    expect(current.json().items[0].vps).toBeNull()
+  })
+
+  it('для matched VPS отдаёт имя хостера из инвентаря', async () => {
+    runWithSpace(MAIN_SPACE_ID, () =>
+      vpsRepository.create({
+        ip: '203.0.113.10',
+        dns: 'edge.example.com',
+        providerId: 'p1',
+        providerAccountId: 'a1',
+        status: 'active',
+        tariffType: 'monthly',
+        currency: 'RUB',
+        vcpu: 2,
+        ramGb: 4,
+        diskGb: 40,
+      }),
+    )
+    await post(
+      ingestPayload({
+        runId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+        probe: { publicIp: '203.0.113.10', hoster: 'Hetzner Online GmbH' },
+      }),
+    )
+    const current = await app.inject({ method: 'GET', url: '/api/censorcheck/current' })
+    const item = current.json().items[0]
+    expect(item.vps.providerName).toBe('Test Host')
+    expect(item.detectedHoster).toBe('Hetzner')
+  })
 })

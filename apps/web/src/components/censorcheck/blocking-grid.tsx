@@ -13,7 +13,7 @@ import {
 } from './blocking-filters'
 import { resolveServiceIcon, ServiceGlyph } from './service-icons'
 import { StatusMatrixCell } from './status-matrix-cell'
-import type { CensorcheckRunDto } from './types'
+import { runHosterLabel, type CensorcheckRunDto } from './types'
 
 /** DNA data-grid-base-4: auto width + H-scroll + pin start. Preview: https://reui.io/preview/base/data-grid-base-4 */
 export const BLOCKING_MATRIX_GRID = {
@@ -31,12 +31,14 @@ function vpsIdentityColumn(): DataGridColumn<CensorcheckRunDto> {
     icon: ServerIcon,
     enableHiding: false,
     enablePinning: true,
-    size: 220,
-    minSize: 180,
+    size: 240,
+    minSize: 200,
     sortValue: (row) => row.vps?.dns || row.probePublicIp,
     cell: (row) => {
       const title = row.vps?.dns || row.probePublicIp
       const ip = row.probePublicIp
+      const hoster = runHosterLabel(row)
+      const secondary = hoster ? `${ip} · ${hoster}` : ip
       const link = row.matchedVpsId ? (
         <Link
           to="/vps/$vpsId"
@@ -49,7 +51,7 @@ function vpsIdentityColumn(): DataGridColumn<CensorcheckRunDto> {
       ) : (
         <span className="font-medium">Unknown VPS</span>
       )
-      return dataGridCellStack(link, ip)
+      return dataGridCellStack(link, secondary)
     },
   }
 }

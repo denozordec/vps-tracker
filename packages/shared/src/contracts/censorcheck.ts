@@ -77,6 +77,7 @@ export const censorcheckIngestBodySchema = z.object({
   runId: z.string().trim().min(8).max(80),
   probe: z.object({
     publicIp: z.string().trim().min(1).max(64),
+    hoster: z.string().trim().max(160).optional(),
   }),
   censorcheck: z
     .object({
@@ -111,4 +112,57 @@ export function emptyCensorcheckSummary(): CensorcheckSummary {
     timeout: 0,
     error: 0,
   }
+}
+
+const HOSTER_ALIASES: ReadonlyArray<{ test: RegExp; name: string }> = [
+  { test: /digitalocean|digital ocean|\bas14061\b/i, name: 'DigitalOcean' },
+  { test: /hetzner|\bas24940\b/i, name: 'Hetzner' },
+  { test: /\bovh|\bas16276\b/i, name: 'OVH' },
+  { test: /linode|akamai|\bas63949\b/i, name: 'Linode' },
+  { test: /\bvultr|\bas20473\b/i, name: 'Vultr' },
+  { test: /amazon|aws|\bec2\b|\bas16509\b|\bas14618\b/i, name: 'AWS' },
+  { test: /google cloud|\bgcp\b|\bas15169\b/i, name: 'Google Cloud' },
+  { test: /microsoft|azure|\bas8075\b/i, name: 'Azure' },
+  { test: /oracle cloud|\bas31898\b/i, name: 'Oracle Cloud' },
+  { test: /selectel|\bas49505\b/i, name: 'Selectel' },
+  { test: /timeweb|\bas197695\b/i, name: 'Timeweb' },
+  { test: /vdsina/i, name: 'VDSina' },
+  { test: /4vps/i, name: '4VPS' },
+  { test: /macloud/i, name: 'Macloud' },
+  { test: /veesp/i, name: 'Veesp' },
+  { test: /ruvds|ru-vds|ru vds/i, name: 'RUVDS' },
+  { test: /\baeza\b/i, name: 'Aeza' },
+  { test: /firstvds|firstdedic/i, name: 'FirstVDS' },
+  { test: /yandex cloud|\bas200350\b/i, name: 'Yandex Cloud' },
+  { test: /cloud\.ru|sbercloud|\bas208677\b/i, name: 'Cloud.ru' },
+  { test: /\bbeget\b/i, name: 'Beget' },
+  { test: /fornex/i, name: 'Fornex' },
+  { test: /adminvps/i, name: 'AdminVPS' },
+  { test: /\bihor\b/i, name: 'Ihor' },
+  { test: /netcup/i, name: 'Netcup' },
+  { test: /contabo/i, name: 'Contabo' },
+  { test: /leaseweb/i, name: 'Leaseweb' },
+]
+
+function tidyOrgName(value: string): string {
+  const stripped = value
+    .replace(/^as\d+\s+/i, '')
+    .replace(/\s*[,;]?\s*\b(llc|ltd|inc|gmbh|corp|limited|jsc|ooo|ооо|ао)\b\.?$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!stripped) return value.slice(0, 80)
+  const words = stripped.split(' ')
+  if (stripped.length > 42 && words.length > 3) return words.slice(0, 3).join(' ')
+  return stripped.slice(0, 80)
+}
+
+/** Нормализует ASN/org/PTR/cloud-id в короткое имя хостера. */
+export function canonicalizeHoster(raw: string | null | undefined): string | null {
+  const value = raw?.replace(/\s+/g, ' ').trim()
+  if (!value) return null
+  const sliced = value.slice(0, 160)
+  for (const alias of HOSTER_ALIASES) {
+    if (alias.test.test(sliced)) return alias.name
+  }
+  return tidyOrgName(sliced)
 }
