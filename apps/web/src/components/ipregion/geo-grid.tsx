@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { GlobeIcon, ServerIcon } from 'lucide-react'
 
 import type { DataGridColumn } from '@/components/data-grid-types'
-import { dataGridCellStack } from '@/components/data-grid-cells'
+import { dataGridCellStack, dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { columnDefFromDataGrid, FrameDataGrid } from '@/components/reui-kit'
 import {
   collectProbeColumns,
@@ -12,6 +12,7 @@ import {
   type GeoServiceRow,
 } from './geo-filters'
 import { CountryMatrixCell } from './country-matrix-cell'
+import { resolveServiceIcon, ServiceGlyph } from './service-icons'
 import { runHosterLabel, type IpregionRunDto } from './types'
 
 /** DNA data-grid-base-4: auto width + H-scroll + pin start. Preview: https://reui.io/preview/base/data-grid-base-4 */
@@ -73,6 +74,7 @@ export function GeoVpsGrid({
           key: `svc:${svc.key}`,
           header: svc.label,
           headerTitle: svc.title,
+          icon: resolveServiceIcon(svc.key),
           className: MATRIX_CELL,
           headerClassName: MATRIX_CELL,
           size: 72,
@@ -140,7 +142,11 @@ export function GeoServiceGrid({
         size: 180,
         minSize: 140,
         sortValue: (row) => row.serviceKey,
-        cell: (row) => dataGridCellStack(row.serviceLabel, row.group),
+        cell: (row) =>
+          dataGridCellWithIcon(
+            <ServiceGlyph serviceKey={row.serviceKey} />,
+            dataGridCellStack(row.serviceLabel, row.group),
+          ),
       },
       ...probeCols.map(
         (probe): DataGridColumn<GeoServiceRow> => ({

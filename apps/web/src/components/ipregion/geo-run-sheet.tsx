@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/reui/badge'
 import { ipregionRunQueryOptions } from '@/queries/ipregion'
 import { countryName } from './geo-filters'
+import { ServiceGlyph } from './service-icons'
 import {
   IPREGION_STATUS_LABELS,
   formatCheckedAt,
@@ -101,14 +102,19 @@ export function GeoRunSheet({ run, open, onOpenChange }: GeoRunSheetProps) {
               <div className="flex flex-col gap-2">
                 {(detail.results ?? []).map((item) => (
                   <div key={item.id} className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm font-medium">{item.serviceLabel}</span>
-                      <span className="text-muted-foreground text-xs">{item.group}</span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ServiceGlyph serviceKey={item.serviceKey} className="text-muted-foreground" />
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate text-sm font-medium">{item.serviceLabel}</span>
+                        <span className="text-muted-foreground text-xs">{item.group}</span>
+                      </div>
                     </div>
-                    {item.status === 'ok' && item.countryIpv4 ? (
+                    {item.status === 'ok' && (item.countryIpv4 || item.countryIpv6) ? (
                       <Badge size="sm" variant="success-light" radius="full">
-                        {item.countryIpv4}
-                        {countryName(item.countryIpv4) ? ` · ${countryName(item.countryIpv4)}` : ''}
+                        {item.countryIpv4 || item.countryIpv6}
+                        {countryName(item.countryIpv4 || item.countryIpv6)
+                          ? ` · ${countryName(item.countryIpv4 || item.countryIpv6)}`
+                          : ''}
                       </Badge>
                     ) : (
                       <StatusBadge

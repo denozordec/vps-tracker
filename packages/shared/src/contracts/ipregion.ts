@@ -131,19 +131,48 @@ export function emptyIpregionSummary(): IpregionSummary {
 }
 
 const ISO_RE = /^[A-Z]{2}$/
+const ISO_IATA_RE = /^([A-Z]{2})\s*\(([A-Z]{3})\)$/
+const IATA_RE = /^[A-Z]{3}$/
 
-/** ISO `RU` → ok; иначе статусы ipregion (`N/A`, `Denied`, `Rate-limit`, `Server error`). */
+export type CanonicalCountry = {
+  status: IpregionStatus
+  country: string | null
+  iata: string | null
+}
+
+/** ISO `RU` / CDN `SE (ARN)` → ok; иначе статусы ipregion (`N/A`, `Denied`, `Rate-limit`, `Server error`). */
 export function canonicalizeCountryValue(
   raw: string | null | undefined,
-): { status: IpregionStatus; country: string | null } {
+): CanonicalCountry {
   const value = raw?.replace(/\s+/g, ' ').trim() ?? ''
-  if (!value || value === 'null' || /^n\/a$/i.test(value)) {
-    return { status: 'na', country: null }
+  if (!value || /^null$/i.test(value) || /^n\/a$/i.test(value)) {
+    return { status: 'na', country: null, iata: null }
   }
-  if (/^denied$/i.test(value)) return { status: 'denied', country: null }
-  if (/^rate[- ]?limit$/i.test(value)) return { status: 'rate_limit', country: null }
-  if (/^server error$/i.test(value)) return { status: 'server_error', country: null }
-  const iso = value.toUpperCase()
-  if (ISO_RE.test(iso)) return { status: 'ok', country: iso }
-  return { status: 'server_error', country: null }
+  if (/^denied$/i.test(value)) return { status: 'denied', country: null, iata: null }
+  if (/^rate[- ]?limit$/i.test(value)) return { status: 'rate_limit', country: null, iata: null }
+  if (/^server error$/i.test(value)) return { status: 'server_error', country: null, iata: null }
+
+  const upper = value.toUpperCase()
+  const withIata = upper.match(ISO_IATA_RE)
+  if (withIata) {
+    return { status: 'ok', country: withIata[1]!, iata: withIata[2]! }
+  }
+  if (ISO_RE.test(upper)) {
+    return { status: 'ok', country: upper, iata: null }
+  }
+  const iataOnly = upper.match(/^\(([A-Z]{3})\)$/)
+  if (iataOnly) {
+    return { status: 'ok', country: null, iata: iataOnly[1]! }
+  }
+  if (IATA_RE.test(upper)) {
+    return { status: 'ok', country: null, iata: upper }
+  }
+  return { status: 'server_error', country: null, iata: null }
+}
+
+export function formatCanonicalCountry(parsed: CanonicalCountry): string | null {
+  if (parsed.country && parsed.iata) return `${parsed.country} (${parsed.iata})`
+  if (parsed.country) return parsed.country
+  if (parsed.iata) return parsed.iata
+  return null
 }

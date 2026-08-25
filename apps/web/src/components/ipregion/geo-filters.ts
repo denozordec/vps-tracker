@@ -1,3 +1,4 @@
+import { canonicalizeCountryValue } from '@cfdm/shared/contracts/ipregion'
 import { COUNTRY_BY_CODE, COUNTRY_BY_NAME_RU } from '@cfdm/shared/geo'
 import {
   IPREGION_CDN_SERVICES,
@@ -14,6 +15,10 @@ import {
 
 const GROUP_RANK: Record<string, number> = { primary: 0, custom: 1, cdn: 2 }
 
+export function resultCountryIso(value: string | null | undefined): string | null {
+  return canonicalizeCountryValue(value).country
+}
+
 export function inventoryCountryCode(run: IpregionRunDto): string | null {
   const raw = run.vps?.country?.trim() ?? ''
   if (!raw) return null
@@ -23,13 +28,22 @@ export function inventoryCountryCode(run: IpregionRunDto): string | null {
 
 export function countryName(code: string | null | undefined): string {
   if (!code) return ''
-  return COUNTRY_BY_CODE[code.toUpperCase()]?.name ?? code
+  const iso = resultCountryIso(code) ?? code
+  return COUNTRY_BY_CODE[iso.toUpperCase()]?.name ?? iso
+}
+
+export function countryBadgeText(value: string | null | undefined): string {
+  const parsed = canonicalizeCountryValue(value)
+  if (parsed.country && parsed.iata) return parsed.country
+  if (parsed.country) return parsed.country
+  if (parsed.iata) return parsed.iata
+  return value?.trim() || ''
 }
 
 export function majorityCountry(run: IpregionRunDto): string | null {
   const counts = new Map<string, number>()
   for (const row of run.results ?? []) {
-    const code = row.countryIpv4 || row.countryIpv6
+    const code = resultCountryIso(row.countryIpv4) || resultCountryIso(row.countryIpv6)
     if (row.status !== 'ok' || !code) continue
     counts.set(code, (counts.get(code) ?? 0) + 1)
   }
@@ -55,8 +69,12 @@ export function uniqueCountries(runs: IpregionRunDto[]): string[] {
   const set = new Set<string>()
   for (const run of runs) {
     for (const row of run.results ?? []) {
-      if (row.status === 'ok' && row.countryIpv4) set.add(row.countryIpv4)
-      if (row.status === 'ok' && row.countryIpv6) set.add(row.countryIpv6)
+      if (row.status === 'ok') {
+        const v4 = resultCountryIso(row.countryIpv4)
+        const v6 = resultCountryIso(row.countryIpv6)
+        if (v4) set.add(v4)
+        if (v6) set.add(v6)
+      }
     }
   }
   return [...set].sort()

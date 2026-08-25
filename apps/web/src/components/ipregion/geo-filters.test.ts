@@ -108,6 +108,27 @@ describe('uniqueCountries / mismatch', () => {
     expect(uniqueCountries([run()]).sort()).toEqual(['NL', 'US'])
   })
 
+  it('извлекает ISO из CDN SE (ARN)', () => {
+    expect(
+      uniqueCountries([
+        run({
+          results: [
+            {
+              id: 'r-cdn',
+              runId: 'iprun-1',
+              serviceKey: 'cloudflare cdn',
+              serviceLabel: 'Cloudflare CDN',
+              group: 'cdn',
+              countryIpv4: 'SE (ARN)',
+              countryIpv6: null,
+              status: 'ok',
+            },
+          ],
+        }),
+      ]),
+    ).toEqual(['SE'])
+  })
+
   it('считает расхождение с инвентарём', () => {
     expect(
       isGeoMismatch(

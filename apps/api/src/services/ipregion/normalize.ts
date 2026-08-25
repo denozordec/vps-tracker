@@ -1,6 +1,7 @@
 import {
   canonicalizeCountryValue,
   emptyIpregionSummary,
+  formatCanonicalCountry,
   inferIpregionGroup,
   type IpregionGroup,
   type IpregionIngestResult,
@@ -29,8 +30,8 @@ export function normalizeIngestResult(item: IpregionIngestResult): NormalizedIpr
     serviceKey,
     serviceLabel,
     group: item.group ?? inferIpregionGroup(serviceKey),
-    countryIpv4: ipv4.country,
-    countryIpv6: ipv6.country,
+    countryIpv4: formatCanonicalCountry(ipv4),
+    countryIpv6: formatCanonicalCountry(ipv6),
     status,
   }
 }
