@@ -5,8 +5,10 @@ set -euo pipefail
 
 VT_API_URL="${VT_API_URL:-__VT_API_URL__}"
 VT_INGEST_TOKEN="${VT_INGEST_TOKEN:-__VT_INGEST_TOKEN__}"
-LAUNCHER_VERSION="1"
+LAUNCHER_VERSION="2"
 VENDOR_SHA="7d1c25c"
+DAILY_SLUG="vt-ipregion"
+DAILY_PATH="/ic"
 
 OS_ID="unknown"
 OS_LIKE=""
@@ -247,6 +249,102 @@ detect_hoster() {
   return 1
 }
 
+show_launcher_help() {
+  cat <<EOF
+Использование:
+  curl -fsSL ${VT_API_URL}${DAILY_PATH} | bash
+  curl -fsSL ${VT_API_URL}${DAILY_PATH} | bash -s -- --daily
+  curl -fsSL ${VT_API_URL}${DAILY_PATH} | bash -s -- --remove-daily
+
+  --daily            выполнить проверку и поставить cron раз в сутки
+  --remove-daily     убрать ежедневный cron
+EOF
+}
+
+daily_run_cmd() {
+  local url="${VT_API_URL}${DAILY_PATH}"
+  local curl_bin bash_bin flock_bin
+  curl_bin="$(command -v curl)"
+  bash_bin="$(command -v bash)"
+  flock_bin="$(command -v flock || true)"
+  if [ -n "$flock_bin" ]; then
+    printf "%s -n /tmp/%s.lock -c '%s -fsSL --max-time 180 %s | %s'" \
+      "$flock_bin" "$DAILY_SLUG" "$curl_bin" "$url" "$bash_bin"
+  else
+    printf '%s -fsSL --max-time 180 %s | %s' "$curl_bin" "$url" "$bash_bin"
+  fi
+}
+
+daily_slot() {
+  local seed n
+  seed="$(hostname -f 2>/dev/null || hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo vt)"
+  n="$(printf '%s' "$seed" | cksum | awk '{print $1}')"
+  DAILY_MINUTE=$((n % 60))
+  DAILY_HOUR=$((3 + (n / 60) % 4))
+}
+
+remove_daily() {
+  local prefix="" removed=0
+  if [ -e "/etc/cron.d/${DAILY_SLUG}" ]; then
+    if prefix="$(root_prefix)"; then
+      # shellcheck disable=SC2086
+      $prefix rm -f "/etc/cron.d/${DAILY_SLUG}"
+      removed=1
+    fi
+  fi
+  if command -v crontab >/dev/null 2>&1; then
+    local current
+    current="$(crontab -l 2>/dev/null || true)"
+    if printf '%s\n' "$current" | grep -qF "vps-tracker:${DAILY_SLUG}"; then
+      printf '%s\n' "$current" | grep -vF "vps-tracker:${DAILY_SLUG}" | crontab -
+      removed=1
+    fi
+  fi
+  if [ "$removed" -eq 1 ]; then
+    log "Ежедневная проверка снята (${DAILY_SLUG})"
+  else
+    log "Ежедневная проверка не была установлена"
+  fi
+}
+
+install_daily() {
+  daily_slot
+  local run line prefix=""
+  local marker="# vps-tracker:${DAILY_SLUG}"
+  run="$(daily_run_cmd)"
+
+  if [ -d /etc/cron.d ] && prefix="$(root_prefix)"; then
+    local tmp
+    tmp="$(mktemp)"
+    cat >"$tmp" <<EOF
+# Managed by VPS Tracker launcher. ${marker}
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+${DAILY_MINUTE} ${DAILY_HOUR} * * * root ${run} >>/var/log/${DAILY_SLUG}.log 2>&1
+EOF
+    # shellcheck disable=SC2086
+    $prefix cp "$tmp" "/etc/cron.d/${DAILY_SLUG}"
+    # shellcheck disable=SC2086
+    $prefix chmod 644 "/etc/cron.d/${DAILY_SLUG}"
+    rm -f "$tmp"
+    log "Ежедневная проверка: каждый день в ${DAILY_HOUR}:$(printf '%02d' "$DAILY_MINUTE") (/etc/cron.d/${DAILY_SLUG})"
+    log "Снять: curl -fsSL ${VT_API_URL}${DAILY_PATH} | bash -s -- --remove-daily"
+    return 0
+  fi
+
+  if ! command -v crontab >/dev/null 2>&1; then
+    die "Нет cron (ни /etc/cron.d, ни crontab). Установите пакет cron и повторите --daily"
+  fi
+  line="${DAILY_MINUTE} ${DAILY_HOUR} * * * ${run} >>/tmp/${DAILY_SLUG}.log 2>&1 ${marker}"
+  {
+    (crontab -l 2>/dev/null || true) | grep -vF "vps-tracker:${DAILY_SLUG}" || true
+    printf '%s\n' "$line"
+  } | crontab -
+  log "Ежедневная проверка: каждый день в ${DAILY_HOUR}:$(printf '%02d' "$DAILY_MINUTE") (crontab)"
+  log "Снять: curl -fsSL ${VT_API_URL}${DAILY_PATH} | bash -s -- --remove-daily"
+}
+
 write_vendor() {
   local dest="$1"
   if [ -n "${IPREGION_VENDOR_B64:-}" ]; then
@@ -272,6 +370,22 @@ uuid4() {
 VT_API_URL="${VT_API_URL%/}"
 [ -n "$VT_API_URL" ] || die "VT_API_URL пуст"
 [ -n "$VT_INGEST_TOKEN" ] || die "VT_INGEST_TOKEN пуст"
+
+DAILY_INSTALL=0
+DAILY_REMOVE=0
+for arg in "$@"; do
+  case "$arg" in
+    --daily|--install-daily) DAILY_INSTALL=1 ;;
+    --remove-daily|--uninstall-daily) DAILY_REMOVE=1 ;;
+    -h|--help) show_launcher_help; exit 0 ;;
+    *) die "Неизвестный аргумент: $arg. См. --help" ;;
+  esac
+done
+
+if [ "$DAILY_REMOVE" -eq 1 ]; then
+  remove_daily
+  exit 0
+fi
 
 TMPDIR="$(mktemp -d /tmp/vt-ipregion.XXXXXX)"
 cleanup() { rm -rf "$TMPDIR"; }
@@ -339,6 +453,9 @@ set -e
 if [ "$POST_EXIT" -ne 0 ]; then
   cp "$PAYLOAD" "$FALLBACK"
   log "API недоступен (curl exit ${POST_EXIT}). JSON сохранён: ${FALLBACK}" >&2
+  if [ "$DAILY_INSTALL" -eq 1 ]; then
+    install_daily
+  fi
   exit 2
 fi
 
@@ -348,9 +465,15 @@ if [ -z "$CHECK_ID" ]; then
   cp "$PAYLOAD" "$FALLBACK"
   log "Некорректный ответ API. JSON сохранён: ${FALLBACK}" >&2
   log "$RESP" >&2
+  if [ "$DAILY_INSTALL" -eq 1 ]; then
+    install_daily
+  fi
   exit 2
 fi
 
 log "Check ID: ${CHECK_ID}"
 log "VPS: ${MATCHED}"
+if [ "$DAILY_INSTALL" -eq 1 ]; then
+  install_daily
+fi
 exit 0

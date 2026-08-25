@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BanIcon,
+  CalendarClockIcon,
   CopyIcon,
   GlobeIcon,
   ServerIcon,
@@ -38,6 +39,7 @@ import { filterCensorcheckRuns, serviceMatrixRows } from './blocking-filters'
 import {
   CENSORCHECK_STATUS_LABELS,
   LAUNCHER_CMD,
+  LAUNCHER_CMD_DAILY,
   formatCheckedAt,
   type CensorcheckRunDto,
 } from './types'
@@ -143,14 +145,24 @@ export function BlockingPage() {
   const blocked = filtered.reduce((sum, row) => sum + row.summary.blocked, 0)
 
   const copyLauncher = (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => void copyText(LAUNCHER_CMD, 'Команда скопирована')}
-    >
-      <CopyIcon data-icon="inline-start" />
-      Скопировать команду
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD, 'Команда скопирована')}
+      >
+        <CopyIcon data-icon="inline-start" />
+        Скопировать команду
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD_DAILY, 'Команда для ежедневного запуска скопирована')}
+      >
+        <CalendarClockIcon data-icon="inline-start" />
+        Раз в день
+      </Button>
+    </>
   )
 
   return (

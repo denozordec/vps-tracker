@@ -93,9 +93,10 @@ vps-tracker/
 ## Статус блокировок (censorcheck)
 
 Ручная проверка с VPS: `curl -fsSL https://vt.shnt.top/cc | bash` (тот же контейнер, Traefik dual Host).
+Раз в сутки: `curl -fsSL https://vt.shnt.top/cc | bash -s -- --daily` (cron, свежий HMAC-токен на каждый запуск).
 
 - **Vendor:** `apps/api/scripts/censorcheck/censorcheck.sh` (pin SHA `12c5839`, MIT)
-- **Launcher:** `GET /cc` минтит HMAC ingest-токен (TTL 20 мин); по `/etc/os-release` ставит `jq`/`dig`/`column` без prompt; прогресс-бар в stderr; `GET /cc/vendor` — скрипт (LF)
+- **Launcher:** `GET /cc` минтит HMAC ingest-токен (TTL 20 мин); по `/etc/os-release` ставит `jq`/`dig`/`column` без prompt; прогресс-бар в stderr; `GET /cc/vendor` — скрипт (LF); `--daily` / `--remove-daily`
 - **Ingest:** `POST /api/integrations/censorcheck/runs` (без portal JWT)
 - **UI:** `/blocking` — текущие прогоны и история, группировка VPS / сервис
 - Env: `CENSORCHECK_INGEST_SECRET`, `CENSORCHECK_PUBLIC_URL`, `VPS_LAUNCHER_DOMAIN`
@@ -103,9 +104,10 @@ vps-tracker/
 ## GeoIP (ipregion)
 
 Ручная проверка с VPS: `curl -fsSL https://vt.shnt.top/ic | bash`.
+Раз в сутки: `curl -fsSL https://vt.shnt.top/ic | bash -s -- --daily`.
 
 - **Vendor:** `apps/api/scripts/ipregion/ipregion.sh` (pin SHA `7d1c25c`, MIT, [vernette/ipregion](https://github.com/vernette/ipregion))
-- **Launcher:** `GET /ic` минтит HMAC ingest-токен (тот же `CENSORCHECK_INGEST_SECRET`); `GET /ic/vendor` — pinned скрипт (LF)
+- **Launcher:** `GET /ic` минтит HMAC ingest-токен (тот же `CENSORCHECK_INGEST_SECRET`); `GET /ic/vendor` — pinned скрипт (LF); `--daily` / `--remove-daily`
 - **Ingest:** `POST /api/integrations/ipregion/runs` (без portal JWT)
 - **UI:** `/geo` — матрица ISO-стран VPS × сервисы (primary / custom / cdn)
 

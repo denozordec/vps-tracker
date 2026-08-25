@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
+  CalendarClockIcon,
   CopyIcon,
   GlobeIcon,
   MapPinIcon,
@@ -43,6 +44,7 @@ import {
 import {
   IPREGION_STATUS_LABELS,
   LAUNCHER_CMD,
+  LAUNCHER_CMD_DAILY,
   formatCheckedAt,
   type IpregionRunDto,
 } from './types'
@@ -148,14 +150,24 @@ export function GeoPage() {
   const mismatches = filtered.filter(isGeoMismatch).length
 
   const copyLauncher = (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => void copyText(LAUNCHER_CMD, 'Команда скопирована')}
-    >
-      <CopyIcon data-icon="inline-start" />
-      Скопировать команду
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD, 'Команда скопирована')}
+      >
+        <CopyIcon data-icon="inline-start" />
+        Скопировать команду
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => void copyText(LAUNCHER_CMD_DAILY, 'Команда для ежедневного запуска скопирована')}
+      >
+        <CalendarClockIcon data-icon="inline-start" />
+        Раз в день
+      </Button>
+    </>
   )
 
   return (

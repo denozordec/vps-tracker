@@ -56,6 +56,7 @@ export const IPREGION_STATUS_LABELS: Record<string, string> = {
 }
 
 export const LAUNCHER_CMD = 'curl -fsSL https://vt.shnt.top/ic | bash'
+export const LAUNCHER_CMD_DAILY = 'curl -fsSL https://vt.shnt.top/ic | bash -s -- --daily'
 
 export function formatVpsResources(vcpu: number, ramGb: number, diskGb: number): string {
   return `${vcpu} vCPU / ${ramGb} GB / ${diskGb} GB`
