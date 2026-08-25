@@ -154,8 +154,9 @@ describe('censorcheck ingest + reads', () => {
     await post(ingestPayload())
     const list = await app.inject({ method: 'GET', url: '/api/censorcheck/runs?limit=10' })
     expect(list.statusCode).toBe(200)
-    const items = list.json().items as Array<{ id: string }>
+    const items = list.json().items as Array<{ id: string; results?: unknown[] }>
     expect(items).toHaveLength(1)
+    expect(items[0]!.results).toHaveLength(1)
     const detail = await app.inject({ method: 'GET', url: `/api/censorcheck/runs/${items[0]!.id}` })
     expect(detail.statusCode).toBe(200)
     expect(detail.json().results).toHaveLength(1)

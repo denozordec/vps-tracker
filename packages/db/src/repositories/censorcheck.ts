@@ -334,7 +334,7 @@ export const censorcheckRepository = {
     const page = rows.slice(0, limit)
     const last = page[page.length - 1]
     return {
-      items: page.map((row) => toRunDto(row, false)),
+      items: page.map((row) => toRunDto(row, true)),
       nextCursor: rows.length > limit && last ? encodeCursor(last.createdAt, last.id) : null,
     }
   },

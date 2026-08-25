@@ -26,6 +26,13 @@ import {
 import { StatusBadge } from '@/components/status-badge'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { BlockingServiceGrid, BlockingVpsGrid } from './blocking-grid'
+import { BlockingSnapshotScrubber } from './blocking-snapshot-scrubber'
+import {
+  collectSnapshotTicks,
+  latestRunsAsOf,
+  mergeCensorcheckRuns,
+  resolveSnapshotIndex,
+} from './blocking-snapshots'
 import { CheckRunSheet } from './check-run-sheet'
 import { filterCensorcheckRuns, serviceMatrixRows } from './blocking-filters'
 import {
@@ -110,15 +117,26 @@ export function BlockingPage() {
   const [group, setGroup] = useState<GroupMode>('vps')
   const [filters, setFilters] = useState<Filter[]>([])
   const [selected, setSelected] = useState<CensorcheckRunDto | null>(null)
+  const [snapshotIndex, setSnapshotIndex] = useState<number | null>(null)
 
   const currentQuery = useQuery(censorcheckCurrentQueryOptions(spaceId))
-  const historyQuery = useQuery({
-    ...censorcheckHistoryQueryOptions({ limit: 50 }, spaceId),
-    enabled: tab === 'history',
-  })
+  const historyQuery = useQuery(censorcheckHistoryQueryOptions({ limit: 200 }, spaceId))
 
-  const runs = currentQuery.data?.items ?? []
-  const filtered = useMemo(() => filterCensorcheckRuns(runs, filters), [runs, filters])
+  const allRuns = useMemo(
+    () => mergeCensorcheckRuns(currentQuery.data?.items ?? [], historyQuery.data?.items ?? []),
+    [currentQuery.data?.items, historyQuery.data?.items],
+  )
+  const ticks = useMemo(() => collectSnapshotTicks(allRuns), [allRuns])
+  const resolvedIndex = resolveSnapshotIndex(ticks.length, snapshotIndex)
+  const snapshotRuns = useMemo(() => {
+    const asOf = ticks[resolvedIndex]?.asOf
+    if (!asOf) return currentQuery.data?.items ?? []
+    return latestRunsAsOf(allRuns, asOf)
+  }, [allRuns, currentQuery.data?.items, resolvedIndex, ticks])
+  const filtered = useMemo(
+    () => filterCensorcheckRuns(snapshotRuns, filters),
+    [snapshotRuns, filters],
+  )
   const serviceGroups = useMemo(() => serviceMatrixRows(filtered), [filtered])
 
   const matched = filtered.filter((row) => row.matchedVpsId).length
@@ -175,7 +193,7 @@ export function BlockingPage() {
 
       <CountedLineTabs
         tabs={[
-          { id: 'current', label: 'Текущие', count: filtered.length },
+          { id: 'current', label: 'Текущие', count: currentQuery.data?.items.length },
           { id: 'history', label: 'История', count: historyQuery.data?.items.length },
         ]}
         value={tab}
@@ -183,7 +201,12 @@ export function BlockingPage() {
       />
 
       {tab === 'current' ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 w-full flex-col gap-3">
+          <BlockingSnapshotScrubber
+            ticks={ticks}
+            index={resolvedIndex}
+            onIndexChange={setSnapshotIndex}
+          />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Filters
               filters={filters}
