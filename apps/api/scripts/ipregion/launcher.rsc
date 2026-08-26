@@ -6,7 +6,7 @@
 :local vtToken "__VT_INGEST_TOKEN__"
 :local vtDaily "__VT_DAILY__"
 :local vtRemove "__VT_REMOVE_DAILY__"
-:local launcherVer "ros-6"
+:local launcherVer "ros-7"
 :local schedName "vt-ic"
 :local dstFile "vt-ic.rsc"
 
@@ -128,7 +128,6 @@
 :local colo
 :local iata
 :local ci
-:local item
 :foreach name in=$names do={
   :set url ""
   :set method "get"
@@ -259,25 +258,27 @@
   }
 
   :put ($name . " " . $iso)
-  :set item { service=$name; ipv4=$iso }
-  :set itemJson [:serialize to=json value=$item]
+  :set itemJson ("{\"service\":\"" . $name . "\",\"ipv4\":\"" . $iso . "\"}")
   :if ([:len $resultJson] > 0) do={ :set resultJson ($resultJson . ",") }
   :set resultJson ($resultJson . $itemJson)
 }
 
-:local probe { publicIp=$publicIp }
-:if ([:len $hoster] > 0) do={ :set ($probe->"hoster") $hoster }
-
-:local meta {\
-  schemaVersion=1;\
-  runId=$runId;\
-  probe=$probe;\
-  launcherVersion=$launcherVer;\
-  ipregion={ version="ros" }\
+:local hosterJson ""
+:if ([:len $hoster] > 0) do={
+  :local esc ""
+  :local hi 0
+  :while ($hi < [:len $hoster]) do={
+    :local ch [:pick $hoster $hi ($hi + 1)]
+    :if ($ch = "\\") do={ :set esc ($esc . "\\\\") } else={
+      :if ($ch = "\"") do={ :set esc ($esc . "\\\"") } else={ :set esc ($esc . $ch) }
+    }
+    :set hi ($hi + 1)
+  }
+  :set hosterJson (",\"hoster\":\"" . $esc . "\"")
 }
-:local metaJson [:serialize to=json value=$meta]
-:local json ([:pick $metaJson 0 ([:len $metaJson] - 1)] . ",\"results\":[" . $resultJson . "]}")
-:local hdrs {"Content-Type: application/json"; ("Authorization: Bearer " . $vtToken)}
+:if ([:len $resultJson] = 0) do={ :error "ingest: results пустой" }
+:local json ("{\"schemaVersion\":1,\"runId\":\"" . $runId . "\",\"probe\":{\"publicIp\":\"" . $publicIp . "\"" . $hosterJson . "},\"launcherVersion\":\"" . $launcherVer . "\",\"ipregion\":{\"version\":\"ros\"},\"results\":[" . $resultJson . "]}")
+:local hdrs ("Content-Type: application/json,Authorization: Bearer " . $vtToken)
 :put ("Отправляю ingest (" . [:len $json] . " B)...")
 :set ingestOk false
 :onerror err,attr in={
@@ -292,6 +293,7 @@
   :if (([:typeof $attr] = "array") and ([:typeof ($attr->"data")] = "str") and ([:len ($attr->"data")] > 0)) do={
     :put ($attr->"data")
   }
+  :if ([:len $json] > 120) do={ :put ([:pick $json 0 120] . "...") } else={ :put $json }
 }
 :if ($ingestOk = false) do={
   :put "повтор ingest без src-address..."
@@ -303,6 +305,7 @@
     :if (([:typeof $attr2] = "array") and ([:typeof ($attr2->"data")] = "str") and ([:len ($attr2->"data")] > 0)) do={
       :put ($attr2->"data")
     }
+    :if ([:len $json] > 120) do={ :put ([:pick $json 0 120] . "...") } else={ :put $json }
   }
 }
 

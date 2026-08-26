@@ -5,6 +5,9 @@
  */
 export function coerceRouterosIngestBody(body: unknown): unknown {
   let value: unknown = body
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(value)) {
+    value = value.toString('utf8')
+  }
   if (typeof value === 'string') {
     try {
       value = JSON.parse(value)
