@@ -94,11 +94,11 @@ vps-tracker/
 
 Ручная проверка с VPS: `curl -fsSL https://vt.shnt.top/cc | bash` (тот же контейнер, Traefik dual Host).
 Раз в сутки: `curl -fsSL https://vt.shnt.top/cc | bash -s -- --daily` (cron, свежий HMAC-токен на каждый запуск).
-MikroTik 7.22+: `:global vtIface "ether1"; /tool fetch url="https://vt.shnt.top/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc` (ежедневно: `?daily=1`; пробы через policy routing + `src-address` интерфейса; при необходимости `:global vtGw`).
+MikroTik 7.22+: `:global vt-srcIp "1.2.3.4"; /tool fetch url="https://vt.shnt.top/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc` (ежедневно: `?daily=1`; все пробы через `src-address` этого IP).
 
 - **Vendor:** `apps/api/scripts/censorcheck/censorcheck.sh` (pin SHA `12c5839`, MIT)
 - **Launcher:** `GET /cc` минтит HMAC ingest-токен (TTL 20 мин); по `/etc/os-release` ставит `jq`/`dig`/`column` без prompt; прогресс-бар в stderr; `GET /cc/vendor` — скрипт (LF); `--daily` / `--remove-daily`
-- **MikroTik:** `GET /cc.rsc` — RouterOS-скрипт (HTTPS GET, без DPI); обязателен `:global vtIface`; `?daily=1` / `?remove=daily`; scheduler `vt-cc`
+- **MikroTik:** `GET /cc.rsc` — RouterOS-скрипт (HTTPS GET, без DPI); обязателен `:global vt-srcIp`; `?daily=1` / `?remove=daily`; scheduler `vt-cc`
 - **Ingest:** `POST /api/integrations/censorcheck/runs` (без portal JWT)
 - **UI:** `/blocking` — текущие прогоны и история, группировка VPS / сервис
 - Env: `CENSORCHECK_INGEST_SECRET`, `CENSORCHECK_PUBLIC_URL`, `VPS_LAUNCHER_DOMAIN`
@@ -107,11 +107,11 @@ MikroTik 7.22+: `:global vtIface "ether1"; /tool fetch url="https://vt.shnt.top/
 
 Ручная проверка с VPS: `curl -fsSL https://vt.shnt.top/ic | bash`.
 Раз в сутки: `curl -fsSL https://vt.shnt.top/ic | bash -s -- --daily`.
-MikroTik 7.22+: `:global vtIface "ether1"; /tool fetch url="https://vt.shnt.top/ic.rsc" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc` (`?daily=1`; пробы через тот же `vtIface` и его шлюз; при необходимости `:global vtGw`).
+MikroTik 7.22+: `:global vt-srcIp "1.2.3.4"; /tool fetch url="https://vt.shnt.top/ic.rsc" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc` (`?daily=1`; пробы через тот же `vt-srcIp`).
 
 - **Vendor:** `apps/api/scripts/ipregion/ipregion.sh` (pin SHA `7d1c25c`, MIT, [vernette/ipregion](https://github.com/vernette/ipregion))
 - **Launcher:** `GET /ic` минтит HMAC ingest-токен (тот же `CENSORCHECK_INGEST_SECRET`); `GET /ic/vendor` — pinned скрипт (LF); `--daily` / `--remove-daily`
-- **MikroTik:** `GET /ic.rsc` — primary GeoIP JSON + Cloudflare CDN; обязателен `:global vtIface`; scheduler `vt-ic`
+- **MikroTik:** `GET /ic.rsc` — primary GeoIP JSON + Cloudflare CDN; обязателен `:global vt-srcIp`; scheduler `vt-ic`
 - **Ingest:** `POST /api/integrations/ipregion/runs` (без portal JWT)
 - **UI:** `/geo` — матрица ISO-стран VPS × сервисы (primary / custom / cdn)
 

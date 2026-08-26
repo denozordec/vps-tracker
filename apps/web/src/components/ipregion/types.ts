@@ -58,9 +58,9 @@ export const IPREGION_STATUS_LABELS: Record<string, string> = {
 export const LAUNCHER_CMD = 'curl -fsSL https://vt.shnt.top/ic | bash'
 export const LAUNCHER_CMD_DAILY = 'curl -fsSL https://vt.shnt.top/ic | bash -s -- --daily'
 export const LAUNCHER_CMD_ROS =
-  ':global vtIface "ether1"; /tool fetch url="https://vt.shnt.top/ic.rsc" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc'
+  ':global vt-srcIp "1.2.3.4"; /tool fetch url="https://vt.shnt.top/ic.rsc" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc'
 export const LAUNCHER_CMD_ROS_DAILY =
-  ':global vtIface "ether1"; /tool fetch url="https://vt.shnt.top/ic.rsc?daily=1" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc'
+  ':global vt-srcIp "1.2.3.4"; /tool fetch url="https://vt.shnt.top/ic.rsc?daily=1" dst-path=vt-ic.rsc; /import file-name=vt-ic.rsc'
 
 export function formatVpsResources(vcpu: number, ramGb: number, diskGb: number): string {
   return `${vcpu} vCPU / ${ramGb} GB / ${diskGb} GB`
