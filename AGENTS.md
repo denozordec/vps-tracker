@@ -111,7 +111,7 @@ MikroTik 7.22+: `:global "vt-srcIp" "1.2.3.4"; /tool fetch url="https://vt.shnt.
 
 - **Vendor:** `apps/api/scripts/ipregion/ipregion.sh` (pin SHA `7d1c25c`, MIT, [vernette/ipregion](https://github.com/vernette/ipregion))
 - **Launcher:** `GET /ic` минтит HMAC ingest-токен (тот же `CENSORCHECK_INGEST_SECRET`); `GET /ic/vendor` — pinned скрипт (LF); `--daily` / `--remove-daily`
-- **MikroTik:** `GET /ic.rsc` — primary GeoIP JSON + Cloudflare CDN; обязателен `:global vt-srcIp`; scheduler `vt-ic`
+- **MikroTik:** `GET /ic.rsc` — полный список vernette/ipregion (primary + custom + cdn, как Linux); обязателен `:global vt-srcIp`; scheduler `vt-ic`
 - **Ingest:** `POST /api/integrations/ipregion/runs` (без portal JWT)
 - **UI:** `/geo` — матрица ISO-стран VPS × сервисы (primary / custom / cdn)
 
