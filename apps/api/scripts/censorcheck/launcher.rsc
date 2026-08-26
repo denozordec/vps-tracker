@@ -1,12 +1,12 @@
 # VPS Tracker — blocking launcher for RouterOS 7.22+
-# First run: :global vt-srcIp "1.2.3.4"; /tool fetch url="__VT_API_URL__/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc
+# First run: :global "vt-srcIp" "1.2.3.4"; /tool fetch url="__VT_API_URL__/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc
 # HTTPS GET only (no DPI/SNI). Ingest: POST /api/integrations/censorcheck/runs
 
 :local vtApi "__VT_API_URL__"
 :local vtToken "__VT_INGEST_TOKEN__"
 :local vtDaily "__VT_DAILY__"
 :local vtRemove "__VT_REMOVE_DAILY__"
-:local launcherVer "ros-4"
+:local launcherVer "ros-5"
 :local schedName "vt-cc"
 :local dstFile "vt-cc.rsc"
 
@@ -37,11 +37,12 @@
 :global "vt-srcIp"
 :if (([:typeof $"vt-srcIp"] != "str") or ([:len $"vt-srcIp"] = 0)) do={
   :put "Задайте исходный IP и повторите импорт:"
-  :put ":global vt-srcIp \"1.2.3.4\""
+  :put ":global \"vt-srcIp\" \"1.2.3.4\""
   :error "vt-srcIp не задан"
 }
 :local srcIp $"vt-srcIp"
 :put ("vt-srcIp: " . $srcIp)
+:local ingestOk false
 
 :local r
 :local publicIp ""
@@ -156,13 +157,33 @@
   results=$results\
 }
 :local json [:serialize to=json value=$payload]
-:local hdrs ("Content-Type: application/json,Authorization: Bearer " . $vtToken)
-:put "Отправляю ingest..."
-:do {
+:local hdrs ("Content-Type:application/json,Authorization:Bearer " . $vtToken)
+:put ("Отправляю ingest (" . [:len $json] . " B)...")
+:set ingestOk false
+:onerror err,attr in={
   :set r [/tool fetch url=($vtApi . "/api/integrations/censorcheck/runs") src-address=$srcIp http-method=post http-header-field=$hdrs http-data=$json output=user as-value]
   :put ($r->"data")
-} on-error={
-  :put "API недоступен (fetch error)"
+  :set ingestOk true
+} do={
+  :put ("ingest: " . $err)
+  :if (([:typeof $attr] = "array") and ([:typeof ($attr->"code")] != "nil")) do={
+    :put ("code: " . ($attr->"code"))
+  }
+  :if (([:typeof $attr] = "array") and ([:typeof ($attr->"data")] = "str") and ([:len ($attr->"data")] > 0)) do={
+    :put ($attr->"data")
+  }
+}
+:if ($ingestOk = false) do={
+  :put "повтор ingest без src-address..."
+  :onerror err2,attr2 in={
+    :set r [/tool fetch url=($vtApi . "/api/integrations/censorcheck/runs") http-method=post http-header-field=$hdrs http-data=$json output=user as-value]
+    :put ($r->"data")
+  } do={
+    :put ("ingest retry: " . $err2)
+    :if (([:typeof $attr2] = "array") and ([:typeof ($attr2->"data")] = "str") and ([:len ($attr2->"data")] > 0)) do={
+      :put ($attr2->"data")
+    }
+  }
 }
 
 :if ($vtDaily = "yes") do={
@@ -175,7 +196,7 @@
   :if ($hour < 10) do={ :set hh ("0" . $hour) }
   :if ($minute < 10) do={ :set mm ("0" . $minute) }
   :local startTime ($hh . ":" . $mm . ":00")
-  :local ev (":global vt-srcIp \"" . $srcIp . "\"; /tool fetch url=" . $vtApi . "/cc.rsc dst-path=" . $dstFile . "; /import file-name=" . $dstFile)
+  :local ev (":global \"vt-srcIp\" \"" . $srcIp . "\"; /tool fetch url=" . $vtApi . "/cc.rsc dst-path=" . $dstFile . "; /import file-name=" . $dstFile)
   :do { /system scheduler remove [find name=$schedName] } on-error={}
   /system scheduler add name=$schedName interval=1d start-time=$startTime on-event=$ev policy=read,write,test,policy comment="vps-tracker vt-cc"
   :put ("Ежедневная проверка: каждый день в " . $startTime . " (" . $schedName . ")")

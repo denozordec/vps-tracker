@@ -59,9 +59,9 @@ export const CENSORCHECK_STATUS_LABELS: Record<string, string> = {
 export const LAUNCHER_CMD = 'curl -fsSL https://vt.shnt.top/cc | bash'
 export const LAUNCHER_CMD_DAILY = 'curl -fsSL https://vt.shnt.top/cc | bash -s -- --daily'
 export const LAUNCHER_CMD_ROS =
-  ':global vt-srcIp "1.2.3.4"; /tool fetch url="https://vt.shnt.top/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc'
+  ':global "vt-srcIp" "1.2.3.4"; /tool fetch url="https://vt.shnt.top/cc.rsc" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc'
 export const LAUNCHER_CMD_ROS_DAILY =
-  ':global vt-srcIp "1.2.3.4"; /tool fetch url="https://vt.shnt.top/cc.rsc?daily=1" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc'
+  ':global "vt-srcIp" "1.2.3.4"; /tool fetch url="https://vt.shnt.top/cc.rsc?daily=1" dst-path=vt-cc.rsc; /import file-name=vt-cc.rsc'
 
 export function formatVpsResources(vcpu: number, ramGb: number, diskGb: number): string {
   return `${vcpu} vCPU / ${ramGb} GB / ${diskGb} GB`
