@@ -201,4 +201,21 @@ describe('censorcheck ingest + reads', () => {
     expect(item.vps.providerName).toBe('Test Host')
     expect(item.detectedHoster).toBe('Hetzner')
   })
+
+  it('принимает results как объект с числовыми ключами (RouterOS serialize)', async () => {
+    const res = await post(
+      ingestPayload({
+        schemaVersion: '1',
+        runId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        results: {
+          '0': {
+            service: 'youtube.com',
+            raw: { https: { ipv4: { status: 200 } } },
+          },
+        },
+      }),
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.json().summary.available).toBe(1)
+  })
 })

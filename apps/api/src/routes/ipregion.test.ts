@@ -140,4 +140,19 @@ describe('ipregion ingest + reads', () => {
     const current = await app.inject({ method: 'GET', url: '/api/ipregion/current' })
     expect(current.json().items[0].detectedHoster).toBe('DigitalOcean')
   })
+
+  it('принимает results как объект с числовыми ключами (RouterOS serialize)', async () => {
+    const res = await post(
+      ingestPayload({
+        schemaVersion: '1',
+        runId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        results: {
+          '0': { service: 'maxmind.com', ipv4: 'NL' },
+          '1': { service: 'ipinfo.io', ipv4: 'RU' },
+        },
+      }),
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.json().summary.ok).toBe(2)
+  })
 })

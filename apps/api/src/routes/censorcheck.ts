@@ -7,6 +7,7 @@ import {
   ingestSecret,
   verifyIngestToken,
 } from '../services/censorcheck/ingest-token.js'
+import { coerceRouterosIngestBody } from '../lib/ros-ingest.js'
 import { matchVpsByPublicIp, resolveProbeIp } from '../services/censorcheck/match-ip.js'
 import { normalizeIngestResult, summarizeResults } from '../services/censorcheck/normalize.js'
 
@@ -44,7 +45,7 @@ export const censorcheckRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       if (!requireIngestToken(request, reply)) return
 
-      const parsed = censorcheckIngestBodySchema.safeParse(request.body)
+      const parsed = censorcheckIngestBodySchema.safeParse(coerceRouterosIngestBody(request.body))
       if (!parsed.success) {
         return sendError(reply, 400, 'VALIDATION', parsed.error.message)
       }

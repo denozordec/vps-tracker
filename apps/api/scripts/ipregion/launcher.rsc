@@ -6,7 +6,7 @@
 :local vtToken "__VT_INGEST_TOKEN__"
 :local vtDaily "__VT_DAILY__"
 :local vtRemove "__VT_REMOVE_DAILY__"
-:local launcherVer "ros-5"
+:local launcherVer "ros-6"
 :local schedName "vt-ic"
 :local dstFile "vt-ic.rsc"
 
@@ -102,7 +102,8 @@
   "ip-api.com";"cloudflare cdn"\
 }
 
-:local results ({})
+:local resultJson ""
+:local itemJson ""
 :local url ""
 :local method "get"
 :local postData ""
@@ -259,22 +260,24 @@
 
   :put ($name . " " . $iso)
   :set item { service=$name; ipv4=$iso }
-  :set ($results->[:len $results]) $item
+  :set itemJson [:serialize to=json value=$item]
+  :if ([:len $resultJson] > 0) do={ :set resultJson ($resultJson . ",") }
+  :set resultJson ($resultJson . $itemJson)
 }
 
 :local probe { publicIp=$publicIp }
 :if ([:len $hoster] > 0) do={ :set ($probe->"hoster") $hoster }
 
-:local payload {\
+:local meta {\
   schemaVersion=1;\
   runId=$runId;\
   probe=$probe;\
   launcherVersion=$launcherVer;\
-  ipregion={ version="ros" };\
-  results=$results\
+  ipregion={ version="ros" }\
 }
-:local json [:serialize to=json value=$payload]
-:local hdrs ("Content-Type:application/json,Authorization:Bearer " . $vtToken)
+:local metaJson [:serialize to=json value=$meta]
+:local json ([:pick $metaJson 0 ([:len $metaJson] - 1)] . ",\"results\":[" . $resultJson . "]}")
+:local hdrs {"Content-Type: application/json"; ("Authorization: Bearer " . $vtToken)}
 :put ("Отправляю ingest (" . [:len $json] . " B)...")
 :set ingestOk false
 :onerror err,attr in={

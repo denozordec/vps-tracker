@@ -9,6 +9,7 @@ import {
   verifyIngestToken,
 } from '../services/censorcheck/ingest-token.js'
 import { matchVpsByPublicIp, resolveProbeIp } from '../services/censorcheck/match-ip.js'
+import { coerceRouterosIngestBody } from '../lib/ros-ingest.js'
 import { normalizeIngestResult, summarizeResults } from '../services/ipregion/normalize.js'
 
 const BODY_LIMIT = 512 * 1024
@@ -45,7 +46,7 @@ export const ipregionRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       if (!requireIngestToken(request, reply)) return
 
-      const parsed = ipregionIngestBodySchema.safeParse(request.body)
+      const parsed = ipregionIngestBodySchema.safeParse(coerceRouterosIngestBody(request.body))
       if (!parsed.success) {
         return sendError(reply, 400, 'VALIDATION', parsed.error.message)
       }
