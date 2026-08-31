@@ -17,7 +17,7 @@ import { QueryState } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 import {
   Frame,
@@ -200,8 +200,16 @@ function VpsDetailPage() {
             <TabsContent value="overview" className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-2">
                 <StatusBadge status={row.status} label={vpsStatusLabel(row.status)} />
-                {row.project ? <Badge variant="outline">{row.project}</Badge> : null}
-                {row.environment ? <Badge variant="outline">{row.environment}</Badge> : null}
+                {row.project ? (
+                  <Badge variant="outline" size="sm" radius="full">
+                    {row.project}
+                  </Badge>
+                ) : null}
+                {row.environment ? (
+                  <Badge variant="outline" size="sm" radius="full">
+                    {row.environment}
+                  </Badge>
+                ) : null}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailFrame title="Сеть" icon={<GlobeIcon className="size-4" />}>

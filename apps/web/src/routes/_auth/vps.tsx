@@ -10,11 +10,12 @@ import { normalizeRatesPayload, effectiveVpsTariffCurrency, formatInProviderCurr
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { ResourcePage, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/reui-kit'
 import type { ColumnVisibilityState } from '@tanstack/react-table'
 import type { DataGridColumn } from '@/components/data-grid-types'
-import { dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
+import { DataGridNameCell, dataGridCellStack, dataGridCellWithFlag } from '@/components/data-grid-cells'
+import { StatusBadge } from '@/components/status-badge'
 import { CountryFlag } from '@/components/country-flag'
 import { QueryState } from '@/components/query-state'
 import { EmptyState } from '@/components/empty-state'
@@ -344,30 +345,35 @@ function VpsPage() {
       header: 'IP / DNS',
       icon: GlobeIcon,
       sortValue: (v) => v.ip || v.dns || '',
-      cell: (v) =>
-        dataGridCellStack(
-          v.ip ? (
-            <Button
-              type="button"
-              variant="link"
-              className="h-auto p-0 font-normal"
-              onClick={() => void copyText(v.ip, 'IP скопирован')}
-            >
-              {v.ip}
-            </Button>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          ),
-          v.dns ? (
-            <Button
-              variant="link"
-              className="text-muted-foreground h-auto p-0 text-xs font-normal"
-              render={<Link to="/vps/$vpsId" params={{ vpsId: v.id }} />}
-            >
-              {v.dns}
-            </Button>
-          ) : undefined,
-        ),
+      cell: (v) => (
+        <DataGridNameCell
+          icon={GlobeIcon}
+          title={
+            v.ip ? (
+              <button
+                type="button"
+                className="truncate text-left font-medium hover:underline"
+                onClick={() => void copyText(v.ip, 'IP скопирован')}
+              >
+                {v.ip}
+              </button>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )
+          }
+          subtitle={
+            v.dns ? (
+              <Link
+                to="/vps/$vpsId"
+                params={{ vpsId: v.id }}
+                className="truncate hover:underline"
+              >
+                {v.dns}
+              </Link>
+            ) : undefined
+          }
+        />
+      ),
     },
     {
       key: 'domains',
@@ -439,11 +445,11 @@ function VpsPage() {
       cell: (v) => (
         <div className="flex items-center gap-1.5">
           {v.access === 'shared' ? (
-            <Badge variant="outline">Общий</Badge>
+            <Badge variant="outline" size="sm" radius="full">
+              Общий
+            </Badge>
           ) : null}
-          <Badge variant={v.status === 'active' ? 'default' : v.status === 'archived' ? 'outline' : 'secondary'}>
-            {vpsStatusLabel(v.status)}
-          </Badge>
+          <StatusBadge status={v.status} label={vpsStatusLabel(v.status)} />
         </div>
       ),
     },
@@ -484,9 +490,9 @@ function VpsPage() {
       cell: (v) => {
         const ext = v as Vps & { lastHealthStatus?: string; monitoringEnabled?: boolean }
         if (!ext.monitoringEnabled) return <span className="text-muted-foreground">—</span>
-        if (ext.lastHealthStatus === 'up') return <Badge variant="default">up</Badge>
-        if (ext.lastHealthStatus === 'down') return <Badge variant="destructive">down</Badge>
-        return <Badge variant="outline">—</Badge>
+        if (ext.lastHealthStatus === 'up') return <StatusBadge status="up" label="up" />
+        if (ext.lastHealthStatus === 'down') return <StatusBadge status="down" label="down" />
+        return <span className="text-muted-foreground">—</span>
       },
     },
     {
@@ -529,7 +535,7 @@ function VpsPage() {
       header: '',
       sortable: false,
       enableHiding: false,
-      className: 'w-24 text-right',
+      className: 'w-12 text-right',
       cell: (v) => (
         <RowActions
           onEdit={v.access === 'shared' && v.grantPermission !== 'write' ? undefined : () => openEdit(v)}
@@ -537,19 +543,18 @@ function VpsPage() {
           deleteTitle="Удалить VPS?"
           deleteDescription={`IP ${v.ip} будет удалён безвозвратно.`}
           extra={
-            v.access !== 'shared' ? (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Доступ"
-                onClick={() => {
-                  setAccessVps(v)
-                  setAccessOpen(true)
-                }}
-              >
-                <Share2Icon />
-              </Button>
-            ) : null
+            v.access !== 'shared'
+              ? [
+                  {
+                    label: 'Доступ',
+                    icon: Share2Icon,
+                    onSelect: () => {
+                      setAccessVps(v)
+                      setAccessOpen(true)
+                    },
+                  },
+                ]
+              : undefined
           }
         />
       ),
@@ -683,7 +688,6 @@ function VpsPage() {
                 data={section.items}
                 getRowId={(v) => v.id}
                 emptyTitle="VPS не найдены"
-                pinLastColumn
                 dense={filters.tableCompact}
                 enableRowSelection
                 onRowSelectionChange={setSelectedIds}

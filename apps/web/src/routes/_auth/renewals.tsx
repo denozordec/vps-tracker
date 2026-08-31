@@ -16,7 +16,7 @@ import {
   FramePanel,
   FrameTitle,
 } from '@/components/reui/frame'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { Button } from '@cfdm/ui/components/button'
 import { SelectField } from '@/components/select-field'
 import { getPaidUntilDate } from '@/lib/paid-until'
@@ -197,7 +197,11 @@ function RenewalsPage() {
                         <span className="text-xs text-muted-foreground">{item.sublabel}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {item.overdue ? <Badge variant="destructive">Просрочено</Badge> : null}
+                        {item.overdue ? (
+                          <Badge variant="destructive-light" size="sm" radius="full">
+                            Просрочено
+                          </Badge>
+                        ) : null}
                         <span className="tabular-nums text-sm">{item.date.toLocaleDateString('ru-RU')}</span>
                       </div>
                     </div>

@@ -143,7 +143,7 @@ function PaymentsPage() {
       key: 'actions',
       header: '',
       sortable: false,
-      className: 'w-24 text-right',
+      className: 'w-12 text-right',
       cell: (p) => (
         <RowActions
           onEdit={() => openEdit(p)}
@@ -250,7 +250,6 @@ function PaymentsPage() {
               columns={columnDefFromDataGrid(columns)}
               data={sorted}
               getRowId={(p) => p.id}
-              pinLastColumn
               virtualization={sorted.length > 200}
               height={560}
               footerContent={

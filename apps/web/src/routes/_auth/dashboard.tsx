@@ -277,7 +277,7 @@ function DashboardPage() {
               iconClassName: 'text-primary',
               to: '/vps',
               footer: (
-                <Badge variant="outline" size="sm">
+                <Badge variant="outline" size="sm" radius="full">
                   {totalCount} всего
                 </Badge>
               ),
@@ -290,7 +290,7 @@ function DashboardPage() {
               iconClassName: 'text-info',
               to: '/reports',
               footer: (
-                <Badge variant="info-light" size="sm">
+                <Badge variant="info-light" size="sm" radius="full">
                   оценка
                 </Badge>
               ),
@@ -308,7 +308,7 @@ function DashboardPage() {
               iconClassName: 'text-success',
               to: '/accounts',
               footer: (
-                <Badge variant="success-light" size="sm">
+                <Badge variant="success-light" size="sm" radius="full">
                   API
                 </Badge>
               ),
@@ -322,11 +322,11 @@ function DashboardPage() {
               variant: runwayLow ? 'warning' : 'default',
               to: '/accounts',
               footer: runwayLow ? (
-                <Badge variant="warning-light" size="sm">
+                <Badge variant="warning-light" size="sm" radius="full">
                   &lt; 14 дн
                 </Badge>
               ) : (
-                <Badge variant="outline" size="sm">
+                <Badge variant="outline" size="sm" radius="full">
                   запас
                 </Badge>
               ),
@@ -343,6 +343,7 @@ function DashboardPage() {
                 <Badge
                   variant={expiringCount > 0 ? 'warning-light' : 'success-light'}
                   size="sm"
+                  radius="full"
                 >
                   {expiringCount > 0 ? 'скоро' : 'в норме'}
                 </Badge>
@@ -360,6 +361,7 @@ function DashboardPage() {
                 <Badge
                   variant={issuesCount > 0 ? 'destructive-light' : 'success-light'}
                   size="sm"
+                  radius="full"
                 >
                   {issuesCount > 0 ? 'требует внимания' : 'в норме'}
                 </Badge>
@@ -406,7 +408,9 @@ function DashboardPage() {
                         <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                           Проблемы
                           {issues.length > 0 ? (
-                            <Badge variant="secondary">{issues.length}</Badge>
+                            <Badge variant="secondary" size="sm" radius="full">
+                              {issues.length}
+                            </Badge>
                           ) : null}
                         </TabsTrigger>
                         <TabsTrigger value="recent" className={DASHBOARD_TAB_TRIGGER_CLASS}>
@@ -415,7 +419,9 @@ function DashboardPage() {
                         <TabsTrigger value="risk" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
                           Аккаунты
                           {atRisk.length > 0 ? (
-                            <Badge variant="outline">{atRisk.length}</Badge>
+                            <Badge variant="outline" size="sm" radius="full">
+                              {atRisk.length}
+                            </Badge>
                           ) : null}
                         </TabsTrigger>
                       </TabsList>

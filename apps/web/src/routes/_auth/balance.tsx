@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions, ratesQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack } from '@/components/data-grid-cells'
@@ -100,7 +100,11 @@ function BalancePage() {
       header: 'Движение',
       icon: ArrowLeftRightIcon,
       cell: (r) => (
-        <Badge variant={r.direction === 'credit' ? 'default' : 'destructive'}>
+        <Badge
+          variant={r.direction === 'credit' ? 'success-light' : 'destructive-light'}
+          size="sm"
+          radius="full"
+        >
           <ArrowDownUpIcon data-icon="inline-start" />
           {r.direction === 'credit' ? 'Приход' : 'Списание'}
         </Badge>
@@ -236,7 +240,6 @@ function BalancePage() {
               columns={columnDefFromDataGrid(columns)}
               data={rows}
               getRowId={(r) => r.id}
-              pinLastColumn
               footerContent={
                 <div className="flex flex-wrap justify-end gap-6 px-3 py-2 text-sm tabular-nums">
                   <span>

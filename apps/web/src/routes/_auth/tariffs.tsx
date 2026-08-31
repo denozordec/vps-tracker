@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Alert, AlertDescription, AlertTitle } from '@cfdm/ui/components/alert'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { ResourcePage, columnDefFromDataGrid, loadStoredColumnVisibility, dataGridColumnVisibilityOptions } from '@/components/reui-kit'
 import type { ColumnVisibilityState } from '@tanstack/react-table'
 import type { DataGridColumn } from '@/components/data-grid-types'
@@ -224,7 +224,7 @@ function TariffsPage() {
         header: 'Диск',
         icon: HardDriveIcon,
         sortValue: (t) => t.diskType ?? '',
-        cell: (t) => <Badge variant="outline">{t.diskType ?? '—'}</Badge>,
+        cell: (t) => <Badge variant="outline" size="sm" radius="full">{t.diskType ?? '—'}</Badge>,
       },
       {
         key: 'location',

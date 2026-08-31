@@ -7,15 +7,14 @@ import { toast } from 'sonner'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { ResourcePage, columnDefFromDataGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
-import { dataGridCellWithIcon } from '@/components/data-grid-cells'
+import { DataGridNameCell } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
 import { ProviderEditSheet, providerFormDefaults } from '@/components/domain/provider-edit-sheet'
 import type { ProviderFormValues } from '@/lib/schemas'
-import { faviconUrlFromWebsite } from '@/lib/format'
 import type { Provider } from '@/types/entities'
 
 export const Route = createFileRoute('/_auth/providers')({
@@ -79,20 +78,19 @@ function ProvidersPage() {
       key: 'name',
       header: 'Хостер',
       icon: BuildingIcon,
-      cell: (p) => {
-        const icon = p.website ? (
-          <img src={faviconUrlFromWebsite(p.website)} alt="" className="size-4 rounded-sm" />
-        ) : (
-          <BuildingIcon />
-        )
-        return dataGridCellWithIcon(icon, <span className="font-medium">{p.name}</span>)
-      },
+      cell: (p) => (
+        <DataGridNameCell
+          icon={BuildingIcon}
+          title={p.name}
+          subtitle={p.website || undefined}
+        />
+      ),
     },
     {
       key: 'api',
       header: 'API',
       icon: PlugIcon,
-      cell: (p) => <Badge variant="outline">{p.apiType}</Badge>,
+      cell: (p) => <Badge variant="outline" size="sm" radius="full">{p.apiType}</Badge>,
     },
     {
       key: 'cur',
@@ -104,7 +102,7 @@ function ProvidersPage() {
       key: 'actions',
       header: '',
       sortable: false,
-      className: 'w-24 text-right',
+      className: 'w-12 text-right',
       cell: (p) => (
         <RowActions
           onEdit={() => openEdit(p)}

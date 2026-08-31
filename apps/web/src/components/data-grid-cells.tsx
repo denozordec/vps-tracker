@@ -1,7 +1,9 @@
+import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { cn } from '@cfdm/ui/lib/utils'
+import { IconTile } from '@/components/reui/icon-tile'
 import { TruncatedText } from '@/components/truncated-text'
+import { cn } from '@cfdm/ui/lib/utils'
 
 export function dataGridCellStack(
   primary: ReactNode,
@@ -26,14 +28,49 @@ export function dataGridCellStack(
   )
 }
 
+/**
+ * Name cell DNA — IconTile elevated size-10.5 + truncate.
+ * Preview: https://reui.io/preview/base/stats-12
+ * Docs: https://reui.io/docs/components/base/icon-tile
+ */
+export function DataGridNameCell({
+  icon: Icon,
+  title,
+  subtitle,
+  iconClassName = 'text-muted-foreground',
+  className,
+}: {
+  icon: LucideIcon
+  title: ReactNode
+  subtitle?: ReactNode
+  iconClassName?: string
+  className?: string
+}) {
+  return (
+    <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
+      <IconTile variant="elevated" className="size-10.5" aria-hidden>
+        <Icon className={iconClassName} />
+      </IconTile>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate font-medium">{title}</span>
+        {subtitle ? (
+          <span className="truncate text-xs text-muted-foreground">{subtitle}</span>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 export function dataGridCellWithIcon(
   icon: ReactNode,
   children: ReactNode,
   className?: string,
 ) {
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <span className="shrink-0 text-muted-foreground">{icon}</span>
+    <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
+      <IconTile variant="elevated" className="size-10.5" aria-hidden>
+        {icon}
+      </IconTile>
       {children}
     </div>
   )

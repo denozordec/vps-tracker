@@ -25,7 +25,7 @@ import {
   type ProjectFiltersState,
 } from '@/components/project-filters'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { EmptyState } from '@/components/empty-state'
 import { ProjectColorDot } from '@/components/project-color-dot'
 import { ProjectEditSheet, projectFormDefaults } from '@/components/domain/project-edit-sheet'
@@ -153,7 +153,7 @@ function ProjectsPage() {
       className: 'text-right tabular-nums',
       sortValue: (row) => row.vpsTotal,
       cell: (row) => (
-        <Badge variant="secondary">
+        <Badge variant="secondary" size="sm" radius="full">
           {row.vpsActive}/{row.vpsTotal}
         </Badge>
       ),
@@ -183,7 +183,7 @@ function ProjectsPage() {
       key: 'actions',
       header: '',
       sortable: false,
-      className: 'w-24 text-right',
+      className: 'w-12 text-right',
       cell: (row) => (
         <div onClick={(e) => e.stopPropagation()}>
           <RowActions
@@ -298,7 +298,6 @@ function ProjectsPage() {
               columns={columnDefFromDataGrid(columns)}
               data={rows}
               getRowId={(r) => r.id}
-              pinLastColumn
               onRowClick={(row) =>
                 void navigate({
                   to: '/projects/$projectId',

@@ -8,7 +8,7 @@ export {
 } from '@cfdm/shared/contracts/custom-fields'
 
 import type { ReactNode } from 'react'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import {
   type CustomFieldDef,
   formatCustomFieldValue,
@@ -39,7 +39,7 @@ export function buildCustomFieldColumns<T extends { customData?: unknown }>(
       }
       if (def.type === 'bool') {
         return (
-          <Badge variant={val ? 'default' : 'outline'}>
+          <Badge variant={val ? 'success-light' : 'outline'} size="sm" radius="full">
             {formatCustomFieldValue(def, val)}
           </Badge>
         )

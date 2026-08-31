@@ -20,10 +20,10 @@ import { buildApiCredentials } from '@cfdm/shared/utils/api-credentials'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { api, ApiError } from '@/lib/api-client'
 import { Button } from '@cfdm/ui/components/button'
-import { Badge } from '@cfdm/ui/components/badge'
+import { Badge } from '@/components/reui/badge'
 import { ResourcePage, columnDefFromDataGrid, KpiStatGrid } from '@/components/reui-kit'
 import type { DataGridColumn } from '@/components/data-grid-types'
-import { dataGridCellStack } from '@/components/data-grid-cells'
+import { dataGridCellStack, DataGridNameCell } from '@/components/data-grid-cells'
 import { CrudListPage } from '@/components/crud-list-page'
 import { RowActions } from '@/components/row-actions'
 import { HealthModeBanner } from '@/components/health-mode-banner'
@@ -62,10 +62,13 @@ const accountsSearchSchema = z.object({
   health: z.string().optional(),
 })
 
-const HEALTH_BADGE_VARIANT: Record<AccountHealthFlag, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  'stale-sync': 'secondary',
-  'low-balance': 'destructive',
-  'balance-mismatch': 'outline',
+const HEALTH_BADGE_VARIANT: Record<
+  AccountHealthFlag,
+  'warning-light' | 'destructive-light' | 'outline'
+> = {
+  'stale-sync': 'warning-light',
+  'low-balance': 'destructive-light',
+  'balance-mismatch': 'warning-light',
   'no-creds': 'outline',
 }
 
@@ -267,7 +270,13 @@ function AccountsPage() {
       key: 'name',
       header: 'Аккаунт',
       icon: UserRoundIcon,
-      cell: (a) => dataGridCellStack(a.name, providerById.get(a.providerId)?.name ?? '—'),
+      cell: (a) => (
+        <DataGridNameCell
+          icon={UserRoundIcon}
+          title={a.name}
+          subtitle={providerById.get(a.providerId)?.name ?? '—'}
+        />
+      ),
     },
     {
       key: 'login',
@@ -285,12 +294,12 @@ function AccountsPage() {
       cell: (a) => {
         const flags = getAccountHealthFlags(a, healthCtx)
         if (!flags.length) {
-          return <Badge variant="outline">OK</Badge>
+          return <Badge variant="success-light" size="sm" radius="full">OK</Badge>
         }
         return (
           <div className="flex flex-wrap gap-1">
             {flags.map((flag) => (
-              <Badge key={flag} variant={HEALTH_BADGE_VARIANT[flag]}>
+              <Badge key={flag} variant={HEALTH_BADGE_VARIANT[flag]} size="sm" radius="full">
                 {ACCOUNT_HEALTH_LABELS[flag]}
               </Badge>
             ))}
@@ -303,7 +312,7 @@ function AccountsPage() {
       header: 'API-доступ',
       icon: PlugIcon,
       cell: (a) => (
-        <Badge variant={a.apiCredentialsSet ? 'default' : 'outline'}>
+        <Badge variant={a.apiCredentialsSet ? 'success-light' : 'outline'} size="sm" radius="full">
           {a.apiCredentialsSet ? 'установлены' : 'нет'}
         </Badge>
       ),
@@ -323,7 +332,7 @@ function AccountsPage() {
       sortValue: (a) => vpsCountByAccount.get(a.id) ?? 0,
       cell: (a) => {
         const count = vpsCountByAccount.get(a.id) ?? 0
-        return count ? <Badge variant="secondary">{count}</Badge> : <span className="text-muted-foreground">0</span>
+        return count ? <Badge variant="secondary" size="sm" radius="full">{count}</Badge> : <span className="text-muted-foreground">0</span>
       },
     },
     {
@@ -358,7 +367,7 @@ function AccountsPage() {
       key: 'actions',
       header: '',
       sortable: false,
-      className: 'w-32 text-right',
+      className: 'w-12 text-right',
       cell: (a) => {
         const provider = providerById.get(a.providerId)
         const canSync = accountBillmanagerUiReady(a, provider)
@@ -369,17 +378,16 @@ function AccountsPage() {
             deleteTitle="Удалить аккаунт?"
             deleteDescription={`«${a.name}» будет удалён.`}
             extra={
-              canSync ? (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Синхронизировать"
-                  disabled={syncMut.isPending && syncMut.variables === a.id}
-                  onClick={() => syncMut.mutate(a.id)}
-                >
-                  <RefreshCwIcon />
-                </Button>
-              ) : null
+              canSync
+                ? [
+                    {
+                      label: 'Синхронизировать',
+                      icon: RefreshCwIcon,
+                      disabled: syncMut.isPending && syncMut.variables === a.id,
+                      onSelect: () => syncMut.mutate(a.id),
+                    },
+                  ]
+                : undefined
             }
           />
         )
@@ -450,7 +458,6 @@ function AccountsPage() {
             columns={columnDefFromDataGrid(columns)}
             data={filteredAccounts}
             getRowId={(a) => a.id}
-            pinLastColumn
             emptyTitle={health || hasActiveAccountFilters(filters) ? 'Нет аккаунтов с этими фильтрами' : 'Нет записей'}
             emptyDescription={
               health || hasActiveAccountFilters(filters)
