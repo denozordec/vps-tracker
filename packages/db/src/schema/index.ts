@@ -213,25 +213,31 @@ export const settings = sqliteTable('settings', {
   showQuickActions: integer('showQuickActions'),
 })
 
-export const vpsDomains = sqliteTable('vps_domains', {
-  id: text('id').primaryKey(),
-  spaceId: text('spaceId')
-    .notNull()
-    .default('space-main')
-    .references(() => spaces.id),
-  vpsId: text('vpsId').references(() => vps.id, { onDelete: 'set null' }),
-  fqdn: text('fqdn').notNull(),
-  zoneName: text('zoneName').notNull(),
-  hostname: text('hostname').notNull(),
-  serviceName: text('serviceName').notNull(),
-  serviceSlug: text('serviceSlug').notNull(),
-  cfdmServiceId: integer('cfdmServiceId').notNull(),
-  cfdmBindingId: integer('cfdmBindingId').notNull(),
-  source: text('source').notNull().default('cfdm'),
-  matchStatus: text('matchStatus').notNull().default('unmatched'),
-  targetIps: text('targetIps'),
-  syncedAt: text('syncedAt').notNull(),
-})
+export const vpsDomains = sqliteTable(
+  'vps_domains',
+  {
+    id: text('id').primaryKey(),
+    spaceId: text('spaceId')
+      .notNull()
+      .default('space-main')
+      .references(() => spaces.id),
+    vpsId: text('vpsId').references(() => vps.id, { onDelete: 'set null' }),
+    fqdn: text('fqdn').notNull(),
+    zoneName: text('zoneName').notNull(),
+    hostname: text('hostname').notNull(),
+    serviceName: text('serviceName').notNull(),
+    serviceSlug: text('serviceSlug').notNull(),
+    cfdmServiceId: integer('cfdmServiceId').notNull(),
+    cfdmBindingId: integer('cfdmBindingId').notNull(),
+    source: text('source').notNull().default('cfdm'),
+    matchStatus: text('matchStatus').notNull().default('unmatched'),
+    targetIps: text('targetIps'),
+    syncedAt: text('syncedAt').notNull(),
+  },
+  (t) => ({
+    bindingVpsUniq: uniqueIndex('vps_domains_binding_vps').on(t.cfdmBindingId, t.vpsId),
+  }),
+)
 
 export const notificationLog = sqliteTable('notification_log', {
   id: text('id').primaryKey(),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   collectVpsIps,
   findVpsIdByIps,
+  findVpsIdsByIps,
   isPrivateOrLoopbackIp,
   normalizeIp,
 } from './ip-match.js'
@@ -31,6 +32,25 @@ describe('ip-match', () => {
       { id: 'b', ip: '', additionalIps: ['203.0.113.10'] },
     ]
     expect(findVpsIdByIps(all, ['203.0.113.10'])).toBeNull()
+    expect(findVpsIdsByIps(all, ['203.0.113.10'])).toEqual([])
+  })
+
+  it('собирает оба VPS по разным однозначным IP', () => {
+    const all = [
+      { id: 'a', ip: '203.0.113.10', additionalIps: [] },
+      { id: 'b', ip: '203.0.113.20', additionalIps: [] },
+    ]
+    expect(findVpsIdByIps(all, ['203.0.113.10', '203.0.113.20'])).toBeNull()
+    expect(findVpsIdsByIps(all, ['203.0.113.10', '203.0.113.20']).sort()).toEqual(['a', 'b'])
+  })
+
+  it('пропускает неоднозначный IP и оставляет однозначные', () => {
+    const all = [
+      { id: 'a', ip: '203.0.113.10', additionalIps: [] },
+      { id: 'b', ip: '203.0.113.20', additionalIps: ['203.0.113.10'] },
+      { id: 'c', ip: '198.51.100.1', additionalIps: [] },
+    ]
+    expect(findVpsIdsByIps(all, ['203.0.113.10', '198.51.100.1'])).toEqual(['c'])
   })
 
   it('считает loopback и RFC1918 приватными', () => {

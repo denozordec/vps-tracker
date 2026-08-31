@@ -147,6 +147,164 @@ describe('vpsDomainsRepository', () => {
     const domains = vpsDomainsRepository.listByVpsId(created.id)
     expect(domains.map((d) => d.fqdn).sort()).toEqual(['home.rkns.top', 'mhome.rkns.top'])
   })
+
+  it('привязывает общий FQDN ко всем VPS с однозначными IP', () => {
+    const vpsA = vpsRepository.create({
+      ip: '203.0.113.40',
+      providerId: 'p1',
+      providerAccountId: 'a1',
+      status: 'active',
+      tariffType: 'monthly',
+      currency: 'RUB',
+      vcpu: 1,
+      ramGb: 1,
+      diskGb: 10,
+    })
+    const vpsB = vpsRepository.create({
+      ip: '203.0.113.41',
+      providerId: 'p1',
+      providerAccountId: 'a1',
+      status: 'active',
+      tariffType: 'monthly',
+      currency: 'RUB',
+      vcpu: 1,
+      ramGb: 1,
+      diskGb: 10,
+    })
+    const a = Array.isArray(vpsA) ? vpsA[0]! : vpsA
+    const b = Array.isArray(vpsB) ? vpsB[0]! : vpsB
+
+    const result = vpsDomainsRepository.syncBindings([
+      {
+        bindingId: 6,
+        serviceId: 30,
+        serviceName: 'DNS',
+        serviceSlug: 'dns',
+        fqdn: 'dns.example.com',
+        zoneName: 'example.com',
+        hostname: 'dns',
+        ips: ['203.0.113.40', '203.0.113.41'],
+      },
+      {
+        bindingId: 7,
+        serviceId: 30,
+        serviceName: 'DNS',
+        serviceSlug: 'dns',
+        fqdn: '*.dns.example.com',
+        zoneName: 'example.com',
+        hostname: '*.dns',
+        ips: ['203.0.113.40', '203.0.113.41'],
+      },
+    ])
+
+    expect(result.matched).toBe(2)
+    expect(result.unmatched).toBe(0)
+    expect(result.upserted).toBe(4)
+    expect(vpsDomainsRepository.listUnmatched()).toHaveLength(0)
+    expect(vpsDomainsRepository.listByVpsId(a.id).map((d) => d.fqdn).sort()).toEqual([
+      '*.dns.example.com',
+      'dns.example.com',
+    ])
+    expect(vpsDomainsRepository.listByVpsId(b.id).map((d) => d.fqdn).sort()).toEqual([
+      '*.dns.example.com',
+      'dns.example.com',
+    ])
+  })
+
+  it('привязывает только VPS с совпавшим IP, если второй IP неизвестен', () => {
+    const vps = vpsRepository.create({
+      ip: '203.0.113.50',
+      providerId: 'p1',
+      providerAccountId: 'a1',
+      status: 'active',
+      tariffType: 'monthly',
+      currency: 'RUB',
+      vcpu: 1,
+      ramGb: 1,
+      diskGb: 10,
+    })
+    const created = Array.isArray(vps) ? vps[0]! : vps
+
+    const result = vpsDomainsRepository.syncBindings([
+      {
+        bindingId: 8,
+        serviceId: 31,
+        serviceName: 'DNS',
+        serviceSlug: 'dns',
+        fqdn: 'ns.example.com',
+        zoneName: 'example.com',
+        hostname: 'ns',
+        ips: ['203.0.113.50', '198.51.100.9'],
+      },
+    ])
+
+    expect(result.matched).toBe(1)
+    expect(result.unmatched).toBe(0)
+    expect(vpsDomainsRepository.listByVpsId(created.id)).toHaveLength(1)
+    expect(vpsDomainsRepository.listUnmatched()).toHaveLength(0)
+  })
+
+  it('наследует все VPS родителя по CNAME', () => {
+    const vpsA = vpsRepository.create({
+      ip: '203.0.113.60',
+      providerId: 'p1',
+      providerAccountId: 'a1',
+      status: 'active',
+      tariffType: 'monthly',
+      currency: 'RUB',
+      vcpu: 1,
+      ramGb: 1,
+      diskGb: 10,
+    })
+    const vpsB = vpsRepository.create({
+      ip: '203.0.113.61',
+      providerId: 'p1',
+      providerAccountId: 'a1',
+      status: 'active',
+      tariffType: 'monthly',
+      currency: 'RUB',
+      vcpu: 1,
+      ramGb: 1,
+      diskGb: 10,
+    })
+    const a = Array.isArray(vpsA) ? vpsA[0]! : vpsA
+    const b = Array.isArray(vpsB) ? vpsB[0]! : vpsB
+
+    const result = vpsDomainsRepository.syncBindings([
+      {
+        bindingId: 9,
+        serviceId: 40,
+        serviceName: 'DNS',
+        serviceSlug: 'dns',
+        fqdn: 'dns.example.com',
+        zoneName: 'example.com',
+        hostname: 'dns',
+        ips: ['203.0.113.60', '203.0.113.61'],
+      },
+      {
+        bindingId: 10,
+        serviceId: 41,
+        serviceName: 'Alias',
+        serviceSlug: 'alias',
+        fqdn: 'ns.other.example',
+        zoneName: 'other.example',
+        hostname: 'ns',
+        ips: [],
+        cnameTarget: 'dns.example.com',
+      },
+    ])
+
+    expect(result.matched).toBe(2)
+    expect(result.unmatched).toBe(0)
+    expect(vpsDomainsRepository.listByVpsId(a.id).map((d) => d.fqdn).sort()).toEqual([
+      'dns.example.com',
+      'ns.other.example',
+    ])
+    expect(vpsDomainsRepository.listByVpsId(b.id).map((d) => d.fqdn).sort()).toEqual([
+      'dns.example.com',
+      'ns.other.example',
+    ])
+  })
 })
 
 describe('settingsRepository integration fields', () => {

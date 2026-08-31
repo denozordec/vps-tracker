@@ -36,18 +36,24 @@ export function collectVpsIps(vps: {
 }
 
 export function findVpsIdByIps<T extends VpsIpFields>(allVps: T[], ips: string[]): string | null {
-  const normalized = [...new Set(ips.map(normalizeIp).filter((ip) => ip && isIpLiteral(ip)))]
-  if (normalized.length === 0) return null
+  const ids = findVpsIdsByIps(allVps, ips)
+  return ids.length === 1 ? ids[0]! : null
+}
 
-  const matches: string[] = []
-  for (const v of allVps) {
-    const vips = collectVpsIps(v)
-    if (normalized.some((ip) => vips.includes(ip))) {
-      matches.push(v.id)
-    }
+/**
+ * Все VPS, у которых IP из списка однозначен (этот IP есть ровно у одного сервера).
+ * IP, висящий сразу на двух VPS, пропускается.
+ */
+export function findVpsIdsByIps<T extends VpsIpFields>(allVps: T[], ips: string[]): string[] {
+  const normalized = [...new Set(ips.map(normalizeIp).filter((ip) => ip && isIpLiteral(ip)))]
+  if (normalized.length === 0) return []
+
+  const result = new Set<string>()
+  for (const ip of normalized) {
+    const matches = allVps.filter((v) => collectVpsIps(v).includes(ip))
+    if (matches.length === 1) result.add(matches[0]!.id)
   }
-  if (matches.length === 1) return matches[0]!
-  return null
+  return [...result]
 }
 
 function ipv4Octets(ip: string): number[] | null {

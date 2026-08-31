@@ -258,11 +258,12 @@ const CORE_TABLE_MIGRATIONS: string[] = [
     serviceName TEXT NOT NULL,
     serviceSlug TEXT NOT NULL,
     cfdmServiceId INTEGER NOT NULL,
-    cfdmBindingId INTEGER NOT NULL UNIQUE,
+    cfdmBindingId INTEGER NOT NULL,
     source TEXT NOT NULL DEFAULT 'cfdm',
     matchStatus TEXT NOT NULL DEFAULT 'unmatched',
     targetIps TEXT,
-    syncedAt TEXT NOT NULL
+    syncedAt TEXT NOT NULL,
+    UNIQUE(cfdmBindingId, vpsId)
   )`,
   `CREATE TABLE IF NOT EXISTS vps_grants (
     id TEXT PRIMARY KEY,
@@ -462,6 +463,54 @@ function backfillSpaceIds(sqlite: Database.Database): void {
   }
 }
 
+function rebuildVpsDomainsBindingUnique(sqlite: Database.Database): void {
+  const row = sqlite
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'vps_domains'`)
+    .get() as { sql?: string } | undefined
+  const sql = row?.sql ?? ''
+  if (!sql) return
+  if (sql.includes('UNIQUE(cfdmBindingId, vpsId)') || sql.includes('UNIQUE (cfdmBindingId, vpsId)')) {
+    return
+  }
+
+  sqlite.exec('PRAGMA foreign_keys = OFF')
+  sqlite.exec('BEGIN')
+  try {
+    sqlite.exec(`CREATE TABLE vps_domains_new (
+      id TEXT PRIMARY KEY,
+      spaceId TEXT NOT NULL DEFAULT 'space-main',
+      vpsId TEXT REFERENCES vps(id) ON DELETE SET NULL,
+      fqdn TEXT NOT NULL,
+      zoneName TEXT NOT NULL,
+      hostname TEXT NOT NULL,
+      serviceName TEXT NOT NULL,
+      serviceSlug TEXT NOT NULL,
+      cfdmServiceId INTEGER NOT NULL,
+      cfdmBindingId INTEGER NOT NULL,
+      source TEXT NOT NULL DEFAULT 'cfdm',
+      matchStatus TEXT NOT NULL DEFAULT 'unmatched',
+      targetIps TEXT,
+      syncedAt TEXT NOT NULL,
+      UNIQUE(cfdmBindingId, vpsId)
+    )`)
+    sqlite.exec(`INSERT INTO vps_domains_new (
+      id, spaceId, vpsId, fqdn, zoneName, hostname, serviceName, serviceSlug,
+      cfdmServiceId, cfdmBindingId, source, matchStatus, targetIps, syncedAt
+    ) SELECT
+      id, COALESCE(spaceId, 'space-main'), vpsId, fqdn, zoneName, hostname, serviceName, serviceSlug,
+      cfdmServiceId, cfdmBindingId, source, matchStatus, targetIps, syncedAt
+    FROM vps_domains`)
+    sqlite.exec('DROP TABLE vps_domains')
+    sqlite.exec('ALTER TABLE vps_domains_new RENAME TO vps_domains')
+    sqlite.exec('COMMIT')
+  } catch (err) {
+    sqlite.exec('ROLLBACK')
+    throw err
+  } finally {
+    sqlite.exec('PRAGMA foreign_keys = ON')
+  }
+}
+
 let migrated = false
 
 export function resetRuntimeMigrate(): void {
@@ -480,6 +529,7 @@ export function ensureRuntimeSchema(sqlite: Database.Database): void {
       /* column exists */
     }
   }
+  rebuildVpsDomainsBindingUnique(sqlite)
   ensureMainSpace(sqlite)
   backfillSpaceIds(sqlite)
   migrated = true

@@ -225,11 +225,12 @@ CREATE TABLE IF NOT EXISTS vps_domains (
   serviceName TEXT NOT NULL,
   serviceSlug TEXT NOT NULL,
   cfdmServiceId INTEGER NOT NULL,
-  cfdmBindingId INTEGER NOT NULL UNIQUE,
+  cfdmBindingId INTEGER NOT NULL,
   source TEXT NOT NULL DEFAULT 'cfdm',
   matchStatus TEXT NOT NULL DEFAULT 'unmatched',
   targetIps TEXT,
   syncedAt TEXT NOT NULL,
+  UNIQUE(cfdmBindingId, vpsId),
   FOREIGN KEY (vpsId) REFERENCES vps(id) ON DELETE SET NULL
 );
 
