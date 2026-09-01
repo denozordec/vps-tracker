@@ -1,13 +1,15 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { ServerIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@cfdm/ui/lib/utils'
+import { Badge } from '@/components/reui/badge'
 import { CountryFlag } from '@/components/country-flag'
 import { StatusBadge } from '@/components/status-badge'
 import { snapshotQueryOptions } from '@/queries/snapshot'
 import { resolveCountryCode, vpsStatusLabel } from '@/lib/format'
 import type { Vps } from '@/types/entities'
+import { aggregateCfdmServices, servicesForVps } from '../cfdm-services'
 import { type VpsNodeData, vpsSpecsLine } from '../types'
 
 function formatRate(vps: Vps): string | null {
@@ -31,6 +33,10 @@ function VpsNodeComponent({ data, selected }: NodeProps & { data: VpsNodeData })
   const rate = vps ? formatRate(vps) : null
   const countryCode = resolveCountryCode(vps?.country)
   const hasFlag = Boolean(countryCode)
+  const serviceChips = useMemo(
+    () => servicesForVps(aggregateCfdmServices(snapshot?.vpsDomains ?? []), data.vpsId),
+    [snapshot?.vpsDomains, data.vpsId],
+  )
 
   return (
     <div
@@ -90,6 +96,15 @@ function VpsNodeComponent({ data, selected }: NodeProps & { data: VpsNodeData })
           {vps?.country || vps?.datacenter ? (
             <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
               {[vps.country, vps.city, vps.datacenter].filter(Boolean).join(' · ')}
+            </div>
+          ) : null}
+          {serviceChips.length > 0 ? (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {serviceChips.map((s) => (
+                <Badge key={s.serviceId} variant="secondary" size="xs">
+                  {s.name}
+                </Badge>
+              ))}
             </div>
           ) : null}
         </div>

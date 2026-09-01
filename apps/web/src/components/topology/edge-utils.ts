@@ -47,3 +47,37 @@ export function createConnectedEdge(connection: {
     data,
   )
 }
+
+export function membershipEdgeData(): TopologyEdgeData {
+  return {
+    relation: 'membership',
+    label: '',
+    lineStyle: 'dashed',
+    direction: 'none',
+    protocol: '',
+    localIp: '',
+    remoteIp: '',
+    notes: '',
+  }
+}
+
+export function createMembershipEdge(
+  serviceNodeId: string,
+  vpsNodeId: string,
+): Edge<TopologyEdgeData> {
+  const data = membershipEdgeData()
+  return applyEdgeVisuals(
+    {
+      id: `e-membership-${serviceNodeId}-${vpsNodeId}`,
+      source: serviceNodeId,
+      target: vpsNodeId,
+      data,
+      deletable: false,
+    },
+    data,
+  )
+}
+
+export function isMembershipEdge(edge: Edge<TopologyEdgeData>): boolean {
+  return edge.data?.relation === 'membership'
+}

@@ -3,7 +3,7 @@ import type { TopologyFlowNode, TopologyNodeType } from './types'
 const GROUP_Z = -1
 const CONTENT_Z = 1
 
-const ATTACHABLE = new Set<TopologyNodeType>(['vps', 'shape', 'note'])
+const ATTACHABLE = new Set<TopologyNodeType>(['vps', 'shape', 'note', 'service'])
 
 export function isAttachableType(type: TopologyNodeType | undefined): boolean {
   return type != null && ATTACHABLE.has(type)

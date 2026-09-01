@@ -11,6 +11,7 @@ import {
   lbModeLabel,
   type GroupNodeData,
   type NoteNodeData,
+  type ServiceNodeData,
   type ShapeKind,
   type ShapeNodeData,
   type TopologyNodeType,
@@ -20,13 +21,18 @@ export type EditableElement =
   | { kind: 'shape'; id: string; data: ShapeNodeData }
   | { kind: 'note'; id: string; data: NoteNodeData }
   | { kind: 'group'; id: string; data: GroupNodeData }
+  | { kind: 'service'; id: string; data: ServiceNodeData }
 
 interface ElementEditSheetProps {
   element: EditableElement | null
   open: boolean
   locked?: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (id: string, type: TopologyNodeType, data: ShapeNodeData | NoteNodeData | GroupNodeData) => void
+  onSave: (
+    id: string,
+    type: TopologyNodeType,
+    data: ShapeNodeData | NoteNodeData | GroupNodeData | ServiceNodeData,
+  ) => void
 }
 
 export function ElementEditSheet({
@@ -52,6 +58,10 @@ export function ElementEditSheet({
       setText(element.data.text ?? '')
       setLabel('')
       setNotes('')
+    } else if (element.kind === 'service') {
+      setLabel(element.data.label ?? '')
+      setNotes('')
+      setText('')
     } else {
       setLabel(element.data.label ?? '')
       setNotes(element.data.notes ?? '')
@@ -64,7 +74,9 @@ export function ElementEditSheet({
       ? 'Параметры блока'
       : element?.kind === 'note'
         ? 'Параметры заметки'
-        : 'Параметры группы'
+        : element?.kind === 'service'
+          ? 'Параметры сервиса CFDM'
+          : 'Параметры группы'
 
   return (
     <FormSheet
@@ -74,7 +86,9 @@ export function ElementEditSheet({
       description={
         locked
           ? 'Схема заблокирована — только просмотр'
-          : 'Изменения сохранятся на схеме'
+          : element?.kind === 'service'
+            ? 'Имя можно изменить. FQDN и тип резервирования — из CFDM.'
+            : 'Изменения сохранятся на схеме'
       }
       submitLabel="Сохранить"
       submitDisabled={locked || !element}
@@ -84,12 +98,15 @@ export function ElementEditSheet({
           onSave(element.id, 'shape', { kind, label: label.trim() || 'Блок' })
         } else if (element.kind === 'note') {
           onSave(element.id, 'note', { text: text.trim() || 'Заметка' })
+        } else if (element.kind === 'service') {
+          onSave(element.id, 'service', {
+            ...element.data,
+            label: label.trim() || element.data.label || 'Сервис',
+          })
         } else {
           onSave(element.id, 'group', {
             label: label.trim() || 'Группа',
             notes: notes.trim() || undefined,
-            cfdmServiceId: element.data.cfdmServiceId,
-            lbMode: element.data.lbMode,
           })
         }
         onOpenChange(false)
@@ -144,13 +161,6 @@ export function ElementEditSheet({
               maxLength={80}
             />
           </FormField>
-          {element.data.lbMode ? (
-            <FormField label="Резервирование">
-              <Badge variant={lbModeBadgeVariant(element.data.lbMode)} size="sm">
-                {lbModeLabel(element.data.lbMode)}
-              </Badge>
-            </FormField>
-          ) : null}
           <FormField label="Заметки" htmlFor="group-notes">
             <Textarea
               id="group-notes"
@@ -162,6 +172,39 @@ export function ElementEditSheet({
               placeholder="Например: subnet 192.168.0.0/24"
             />
           </FormField>
+        </>
+      ) : null}
+
+      {element?.kind === 'service' ? (
+        <>
+          <FormField label="Название" htmlFor="service-label">
+            <Input
+              id="service-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              disabled={locked}
+              maxLength={80}
+            />
+          </FormField>
+          {element.data.fqdn ? (
+            <FormField label="Основной FQDN">
+              <p className="font-mono text-sm text-foreground">{element.data.fqdn}</p>
+            </FormField>
+          ) : null}
+          {element.data.extraFqdns && element.data.extraFqdns.length > 0 ? (
+            <FormField label="Другие FQDN">
+              <p className="font-mono text-sm text-muted-foreground">
+                {element.data.extraFqdns.join(', ')}
+              </p>
+            </FormField>
+          ) : null}
+          {element.data.lbMode ? (
+            <FormField label="Резервирование">
+              <Badge variant={lbModeBadgeVariant(element.data.lbMode)} size="sm">
+                {lbModeLabel(element.data.lbMode)}
+              </Badge>
+            </FormField>
+          ) : null}
         </>
       ) : null}
     </FormSheet>

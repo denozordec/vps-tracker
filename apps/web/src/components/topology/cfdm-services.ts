@@ -70,3 +70,21 @@ export function aggregateCfdmServices(domains: VpsDomain[]): CfdmTopologyService
     }))
     .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
 }
+
+export function serviceFqdnMeta(service: Pick<CfdmTopologyService, 'fqdns'>): {
+  fqdn: string
+  extraFqdns: string[]
+} {
+  const [primary, ...rest] = service.fqdns
+  return { fqdn: primary ?? '', extraFqdns: rest }
+}
+
+/** Сервисы CFDM, в которых состоит данный VPS (для чипов на карточке). */
+export function servicesForVps(
+  services: CfdmTopologyService[],
+  vpsId: string,
+): Pick<CfdmTopologyService, 'serviceId' | 'name' | 'lbMode'>[] {
+  return services
+    .filter((s) => s.matchedVpsIds.includes(vpsId))
+    .map((s) => ({ serviceId: s.serviceId, name: s.name, lbMode: s.lbMode }))
+}

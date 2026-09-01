@@ -1,32 +1,34 @@
 import type { CfdmTopologyService } from './cfdm-services'
-import { attachNodeToGroup, normalizeGroupLayers, sortParentsFirst } from './group-utils'
+import { serviceFqdnMeta } from './cfdm-services'
+import { createMembershipEdge } from './edge-utils'
+import { detachNodeFromGroup, normalizeGroupLayers, sortParentsFirst } from './group-utils'
 import {
   isGroupNodeData,
+  isServiceNodeData,
   isVpsNodeData,
   newNodeId,
+  type TopologyFlowEdge,
   type TopologyFlowNode,
+  type ServiceNodeData,
 } from './types'
 
-const PAD_X = 20
-const PAD_Y = 44
 const CELL_W = 240
 const CELL_H = 110
+const SERVICE_GAP_Y = 120
 
 export type PlaceCfdmServiceResult = {
   nodes: TopologyFlowNode[]
-  skippedVpsIds: string[]
+  edges: TopologyFlowEdge[]
   alreadyOnCanvas: boolean
 }
 
-function cfdmGroupOf(
-  node: TopologyFlowNode,
+function existingServiceNode(
   nodes: TopologyFlowNode[],
+  serviceId: number,
 ): TopologyFlowNode | undefined {
-  if (!node.parentId) return undefined
-  const parent = nodes.find((n) => n.id === node.parentId)
-  if (!parent || parent.type !== 'group' || !isGroupNodeData(parent.data)) return undefined
-  if (parent.data.cfdmServiceId == null) return undefined
-  return parent
+  return nodes.find(
+    (n) => n.type === 'service' && isServiceNodeData(n.data) && n.data.cfdmServiceId === serviceId,
+  )
 }
 
 function existingVpsNode(
@@ -36,108 +38,209 @@ function existingVpsNode(
   return nodes.find((n) => n.type === 'vps' && isVpsNodeData(n.data) && n.data.vpsId === vpsId)
 }
 
-/** Ставит сервис CFDM как существующую dashed-группу с VPS-детьми. */
-export function placeCfdmServiceGroup(
+function hasMembership(
+  edges: TopologyFlowEdge[],
+  serviceNodeId: string,
+  vpsNodeId: string,
+): boolean {
+  return edges.some(
+    (e) =>
+      e.data?.relation === 'membership' &&
+      e.source === serviceNodeId &&
+      e.target === vpsNodeId,
+  )
+}
+
+function serviceNodeData(service: CfdmTopologyService): ServiceNodeData {
+  const { fqdn, extraFqdns } = serviceFqdnMeta(service)
+  return {
+    label: service.name,
+    cfdmServiceId: service.serviceId,
+    fqdn,
+    extraFqdns: extraFqdns.length > 0 ? extraFqdns : undefined,
+    lbMode: service.lbMode,
+  }
+}
+
+/** Ставит сервис CFDM как отдельный узел и пунктирные рёбра членства к VPS. */
+export function placeCfdmService(
   nodes: TopologyFlowNode[],
+  edges: TopologyFlowEdge[],
   service: CfdmTopologyService,
   origin: { x: number; y: number },
 ): PlaceCfdmServiceResult {
-  const already = nodes.some(
-    (n) =>
-      n.type === 'group' &&
-      isGroupNodeData(n.data) &&
-      n.data.cfdmServiceId === service.serviceId,
-  )
+  const already = existingServiceNode(nodes, service.serviceId)
   if (already) {
-    return { nodes, skippedVpsIds: [], alreadyOnCanvas: true }
+    return { nodes, edges, alreadyOnCanvas: true }
   }
 
-  const skippedVpsIds: string[] = []
-  const vpsIds: string[] = []
-  for (const vpsId of service.matchedVpsIds) {
-    const existing = existingVpsNode(nodes, vpsId)
-    if (existing) {
-      const other = cfdmGroupOf(existing, nodes)
-      if (other && isGroupNodeData(other.data) && other.data.cfdmServiceId !== service.serviceId) {
-        skippedVpsIds.push(vpsId)
-        continue
-      }
-    }
-    vpsIds.push(vpsId)
-  }
-
-  if (vpsIds.length === 0) {
-    return { nodes, skippedVpsIds, alreadyOnCanvas: false }
-  }
-
-  const width = PAD_X * 2 + vpsIds.length * CELL_W - (CELL_W - 220)
-  const height = PAD_Y + CELL_H + 16
-  const groupId = newNodeId('group')
-  const group: TopologyFlowNode = {
-    id: groupId,
-    type: 'group',
+  const serviceId = newNodeId('service')
+  const serviceNode: TopologyFlowNode = {
+    id: serviceId,
+    type: 'service',
     position: origin,
-    style: { width, height },
-    width,
-    height,
-    data: {
-      label: service.name,
-      cfdmServiceId: service.serviceId,
-      lbMode: service.lbMode,
-    },
-    zIndex: -1,
+    data: serviceNodeData(service),
   }
 
-  let next = [...nodes, group]
+  let nextNodes = [...nodes, serviceNode]
+  let nextEdges = [...edges]
 
-  vpsIds.forEach((vpsId, i) => {
-    const abs = {
-      x: origin.x + PAD_X + i * CELL_W,
-      y: origin.y + PAD_Y,
-    }
-    const existing = existingVpsNode(next, vpsId)
-    if (existing) {
-      const detached: TopologyFlowNode = {
-        ...existing,
-        parentId: undefined,
-        position: abs,
+  service.matchedVpsIds.forEach((vpsId, i) => {
+    let vpsNode = existingVpsNode(nextNodes, vpsId)
+    if (!vpsNode) {
+      vpsNode = {
+        id: newNodeId('vps'),
+        type: 'vps',
+        position: {
+          x: origin.x + i * CELL_W,
+          y: origin.y + SERVICE_GAP_Y,
+        },
+        data: { vpsId },
       }
-      const attached = attachNodeToGroup(detached, group, next)
-      next = next.map((n) => (n.id === existing.id ? attached : n))
-      return
+      nextNodes = [...nextNodes, vpsNode]
     }
-    const draft: TopologyFlowNode = {
-      id: newNodeId('vps'),
-      type: 'vps',
-      position: abs,
-      data: { vpsId },
+    if (!hasMembership(nextEdges, serviceId, vpsNode.id)) {
+      nextEdges = [...nextEdges, createMembershipEdge(serviceId, vpsNode.id)]
     }
-    next = [...next, attachNodeToGroup(draft, group, next)]
   })
 
   return {
-    nodes: normalizeGroupLayers(sortParentsFirst(next)),
-    skippedVpsIds,
+    nodes: normalizeGroupLayers(sortParentsFirst(nextNodes)),
+    edges: nextEdges,
     alreadyOnCanvas: false,
   }
 }
 
 export function placeCfdmServices(
   nodes: TopologyFlowNode[],
+  edges: TopologyFlowEdge[],
   services: CfdmTopologyService[],
   origin: { x: number; y: number },
-): { nodes: TopologyFlowNode[]; skippedVpsIds: string[]; alreadyIds: number[] } {
-  let next = nodes
-  const skippedVpsIds: string[] = []
+): { nodes: TopologyFlowNode[]; edges: TopologyFlowEdge[]; alreadyIds: number[] } {
+  let nextNodes = nodes
+  let nextEdges = edges
   const alreadyIds: number[] = []
   services.forEach((service, i) => {
-    const result = placeCfdmServiceGroup(next, service, {
+    const result = placeCfdmService(nextNodes, nextEdges, service, {
       x: origin.x,
-      y: origin.y + i * 220,
+      y: origin.y + i * (SERVICE_GAP_Y + CELL_H),
     })
-    next = result.nodes
-    skippedVpsIds.push(...result.skippedVpsIds)
+    nextNodes = result.nodes
+    nextEdges = result.edges
     if (result.alreadyOnCanvas) alreadyIds.push(service.serviceId)
   })
-  return { nodes: next, skippedVpsIds, alreadyIds }
+  return { nodes: nextNodes, edges: nextEdges, alreadyIds }
+}
+
+function compactServiceNode(node: TopologyFlowNode): TopologyFlowNode {
+  if (node.type !== 'service') return node
+  if (node.style == null && node.width == null && node.height == null && node.measured == null) {
+    return node
+  }
+  const { style: _style, width: _width, height: _height, measured: _measured, ...rest } = node
+  return rest
+}
+
+function compactServiceFromGroup(
+  group: TopologyFlowNode,
+  service: CfdmTopologyService | undefined,
+): TopologyFlowNode {
+  const data = isGroupNodeData(group.data) ? group.data : undefined
+  const { fqdn, extraFqdns } = service ? serviceFqdnMeta(service) : { fqdn: '', extraFqdns: [] }
+  const nextData: ServiceNodeData = {
+    label: data?.label ?? service?.name ?? 'Сервис',
+    cfdmServiceId: data?.cfdmServiceId ?? service?.serviceId ?? 0,
+    fqdn,
+    extraFqdns: extraFqdns.length > 0 ? extraFqdns : undefined,
+    lbMode: data?.lbMode ?? service?.lbMode,
+  }
+  const { style: _style, width: _w, height: _h, measured: _m, ...rest } = group
+  return {
+    ...rest,
+    type: 'service',
+    data: nextData,
+  }
+}
+
+/**
+ * Одноразовая миграция: CFDM dashed-группа + parentId → узел service + membership.
+ * Идемпотентна: уже `type: 'service'` не трогает.
+ */
+export function migrateCfdmGroupsToServices(
+  nodes: TopologyFlowNode[],
+  edges: TopologyFlowEdge[],
+  services: CfdmTopologyService[],
+): { nodes: TopologyFlowNode[]; edges: TopologyFlowEdge[]; changed: boolean } {
+  const byServiceId = new Map(services.map((s) => [s.serviceId, s]))
+  const groups = nodes.filter(
+    (n) => n.type === 'group' && isGroupNodeData(n.data) && n.data.cfdmServiceId != null,
+  )
+  if (groups.length === 0) {
+    const compacted = nodes.map(compactServiceNode)
+    const withMeta = applyServiceFqdns(compacted, services)
+    const changed = compacted.some((n, i) => n !== nodes[i]) || withMeta !== compacted
+    return { nodes: withMeta, edges, changed }
+  }
+
+  let nextNodes = nodes
+  let nextEdges = edges
+  let changed = false
+
+  for (const group of groups) {
+    if (!isGroupNodeData(group.data) || group.data.cfdmServiceId == null) continue
+    const service = byServiceId.get(group.data.cfdmServiceId)
+    const children = nextNodes.filter((n) => n.parentId === group.id && n.type === 'vps')
+    for (const child of children) {
+      const detached = detachNodeFromGroup(child, nextNodes)
+      nextNodes = nextNodes.map((n) => (n.id === child.id ? detached : n))
+      if (!hasMembership(nextEdges, group.id, detached.id)) {
+        nextEdges = [...nextEdges, createMembershipEdge(group.id, detached.id)]
+      }
+      changed = true
+    }
+    const converted = compactServiceFromGroup(group, service)
+    nextNodes = nextNodes.map((n) => (n.id === group.id ? converted : n))
+    changed = true
+  }
+
+  return {
+    nodes: normalizeGroupLayers(sortParentsFirst(nextNodes)),
+    edges: nextEdges,
+    changed,
+  }
+}
+
+/** Подставляет FQDN/lbMode из агрегата, не меняя позиции. */
+export function applyServiceFqdns(
+  nodes: TopologyFlowNode[],
+  services: CfdmTopologyService[],
+): TopologyFlowNode[] {
+  if (services.length === 0) return nodes
+  const byId = new Map(services.map((s) => [s.serviceId, s]))
+  let changed = false
+  const next = nodes.map((n) => {
+    if (n.type !== 'service' || !isServiceNodeData(n.data)) return n
+    const service = byId.get(n.data.cfdmServiceId)
+    if (!service) return n
+    const { fqdn, extraFqdns } = serviceFqdnMeta(service)
+    const extra = extraFqdns.length > 0 ? extraFqdns : undefined
+    if (
+      n.data.fqdn === fqdn &&
+      n.data.lbMode === service.lbMode &&
+      JSON.stringify(n.data.extraFqdns) === JSON.stringify(extra)
+    ) {
+      return n
+    }
+    changed = true
+    return {
+      ...n,
+      data: {
+        ...n.data,
+        fqdn,
+        extraFqdns: extra,
+        lbMode: service.lbMode,
+      },
+    }
+  })
+  return changed ? next : nodes
 }

@@ -43,6 +43,7 @@ function TopologyEdgeComponent(props: EdgeProps<Edge<TopologyEdgeData>>) {
   const title = data?.label?.trim() ?? ''
   const protocol = data?.protocol?.trim() ?? ''
   const tunnelIps = formatEdgeTunnelIps(data ?? {})
+  const membership = relation === 'membership'
 
   return (
     <>
@@ -56,6 +57,7 @@ function TopologyEdgeComponent(props: EdgeProps<Edge<TopologyEdgeData>>) {
           strokeWidth: selected ? 2.5 : 1.5,
         }}
       />
+      {membership ? null : (
       <EdgeLabelRenderer>
         <div
           className={cn(
@@ -88,6 +90,7 @@ function TopologyEdgeComponent(props: EdgeProps<Edge<TopologyEdgeData>>) {
           ) : null}
         </div>
       </EdgeLabelRenderer>
+      )}
     </>
   )
 }

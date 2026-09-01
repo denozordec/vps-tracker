@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { VpsDomain } from '@/types/entities'
-import { aggregateCfdmServices } from './cfdm-services'
+import { aggregateCfdmServices, servicesForVps } from './cfdm-services'
 
 function domain(partial: Partial<VpsDomain> & Pick<VpsDomain, 'id' | 'cfdmServiceId'>): VpsDomain {
   return {
@@ -66,6 +66,32 @@ describe('aggregateCfdmServices', () => {
     expect(dns?.matchedVpsIds).toEqual([])
     expect(dns?.unmatchedIps).toEqual(['198.51.100.1'])
     expect(dns?.lbMode).toBe('round_robin')
+  })
+
+  it('lists services a VPS belongs to', () => {
+    const rows: VpsDomain[] = [
+      domain({
+        id: 'a',
+        cfdmServiceId: 10,
+        cfdmBindingId: 1,
+        vpsId: 'vps-1',
+        matchStatus: 'matched',
+        lbMode: 'failover',
+      }),
+      domain({
+        id: 'b',
+        cfdmServiceId: 11,
+        cfdmBindingId: 3,
+        serviceName: 'DNS',
+        serviceSlug: 'dns',
+        fqdn: 'ns.example.com',
+        vpsId: 'vps-1',
+        matchStatus: 'matched',
+        lbMode: 'round_robin',
+      }),
+    ]
+    const chips = servicesForVps(aggregateCfdmServices(rows), 'vps-1')
+    expect(chips.map((c) => c.name).sort()).toEqual(['DNS', 'VPN'])
   })
 
   it('deduplicates the same vpsId across bindings of one service', () => {

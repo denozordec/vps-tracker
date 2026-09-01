@@ -5,7 +5,7 @@ import { uid } from '@/lib/format'
 
 export type { TopologyLbMode }
 
-export type TopologyNodeType = 'vps' | 'shape' | 'note' | 'group'
+export type TopologyNodeType = 'vps' | 'shape' | 'note' | 'group' | 'service'
 
 export type ShapeKind = 'rect' | 'ellipse' | 'diamond'
 
@@ -26,7 +26,16 @@ export type NoteNodeData = {
 export type GroupNodeData = {
   label: string
   notes?: string
+  /** Только у немигрированных CFDM-коробок; после миграции поле на `service`. */
   cfdmServiceId?: number
+  lbMode?: TopologyLbMode
+}
+
+export type ServiceNodeData = {
+  label: string
+  cfdmServiceId: number
+  fqdn: string
+  extraFqdns?: string[]
   lbMode?: TopologyLbMode
 }
 
@@ -35,6 +44,7 @@ export type TopologyNodeData =
   | ShapeNodeData
   | NoteNodeData
   | GroupNodeData
+  | ServiceNodeData
 
 /** Тип связи на схеме инфраструктуры */
 export type TopologyEdgeRelation =
@@ -44,6 +54,7 @@ export type TopologyEdgeRelation =
   | 'vpn'
   | 'sync'
   | 'custom'
+  | 'membership'
 
 export type TopologyEdgeDirection = 'forward' | 'bidirectional' | 'none'
 
@@ -102,8 +113,23 @@ export function isNoteNodeData(data: TopologyNodeData): data is NoteNodeData {
   return 'text' in data
 }
 
+export function isServiceNodeData(data: TopologyNodeData): data is ServiceNodeData {
+  return (
+    typeof (data as ServiceNodeData).cfdmServiceId === 'number' &&
+    'fqdn' in data &&
+    'label' in data &&
+    !('vpsId' in data)
+  )
+}
+
 export function isGroupNodeData(data: TopologyNodeData): data is GroupNodeData {
-  return 'label' in data && !('kind' in data) && !('vpsId' in data) && !('text' in data)
+  return (
+    'label' in data &&
+    !('kind' in data) &&
+    !('vpsId' in data) &&
+    !('text' in data) &&
+    !isServiceNodeData(data)
+  )
 }
 
 export function defaultEdgeData(): TopologyEdgeData {
@@ -145,6 +171,8 @@ export function edgeRelationShortLabel(relation: TopologyEdgeRelation): string {
       return 'Синк'
     case 'custom':
       return 'Связь'
+    case 'membership':
+      return 'Членство'
     default:
       return relation
   }

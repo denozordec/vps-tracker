@@ -27,9 +27,11 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { toPng } from 'html-to-image'
+import { useQuery } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { cn } from '@cfdm/ui/lib/utils'
+import { snapshotQueryOptions } from '@/queries/snapshot'
 import { topologyNodeTypes } from './node-types'
 import { topologyEdgeTypes } from './edge-types'
 import { TopologyPalette, parsePaletteDrag, shapeLabel } from './palette'
@@ -38,9 +40,13 @@ import { AddVpsSheet } from './add-vps-sheet'
 import { VpsDetailSheet } from './vps-detail-sheet'
 import { ElementEditSheet, type EditableElement } from './element-edit-sheet'
 import { EdgeEditSheet } from './edge-edit-sheet'
-import { applyEdgeVisuals, createConnectedEdge } from './edge-utils'
-import type { CfdmTopologyService } from './cfdm-services'
-import { placeCfdmServices } from './place-cfdm-service'
+import { applyEdgeVisuals, createConnectedEdge, isMembershipEdge } from './edge-utils'
+import { aggregateCfdmServices, type CfdmTopologyService } from './cfdm-services'
+import {
+  applyServiceFqdns,
+  migrateCfdmGroupsToServices,
+  placeCfdmServices,
+} from './place-cfdm-service'
 import {
   normalizeGroupLayers,
   placeWithOptionalParent,
@@ -51,12 +57,14 @@ import {
   defaultEdgeData,
   isGroupNodeData,
   isNoteNodeData,
+  isServiceNodeData,
   isShapeNodeData,
   isVpsNodeData,
   newNodeId,
   type GroupNodeData,
   type NoteNodeData,
   type PaletteItem,
+  type ServiceNodeData,
   type ShapeNodeData,
   type TopologyEdgeData,
   type TopologyFlowNode,
@@ -96,6 +104,13 @@ function TopologyEditorInner({
   const wrapperRef = useRef<HTMLDivElement>(null)
   const { screenToFlowPosition, fitView, zoomIn, zoomOut, getViewport, setViewport } =
     useReactFlow()
+  const { data: snapshot } = useQuery(snapshotQueryOptions())
+  const cfdmServices = useMemo(
+    () => aggregateCfdmServices(snapshot?.vpsDomains ?? []),
+    [snapshot?.vpsDomains],
+  )
+  const cfdmServicesRef = useRef(cfdmServices)
+  cfdmServicesRef.current = cfdmServices
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<FlowNode>(
     normalizeGroupLayers(sortParentsFirst(initialNodes)),
@@ -118,8 +133,14 @@ function TopologyEditorInner({
   useEffect(() => {
     skipSave.current = true
     hydrated.current = false
-    setNodes(normalizeGroupLayers(sortParentsFirst(initialNodes)))
-    setEdges(normalizeEdges(initialEdges))
+    const migrated = migrateCfdmGroupsToServices(
+      initialNodes,
+      initialEdges as FlowEdge[],
+      cfdmServicesRef.current,
+    )
+    const withFqdn = applyServiceFqdns(migrated.nodes, cfdmServicesRef.current)
+    setNodes(() => normalizeGroupLayers(sortParentsFirst(withFqdn)))
+    setEdges(() => normalizeEdges(migrated.edges))
     setEditElement(null)
     setElementOpen(false)
     setEditEdgeId(null)
@@ -135,6 +156,13 @@ function TopologyEditorInner({
     }, 100)
     return () => window.clearTimeout(t)
   }, [diagramId]) // eslint-disable-line react-hooks/exhaustive-deps -- remount on diagram switch
+
+  useEffect(() => {
+    setNodes((ns) => {
+      const next = applyServiceFqdns(ns, cfdmServices)
+      return next === ns ? ns : next
+    })
+  }, [cfdmServices, setNodes])
 
   const emitSave = useCallback(() => {
     if (skipSave.current || !hydrated.current || locked) return
@@ -224,6 +252,9 @@ function TopologyEditorInner({
   const existingCfdmServiceIds = useMemo(() => {
     const ids = new Set<number>()
     for (const n of nodes) {
+      if (n.type === 'service' && isServiceNodeData(n.data)) {
+        ids.add(n.data.cfdmServiceId)
+      }
       if (n.type === 'group' && isGroupNodeData(n.data) && n.data.cfdmServiceId != null) {
         ids.add(n.data.cfdmServiceId)
       }
@@ -311,16 +342,12 @@ function TopologyEditorInner({
       x: (wrapperRef.current?.clientWidth ?? 400) / 2 + 80,
       y: (wrapperRef.current?.clientHeight ?? 300) / 2,
     })
-    const result = placeCfdmServices(nodes, services, origin)
+    const result = placeCfdmServices(nodes, edges, services, origin)
     if (result.alreadyIds.length > 0) {
       toast.message('Некоторые сервисы уже на схеме')
     }
-    if (result.skippedVpsIds.length > 0) {
-      toast.warning(
-        `Не перенесены серверы из другой группы CFDM: ${result.skippedVpsIds.length}`,
-      )
-    }
     setNodes(result.nodes)
+    setEdges(normalizeEdges(result.edges))
   }
 
   function placeItemAtCenter(item: PaletteItem) {
@@ -352,10 +379,16 @@ function TopologyEditorInner({
     if (node.type === 'group' && isGroupNodeData(node.data)) {
       setEditElement({ kind: 'group', id: node.id, data: node.data })
       setElementOpen(true)
+      return
+    }
+    if (node.type === 'service' && isServiceNodeData(node.data)) {
+      setEditElement({ kind: 'service', id: node.id, data: node.data })
+      setElementOpen(true)
     }
   }
 
   function onEdgeClick(_e: ReactMouseEvent, edge: FlowEdge) {
+    if (isMembershipEdge(edge)) return
     const data = edge.data ?? defaultEdgeData()
     setEditEdgeId(edge.id)
     setEditEdgeData(data)
@@ -365,7 +398,7 @@ function TopologyEditorInner({
   function handleSaveElement(
     id: string,
     type: TopologyNodeType,
-    data: ShapeNodeData | NoteNodeData | GroupNodeData,
+    data: ShapeNodeData | NoteNodeData | GroupNodeData | ServiceNodeData,
   ) {
     setNodes((ns) =>
       ns.map((n) => (n.id === id && n.type === type ? { ...n, data } : n)),
