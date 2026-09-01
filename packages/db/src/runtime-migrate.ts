@@ -262,6 +262,7 @@ const CORE_TABLE_MIGRATIONS: string[] = [
     source TEXT NOT NULL DEFAULT 'cfdm',
     matchStatus TEXT NOT NULL DEFAULT 'unmatched',
     targetIps TEXT,
+    lbMode TEXT,
     syncedAt TEXT NOT NULL,
     UNIQUE(cfdmBindingId, vpsId)
   )`,
@@ -376,6 +377,7 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE settings ADD COLUMN notifyLowBalanceEnabled INTEGER`,
   `ALTER TABLE settings ADD COLUMN notifySyncDigestEnabled INTEGER`,
   `ALTER TABLE vps_domains ADD COLUMN targetIps TEXT`,
+  `ALTER TABLE vps_domains ADD COLUMN lbMode TEXT`,
   `ALTER TABLE providers ADD COLUMN spaceId TEXT`,
   `ALTER TABLE provider_accounts ADD COLUMN spaceId TEXT`,
   `ALTER TABLE provider_accounts ADD COLUMN balance_api REAL`,
@@ -473,6 +475,10 @@ function rebuildVpsDomainsBindingUnique(sqlite: Database.Database): void {
     return
   }
 
+  const colRows = sqlite.prepare(`PRAGMA table_info(vps_domains)`).all() as { name: string }[]
+  const hasLbMode = colRows.some((c) => c.name === 'lbMode')
+  const lbSelect = hasLbMode ? 'lbMode' : 'NULL'
+
   sqlite.exec('PRAGMA foreign_keys = OFF')
   sqlite.exec('BEGIN')
   try {
@@ -490,15 +496,16 @@ function rebuildVpsDomainsBindingUnique(sqlite: Database.Database): void {
       source TEXT NOT NULL DEFAULT 'cfdm',
       matchStatus TEXT NOT NULL DEFAULT 'unmatched',
       targetIps TEXT,
+      lbMode TEXT,
       syncedAt TEXT NOT NULL,
       UNIQUE(cfdmBindingId, vpsId)
     )`)
     sqlite.exec(`INSERT INTO vps_domains_new (
       id, spaceId, vpsId, fqdn, zoneName, hostname, serviceName, serviceSlug,
-      cfdmServiceId, cfdmBindingId, source, matchStatus, targetIps, syncedAt
+      cfdmServiceId, cfdmBindingId, source, matchStatus, targetIps, lbMode, syncedAt
     ) SELECT
       id, COALESCE(spaceId, 'space-main'), vpsId, fqdn, zoneName, hostname, serviceName, serviceSlug,
-      cfdmServiceId, cfdmBindingId, source, matchStatus, targetIps, syncedAt
+      cfdmServiceId, cfdmBindingId, source, matchStatus, targetIps, ${lbSelect}, syncedAt
     FROM vps_domains`)
     sqlite.exec('DROP TABLE vps_domains')
     sqlite.exec('ALTER TABLE vps_domains_new RENAME TO vps_domains')

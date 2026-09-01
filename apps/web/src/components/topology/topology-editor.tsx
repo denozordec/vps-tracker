@@ -39,6 +39,8 @@ import { VpsDetailSheet } from './vps-detail-sheet'
 import { ElementEditSheet, type EditableElement } from './element-edit-sheet'
 import { EdgeEditSheet } from './edge-edit-sheet'
 import { applyEdgeVisuals, createConnectedEdge } from './edge-utils'
+import type { CfdmTopologyService } from './cfdm-services'
+import { placeCfdmServices } from './place-cfdm-service'
 import {
   normalizeGroupLayers,
   placeWithOptionalParent,
@@ -219,6 +221,16 @@ function TopologyEditorInner({
     return ids
   }, [nodes])
 
+  const existingCfdmServiceIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const n of nodes) {
+      if (n.type === 'group' && isGroupNodeData(n.data) && n.data.cfdmServiceId != null) {
+        ids.add(n.data.cfdmServiceId)
+      }
+    }
+    return ids
+  }, [nodes])
+
   function placeNode(item: PaletteItem, position: { x: number; y: number }) {
     if (item.kind === 'vps-picker') {
       setAddVpsOpen(true)
@@ -292,6 +304,23 @@ function TopologyEditorInner({
       })
       return normalizeGroupLayers(sortParentsFirst([...ns, ...created]))
     })
+  }
+
+  function handleAddCfdmServices(services: CfdmTopologyService[]) {
+    const origin = screenToFlowPosition({
+      x: (wrapperRef.current?.clientWidth ?? 400) / 2 + 80,
+      y: (wrapperRef.current?.clientHeight ?? 300) / 2,
+    })
+    const result = placeCfdmServices(nodes, services, origin)
+    if (result.alreadyIds.length > 0) {
+      toast.message('Некоторые сервисы уже на схеме')
+    }
+    if (result.skippedVpsIds.length > 0) {
+      toast.warning(
+        `Не перенесены серверы из другой группы CFDM: ${result.skippedVpsIds.length}`,
+      )
+    }
+    setNodes(result.nodes)
   }
 
   function placeItemAtCenter(item: PaletteItem) {
@@ -448,7 +477,9 @@ function TopologyEditorInner({
         open={addVpsOpen}
         onOpenChange={setAddVpsOpen}
         existingVpsIds={existingVpsIds}
+        existingCfdmServiceIds={existingCfdmServiceIds}
         onAdd={handleAddVps}
+        onAddServices={handleAddCfdmServices}
       />
       <VpsDetailSheet
         vpsId={detailVpsId}

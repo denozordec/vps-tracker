@@ -4,8 +4,11 @@ import { Textarea } from '@cfdm/ui/components/textarea'
 import { FormSheet } from '@/components/form-sheet'
 import { FormField } from '@/components/form-field'
 import { SelectField } from '@/components/select-field'
+import { Badge } from '@/components/reui/badge'
 import {
   SHAPE_KIND_OPTIONS,
+  lbModeBadgeVariant,
+  lbModeLabel,
   type GroupNodeData,
   type NoteNodeData,
   type ShapeKind,
@@ -85,6 +88,8 @@ export function ElementEditSheet({
           onSave(element.id, 'group', {
             label: label.trim() || 'Группа',
             notes: notes.trim() || undefined,
+            cfdmServiceId: element.data.cfdmServiceId,
+            lbMode: element.data.lbMode,
           })
         }
         onOpenChange(false)
@@ -139,6 +144,13 @@ export function ElementEditSheet({
               maxLength={80}
             />
           </FormField>
+          {element.data.lbMode ? (
+            <FormField label="Резервирование">
+              <Badge variant={lbModeBadgeVariant(element.data.lbMode)} size="sm">
+                {lbModeLabel(element.data.lbMode)}
+              </Badge>
+            </FormField>
+          ) : null}
           <FormField label="Заметки" htmlFor="group-notes">
             <Textarea
               id="group-notes"

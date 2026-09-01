@@ -1,6 +1,9 @@
 import type { Edge, Node } from '@xyflow/react'
+import type { TopologyLbMode } from '@cfdm/shared/contracts/integration-cfdm'
 import type { Vps } from '@/types/entities'
 import { uid } from '@/lib/format'
+
+export type { TopologyLbMode }
 
 export type TopologyNodeType = 'vps' | 'shape' | 'note' | 'group'
 
@@ -23,6 +26,8 @@ export type NoteNodeData = {
 export type GroupNodeData = {
   label: string
   notes?: string
+  cfdmServiceId?: number
+  lbMode?: TopologyLbMode
 }
 
 export type TopologyNodeData =
@@ -153,4 +158,32 @@ export function vpsSpecsLine(vps: Pick<Vps, 'vcpu' | 'ramGb' | 'diskGb' | 'diskT
 export function newNodeId(prefix: string): string {
   // uid() falls back when crypto.randomUUID unavailable (HTTP non-localhost)
   return `${prefix}-${uid()}`
+}
+
+export function isTopologyLbMode(value: unknown): value is TopologyLbMode {
+  return value === 'round_robin' || value === 'failover' || value === 'weighted'
+}
+
+export function lbModeLabel(mode: TopologyLbMode): string {
+  switch (mode) {
+    case 'failover':
+      return 'Failover'
+    case 'round_robin':
+      return 'Round robin'
+    case 'weighted':
+      return 'Weighted'
+  }
+}
+
+export function lbModeBadgeVariant(
+  mode: TopologyLbMode,
+): 'warning' | 'success' | 'info' {
+  switch (mode) {
+    case 'failover':
+      return 'warning'
+    case 'round_robin':
+      return 'success'
+    case 'weighted':
+      return 'info'
+  }
 }

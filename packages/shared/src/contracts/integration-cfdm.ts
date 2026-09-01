@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+export const topologyLbModeSchema = z.enum(['round_robin', 'failover', 'weighted'])
+export type TopologyLbMode = z.infer<typeof topologyLbModeSchema>
+
 export const cfdmBindingSyncItemSchema = z.object({
   bindingId: z.number().int().positive(),
   serviceId: z.number().int().positive(),
@@ -11,6 +14,8 @@ export const cfdmBindingSyncItemSchema = z.object({
   ips: z.array(z.string()),
   /** CNAME-цель (FQDN), если binding — CNAME; для матчинга по dns / цепочке. */
   cnameTarget: z.string().optional(),
+  /** HA-режим binding (fallback — service group). Optional для старых payload. */
+  lbMode: topologyLbModeSchema.optional(),
   deleted: z.boolean().optional(),
 })
 

@@ -154,6 +154,7 @@ export interface VpsDomain {
   source: string
   matchStatus: 'matched' | 'unmatched' | 'orphaned'
   targetIps?: string | null
+  lbMode?: 'round_robin' | 'failover' | 'weighted' | null
   syncedAt: string
 }
 

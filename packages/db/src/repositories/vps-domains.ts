@@ -63,6 +63,7 @@ type BindingFields = {
   cfdmBindingId: number
   source: 'cfdm'
   targetIps: string
+  lbMode: string | null
   syncedAt: string
 }
 
@@ -239,6 +240,7 @@ export const vpsDomainsRepository = {
         cfdmBindingId: seed.cfdmBindingId,
         source: 'cfdm',
         targetIps: seed.targetIps ?? JSON.stringify(storedIps),
+        lbMode: seed.lbMode ?? null,
         syncedAt: now,
       }
       const result = reconcileBindingToVpsIds(db, group, fields, wanted, emptyStatus)
@@ -282,6 +284,7 @@ export const vpsDomainsRepository = {
       cfdmBindingId: item.bindingId,
       source: 'cfdm',
       targetIps: JSON.stringify(item.ips.filter(isIpLiteral)),
+      lbMode: item.lbMode ?? null,
       syncedAt: now,
     })
 

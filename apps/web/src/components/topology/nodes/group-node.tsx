@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import { type NodeProps, NodeResizer } from '@xyflow/react'
 import { cn } from '@cfdm/ui/lib/utils'
-import type { GroupNodeData } from '../types'
+import { Badge } from '@/components/reui/badge'
+import { lbModeBadgeVariant, lbModeLabel, type GroupNodeData } from '../types'
 
 function GroupNodeComponent({ data, selected }: NodeProps & { data: GroupNodeData }) {
   return (
@@ -13,8 +14,15 @@ function GroupNodeComponent({ data, selected }: NodeProps & { data: GroupNodeDat
     >
       <NodeResizer minWidth={200} minHeight={120} isVisible={selected} />
       <div className="flex flex-col gap-0.5 px-3 py-2">
-        <div className="text-xs font-medium text-foreground">
-          {data.label || 'Группа'}
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 truncate text-xs font-medium text-foreground">
+            {data.label || 'Группа'}
+          </div>
+          {data.lbMode ? (
+            <Badge variant={lbModeBadgeVariant(data.lbMode)} size="xs">
+              {lbModeLabel(data.lbMode)}
+            </Badge>
+          ) : null}
         </div>
         {data.notes ? (
           <div className="text-[10px] text-muted-foreground whitespace-pre-wrap">

@@ -232,6 +232,7 @@ export const vpsDomains = sqliteTable(
     source: text('source').notNull().default('cfdm'),
     matchStatus: text('matchStatus').notNull().default('unmatched'),
     targetIps: text('targetIps'),
+    lbMode: text('lbMode'),
     syncedAt: text('syncedAt').notNull(),
   },
   (t) => ({
