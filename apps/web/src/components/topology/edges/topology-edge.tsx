@@ -2,6 +2,7 @@ import { memo } from 'react'
 import {
   BaseEdge,
   EdgeLabelRenderer,
+  getBezierPath,
   getSmoothStepPath,
   type Edge,
   type EdgeProps,
@@ -30,20 +31,22 @@ function TopologyEdgeComponent(props: EdgeProps<Edge<TopologyEdgeData>>) {
     data,
   } = props
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const relation = data?.relation ?? 'network'
+  const title = data?.label?.trim() ?? ''
+  const protocol = data?.protocol?.trim() ?? ''
+  const tunnelIps = formatEdgeTunnelIps(data ?? {})
+  const membership = relation === 'membership'
+  const pathParams = {
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
-  })
-
-  const relation = data?.relation ?? 'network'
-  const title = data?.label?.trim() ?? ''
-  const protocol = data?.protocol?.trim() ?? ''
-  const tunnelIps = formatEdgeTunnelIps(data ?? {})
-  const membership = relation === 'membership'
+  }
+  const [edgePath, labelX, labelY] = membership
+    ? getBezierPath(pathParams)
+    : getSmoothStepPath(pathParams)
 
   return (
     <>

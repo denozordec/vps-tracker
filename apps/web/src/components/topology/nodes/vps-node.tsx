@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { type NodeProps } from '@xyflow/react'
 import { ServerIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@cfdm/ui/lib/utils'
@@ -11,6 +11,7 @@ import { resolveCountryCode, vpsStatusLabel } from '@/lib/format'
 import type { Vps } from '@/types/entities'
 import { aggregateCfdmServices, servicesForVps } from '../cfdm-services'
 import { type VpsNodeData, vpsSpecsLine } from '../types'
+import { NodeSideHandles } from './node-side-handles'
 
 function formatRate(vps: Vps): string | null {
   if (vps.tariffType === 'monthly' && vps.monthlyRate != null) {
@@ -56,11 +57,7 @@ function VpsNodeComponent({ data, selected }: NodeProps & { data: VpsNodeData })
           />
         </div>
       ) : null}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!size-2.5 !border-background !bg-muted-foreground"
-      />
+      <NodeSideHandles />
       {vps?.ip ? (
         <div className="mb-1 font-mono text-[10px] text-muted-foreground">{vps.ip}</div>
       ) : null}
@@ -109,11 +106,6 @@ function VpsNodeComponent({ data, selected }: NodeProps & { data: VpsNodeData })
           ) : null}
         </div>
       </div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!size-2.5 !border-background !bg-muted-foreground"
-      />
     </div>
   )
 }

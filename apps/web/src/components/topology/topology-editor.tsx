@@ -12,6 +12,7 @@ import {
   ReactFlowProvider,
   Background,
   BackgroundVariant,
+  ConnectionMode,
   MarkerType,
   addEdge,
   useEdgesState,
@@ -41,6 +42,7 @@ import { VpsDetailSheet } from './vps-detail-sheet'
 import { ElementEditSheet, type EditableElement } from './element-edit-sheet'
 import { EdgeEditSheet } from './edge-edit-sheet'
 import { applyEdgeVisuals, createConnectedEdge, isMembershipEdge } from './edge-utils'
+import { applyMembershipHandles, clusterIdsForService } from './membership-handles'
 import { aggregateCfdmServices, type CfdmTopologyService } from './cfdm-services'
 import {
   applyServiceFqdns,
@@ -102,7 +104,7 @@ function TopologyEditorInner({
   const { resolvedTheme } = useTheme()
   const colorMode = resolvedTheme === 'dark' ? 'dark' : 'light'
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const { screenToFlowPosition, fitView, zoomIn, zoomOut, getViewport, setViewport } =
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut, getViewport, setViewport, getNodes, getEdges } =
     useReactFlow()
   const { data: snapshot } = useQuery(snapshotQueryOptions())
   const cfdmServices = useMemo(
@@ -139,8 +141,9 @@ function TopologyEditorInner({
       cfdmServicesRef.current,
     )
     const withFqdn = applyServiceFqdns(migrated.nodes, cfdmServicesRef.current)
+    const withHandles = applyMembershipHandles(migrated.edges, withFqdn)
     setNodes(() => normalizeGroupLayers(sortParentsFirst(withFqdn)))
-    setEdges(() => normalizeEdges(migrated.edges))
+    setEdges(() => normalizeEdges(withHandles))
     setEditElement(null)
     setElementOpen(false)
     setEditEdgeId(null)
@@ -179,6 +182,10 @@ function TopologyEditorInner({
     return () => window.clearTimeout(t)
   }, [nodes, edges, emitSave, locked])
 
+  const syncMembershipHandles = useCallback(() => {
+    setEdges((eds) => applyMembershipHandles(eds, getNodes() as FlowNode[]))
+  }, [getNodes, setEdges])
+
   const onNodesChange: OnNodesChange<FlowNode> = useCallback(
     (changes) => {
       if (locked) return
@@ -192,8 +199,13 @@ function TopologyEditorInner({
           setNodes((ns) => normalizeGroupLayers(ns))
         })
       }
+      if (changes.some((c) => c.type === 'dimensions')) {
+        queueMicrotask(() => {
+          setEdges((eds) => applyMembershipHandles(eds, getNodes() as FlowNode[]))
+        })
+      }
     },
-    [locked, onNodesChangeBase, setNodes],
+    [locked, onNodesChangeBase, setNodes, setEdges, getNodes],
   )
 
   const onEdgesChange: OnEdgesChange<FlowEdge> = useCallback(
@@ -223,6 +235,11 @@ function TopologyEditorInner({
     [locked, setEdges],
   )
 
+  const onNodeDrag: OnNodeDrag<FlowNode> = useCallback(() => {
+    if (locked) return
+    syncMembershipHandles()
+  }, [locked, syncMembershipHandles])
+
   const onNodeDragStop: OnNodeDrag<FlowNode> = useCallback(
     (_e, node) => {
       if (locked) return
@@ -237,8 +254,9 @@ function TopologyEditorInner({
         const updated = ns.map((n) => (n.id === next.id ? next : n))
         return normalizeGroupLayers(sortParentsFirst(updated))
       })
+      syncMembershipHandles()
     },
-    [locked, setNodes],
+    [locked, setNodes, syncMembershipHandles],
   )
 
   const existingVpsIds = useMemo(() => {
@@ -382,6 +400,16 @@ function TopologyEditorInner({
       return
     }
     if (node.type === 'service' && isServiceNodeData(node.data)) {
+      const serviceId = node.id
+      queueMicrotask(() => {
+        const ids = new Set(clusterIdsForService(serviceId, getEdges()))
+        setNodes((ns) => ns.map((n) => ({ ...n, selected: ids.has(n.id) })))
+      })
+    }
+  }
+
+  function onNodeDoubleClick(_e: ReactMouseEvent, node: FlowNode) {
+    if (node.type === 'service' && isServiceNodeData(node.data)) {
       setEditElement({ kind: 'service', id: node.id, data: node.data })
       setElementOpen(true)
     }
@@ -457,7 +485,9 @@ function TopologyEditorInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         onEdgeClick={onEdgeClick}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onDrop={onDrop}
         onDragOver={onDragOver}
@@ -469,6 +499,8 @@ function TopologyEditorInner({
         }}
         nodeTypes={topologyNodeTypes}
         edgeTypes={topologyEdgeTypes}
+        connectionMode={ConnectionMode.Loose}
+        elevateNodesOnSelect={false}
         nodesDraggable={!locked}
         nodesConnectable={!locked}
         elementsSelectable={!locked}

@@ -32,6 +32,7 @@ export function aggregateCfdmServices(domains: VpsDomain[]): CfdmTopologyService
       lbMode?: TopologyLbMode
       fqdns: Set<string>
       matchedVpsIds: Set<string>
+      originIps: Set<string>
       unmatchedIps: Set<string>
     }
   >()
@@ -45,12 +46,14 @@ export function aggregateCfdmServices(domains: VpsDomain[]): CfdmTopologyService
         slug: row.serviceSlug,
         fqdns: new Set(),
         matchedVpsIds: new Set(),
+        originIps: new Set(),
         unmatchedIps: new Set(),
       }
       byService.set(row.cfdmServiceId, bucket)
     }
     if (row.fqdn) bucket.fqdns.add(row.fqdn)
     if (isTopologyLbMode(row.lbMode)) bucket.lbMode = row.lbMode
+    for (const ip of parseTargetIps(row.targetIps)) bucket.originIps.add(ip)
     if (row.vpsId && row.matchStatus === 'matched') {
       bucket.matchedVpsIds.add(row.vpsId)
     } else {
@@ -63,7 +66,7 @@ export function aggregateCfdmServices(domains: VpsDomain[]): CfdmTopologyService
       serviceId,
       name: b.name,
       slug: b.slug,
-      lbMode: b.lbMode,
+      lbMode: b.originIps.size >= 2 ? b.lbMode : undefined,
       fqdns: [...b.fqdns].sort(),
       matchedVpsIds: [...b.matchedVpsIds],
       unmatchedIps: [...b.unmatchedIps],

@@ -1,9 +1,10 @@
 import { memo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { type NodeProps } from '@xyflow/react'
 import { NetworkIcon } from 'lucide-react'
 import { cn } from '@cfdm/ui/lib/utils'
 import { Badge } from '@/components/reui/badge'
 import { lbModeBadgeVariant, lbModeLabel, type ServiceNodeData } from '../types'
+import { NodeSideHandles } from './node-side-handles'
 
 function ServiceNodeComponent({ data, selected }: NodeProps & { data: ServiceNodeData }) {
   return (
@@ -13,11 +14,7 @@ function ServiceNodeComponent({ data, selected }: NodeProps & { data: ServiceNod
         selected ? 'border-primary ring-2 ring-primary/20' : 'border-border',
       )}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!size-2.5 !border-background !bg-muted-foreground"
-      />
+      <NodeSideHandles />
       <div className="flex items-start gap-2">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
           <NetworkIcon className="size-4 text-muted-foreground" />
@@ -38,11 +35,6 @@ function ServiceNodeComponent({ data, selected }: NodeProps & { data: ServiceNod
           ) : null}
         </div>
       </div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!size-2.5 !border-background !bg-muted-foreground"
-      />
     </div>
   )
 }

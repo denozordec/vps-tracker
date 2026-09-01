@@ -2,6 +2,7 @@ import type { TopologyFlowNode, TopologyNodeType } from './types'
 
 const GROUP_Z = -1
 const CONTENT_Z = 1
+const SERVICE_Z = 3
 
 const ATTACHABLE = new Set<TopologyNodeType>(['vps', 'shape', 'note', 'service'])
 
@@ -16,10 +17,10 @@ export function normalizeGroupLayers(nodes: TopologyFlowNode[]): TopologyFlowNod
     }
     // extent: 'parent' блокирует вытаскивание — не используем; parentId достаточно для «прилипания»
     const cleared = n.extent != null ? { ...n, extent: undefined } : n
-    if (cleared.zIndex != null && cleared.zIndex < CONTENT_Z) {
-      return { ...cleared, zIndex: CONTENT_Z }
+    if (cleared.type === 'service') {
+      return { ...cleared, zIndex: SERVICE_Z }
     }
-    return cleared.zIndex == null ? { ...cleared, zIndex: CONTENT_Z } : cleared
+    return { ...cleared, zIndex: CONTENT_Z }
   })
 }
 

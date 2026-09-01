@@ -57,6 +57,7 @@ describe('placeCfdmService', () => {
     expect(edges.every((e) => e.data?.relation === 'membership')).toBe(true)
     expect(edges).toHaveLength(2)
     expect(edges.every((e) => e.source === service!.id)).toBe(true)
+    expect(edges.every((e) => e.sourceHandle && e.targetHandle)).toBe(true)
   })
 
   it('does not duplicate a service already on the canvas', () => {

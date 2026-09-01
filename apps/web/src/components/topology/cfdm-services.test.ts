@@ -28,6 +28,7 @@ describe('aggregateCfdmServices', () => {
         fqdn: 'vpn-a.example.com',
         vpsId: 'vps-1',
         matchStatus: 'matched',
+        targetIps: JSON.stringify(['203.0.113.10']),
         lbMode: 'failover',
       }),
       domain({
@@ -37,6 +38,7 @@ describe('aggregateCfdmServices', () => {
         fqdn: 'vpn-b.example.com',
         vpsId: 'vps-2',
         matchStatus: 'matched',
+        targetIps: JSON.stringify(['203.0.113.20']),
         lbMode: 'failover',
       }),
       domain({
@@ -65,7 +67,32 @@ describe('aggregateCfdmServices', () => {
     const dns = services.find((s) => s.serviceId === 11)
     expect(dns?.matchedVpsIds).toEqual([])
     expect(dns?.unmatchedIps).toEqual(['198.51.100.1'])
-    expect(dns?.lbMode).toBe('round_robin')
+    expect(dns?.lbMode).toBeUndefined()
+  })
+
+  it('omits lbMode when unique origin IPs are below two', () => {
+    const rows: VpsDomain[] = [
+      domain({
+        id: 'a',
+        cfdmServiceId: 10,
+        cfdmBindingId: 1,
+        vpsId: 'vps-1',
+        matchStatus: 'matched',
+        targetIps: JSON.stringify(['203.0.113.10']),
+        lbMode: 'round_robin',
+      }),
+      domain({
+        id: 'b',
+        cfdmServiceId: 10,
+        cfdmBindingId: 2,
+        fqdn: 'vpn-b.example.com',
+        vpsId: 'vps-2',
+        matchStatus: 'matched',
+        targetIps: JSON.stringify(['203.0.113.10']),
+        lbMode: 'round_robin',
+      }),
+    ]
+    expect(aggregateCfdmServices(rows)[0]?.lbMode).toBeUndefined()
   })
 
   it('lists services a VPS belongs to', () => {

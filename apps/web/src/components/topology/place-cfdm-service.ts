@@ -1,6 +1,7 @@
 import type { CfdmTopologyService } from './cfdm-services'
 import { serviceFqdnMeta } from './cfdm-services'
 import { createMembershipEdge } from './edge-utils'
+import { applyMembershipHandles } from './membership-handles'
 import { detachNodeFromGroup, normalizeGroupLayers, sortParentsFirst } from './group-utils'
 import {
   isGroupNodeData,
@@ -106,7 +107,7 @@ export function placeCfdmService(
 
   return {
     nodes: normalizeGroupLayers(sortParentsFirst(nextNodes)),
-    edges: nextEdges,
+    edges: applyMembershipHandles(nextEdges, nextNodes),
     alreadyOnCanvas: false,
   }
 }
@@ -178,8 +179,12 @@ export function migrateCfdmGroupsToServices(
   if (groups.length === 0) {
     const compacted = nodes.map(compactServiceNode)
     const withMeta = applyServiceFqdns(compacted, services)
-    const changed = compacted.some((n, i) => n !== nodes[i]) || withMeta !== compacted
-    return { nodes: withMeta, edges, changed }
+    const nextEdges = applyMembershipHandles(edges, withMeta)
+    const changed =
+      compacted.some((n, i) => n !== nodes[i]) ||
+      withMeta !== compacted ||
+      nextEdges !== edges
+    return { nodes: withMeta, edges: nextEdges, changed }
   }
 
   let nextNodes = nodes
@@ -205,7 +210,7 @@ export function migrateCfdmGroupsToServices(
 
   return {
     nodes: normalizeGroupLayers(sortParentsFirst(nextNodes)),
-    edges: nextEdges,
+    edges: applyMembershipHandles(nextEdges, nextNodes),
     changed,
   }
 }
