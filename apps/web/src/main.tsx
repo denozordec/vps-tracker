@@ -5,6 +5,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { Toaster } from '@cfdm/ui/components/sonner'
 
 import '@cfdm/ui/globals.css'
+import '@/styles/theme.css'
 
 import { queryClient } from '@/lib/queryClient'
 import { createRouter } from '@/lib/router'
