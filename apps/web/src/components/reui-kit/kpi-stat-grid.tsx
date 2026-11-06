@@ -231,38 +231,39 @@ interface KpiStatGridProps {
   'aria-label'?: string
 }
 
+/** Ячейка полосы KPI: плоская (разделители даёт `gap-px` на фоне border), padding как в макете 14×18. */
 function KpiStatCardItem({ item }: { item: KpiStatItem }) {
   const onActivate = resolveActivate(item)
-  const panelClass = panelClassName(item)
+  const cellClass = cn('bg-card min-w-0 px-[18px] py-3.5', panelClassName(item))
 
   if (item.to) {
     return (
-      <FramePanel className={panelClass}>
-        <Link to={item.to} search={item.search} className="focus-visible:outline-none">
+      <div className={cellClass}>
+        <Link to={item.to} search={item.search} className="block focus-visible:outline-none">
           <KpiStatCardBody item={item} />
         </Link>
-      </FramePanel>
+      </div>
     )
   }
 
   if (onActivate) {
     return (
-      <FramePanel
-        className={panelClass}
+      <div
+        className={cellClass}
         onClick={onActivate}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => handleCardKeyDown(onActivate, e)}
       >
         <KpiStatCardBody item={item} />
-      </FramePanel>
+      </div>
     )
   }
 
   return (
-    <FramePanel className={panelClass}>
+    <div className={cellClass}>
       <KpiStatCardBody item={item} />
-    </FramePanel>
+    </div>
   )
 }
 
@@ -312,15 +313,27 @@ export function KpiStatGrid({
     )
   }
 
+  // Макет (TplVps `cap3 knN`) и EvoBGP: одна панель, ячейки через 1px-разделитель, не больше 4 колонок.
   return (
-    <Frame className={cn('@container w-full', className)} aria-label={ariaLabel}>
-      <div className={cn('grid gap-2', kpiCols(list.length || 1))}>
-        {list.map((item, index) => (
-          <KpiStatCardItem key={kpiStatItemKey(item, index)} item={item} />
-        ))}
-      </div>
+    <Frame spacing="sm" className={cn('@container w-full min-w-0', className)} aria-label={ariaLabel}>
+      <FramePanel className="overflow-hidden p-0">
+        <div className={cn('bg-border grid gap-px', stripCols(list.length || 1))}>
+          {list.map((item, index) => (
+            <KpiStatCardItem key={kpiStatItemKey(item, index)} item={item} />
+          ))}
+        </div>
+      </FramePanel>
     </Frame>
   )
+}
+
+function stripCols(count: number): string {
+  if (count <= 1) return 'grid-cols-1'
+  if (count === 2) return 'grid-cols-1 @xl:grid-cols-2'
+  if (count === 3) return 'grid-cols-1 @2xl:grid-cols-3'
+  if (count === 4) return 'grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-4'
+  // 5+ — по 3 в ряд, чтобы не оставалась пустая серая ячейка (6 = 3+3).
+  return 'grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3'
 }
 
 export function kpiStatItemKey(item: KpiStatItem, index: number): string {
