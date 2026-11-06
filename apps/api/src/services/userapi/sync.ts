@@ -2,8 +2,9 @@
  * Sync Macloud / VDSina UserAPI data into vps-tracker DB
  */
 
-import { and, eq, like, or } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { eq } from 'drizzle-orm'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
+import { findSyncedVps } from '../providers/find-synced-vps.js'
 
 import type { UserApiSyncAccount } from './context.js'
 import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
@@ -117,19 +118,7 @@ export async function syncFromUserApi(
       const paidUntil = vps.paidUntil || ''
       const notes = vps.notes
 
-      const existing = db
-        .select()
-        .from(schema.vps)
-        .where(
-          and(
-            eq(schema.vps.providerAccountId, accountId),
-            or(
-              ...(vps.ip ? [eq(schema.vps.ip, vps.ip)] : []),
-              like(schema.vps.notes, `%${idPrefix}-${vps.externalId}%`),
-            ),
-          ),
-        )
-        .get()
+      const existing = findSyncedVps(accountId, id, [`${idPrefix}-${vps.externalId}`], vps.ip)
 
       if (existing) {
         let userOverrides: string[] = []
@@ -193,6 +182,7 @@ export async function syncFromUserApi(
         syncSummary.added.push({ id, label })
         db.insert(schema.vps)
           .values({
+            spaceId: getCurrentSpaceId(),
             id,
             ip: vps.ip,
             ipv6: vps.ipv6,
@@ -253,6 +243,7 @@ export async function syncFromUserApi(
       const payId = `pay-${idPrefix}-${accountId}-${payment.externalId}`
       db.insert(schema.payments)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: payId,
           type: payment.type,
           date: payment.date,
@@ -308,6 +299,7 @@ export async function syncFromUserApi(
       }
       db.insert(schema.activeTariffs)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: tariffId,
           providerAccountId: accountId,
           providerId,

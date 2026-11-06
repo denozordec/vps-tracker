@@ -2,8 +2,9 @@
  * Sync RuVDS API v2 data into vps-tracker DB
  */
 
-import { and, eq, like, or } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { eq } from 'drizzle-orm'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
+import { findSyncedVps } from '../providers/find-synced-vps.js'
 
 import type { RuvdsSyncAccount } from './context.js'
 import { ruvdsCredentialsString } from './context.js'
@@ -112,19 +113,7 @@ export async function syncFromRuvds(
       const paidUntil = vps.paidUntil || ''
       const notes = vps.notes
 
-      const existing = db
-        .select()
-        .from(schema.vps)
-        .where(
-          and(
-            eq(schema.vps.providerAccountId, accountId),
-            or(
-              ...(vps.ip ? [eq(schema.vps.ip, vps.ip)] : []),
-              like(schema.vps.notes, `%ruvds-${vps.externalId}%`),
-            ),
-          ),
-        )
-        .get()
+      const existing = findSyncedVps(accountId, id, [`ruvds-${vps.externalId}`], vps.ip)
 
       if (existing) {
         let userOverrides: string[] = []
@@ -205,6 +194,7 @@ export async function syncFromRuvds(
         syncSummary.added.push({ id, label })
         db.insert(schema.vps)
           .values({
+            spaceId: getCurrentSpaceId(),
             id,
             ip: vps.ip,
             ipv6: vps.ipv6,
@@ -265,6 +255,7 @@ export async function syncFromRuvds(
       const payId = `pay-ruvds-${accountId}-${payment.externalId}`
       db.insert(schema.payments)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: payId,
           type: payment.type,
           date: payment.date,
@@ -320,6 +311,7 @@ export async function syncFromRuvds(
       }
       db.insert(schema.activeTariffs)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: tariffId,
           providerAccountId: accountId,
           providerId,

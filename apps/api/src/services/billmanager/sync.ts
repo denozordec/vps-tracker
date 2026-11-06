@@ -2,8 +2,9 @@
  * Sync BILLmanager data into vps-tracker DB (Drizzle / @cfdm/db)
  */
 
-import { and, eq, like, or } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { eq } from 'drizzle-orm'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
+import { findSyncedVps } from '../providers/find-synced-vps.js'
 
 import type { BillmanagerSyncAccount } from './context.js'
 import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
@@ -165,16 +166,7 @@ export async function syncFromBillmanager(
       const paidUntil = vps.paidUntil || ''
       const notes = vps.notes ? `${vps.notes} [bm-${vps.externalId}]` : `bm-${vps.externalId}`
 
-      const existing = db
-        .select()
-        .from(schema.vps)
-        .where(
-          and(
-            eq(schema.vps.providerAccountId, accountId),
-            or(eq(schema.vps.ip, vps.ip), like(schema.vps.notes, `%bm-${vps.externalId}%`)),
-          ),
-        )
-        .get()
+      const existing = findSyncedVps(accountId, id, [`bm-${vps.externalId}`], vps.ip)
 
       if (existing) {
         let userOverrides: string[] = []
@@ -271,6 +263,7 @@ export async function syncFromBillmanager(
         syncSummary.added.push({ id, label })
         db.insert(schema.vps)
           .values({
+            spaceId: getCurrentSpaceId(),
             id,
             ip: vps.ip,
             ipv6: vps.ipv6,
@@ -331,6 +324,7 @@ export async function syncFromBillmanager(
       const payId = `pay-bm-${accountId}-${payment.externalId}`
       db.insert(schema.payments)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: payId,
           type: payment.type,
           date: payment.date,
@@ -386,6 +380,7 @@ export async function syncFromBillmanager(
       }
       db.insert(schema.activeTariffs)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: tariffId,
           providerAccountId: accountId,
           providerId,
@@ -416,6 +411,7 @@ export async function syncFromBillmanager(
       const periods = Array.isArray(slist.period) ? JSON.stringify(slist.period) : '[]'
       db.insert(schema.tariffSyncOptions)
         .values({
+          spaceId: getCurrentSpaceId(),
           providerAccountId: accountId,
           datacenters,
           periods,

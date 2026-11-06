@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createConnection } from 'node:net'
 import { desc, eq } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
 
 const CHECK_TIMEOUT_MS = 5000
 
@@ -67,6 +67,7 @@ export async function runVpsUptimeChecks(): Promise<UptimeCheckResult> {
 
     db.insert(schema.vpsHealthChecks)
       .values({
+        spaceId: getCurrentSpaceId(),
         id: `hc-${randomUUID()}`,
         vpsId: row.id,
         checkedAt: now,

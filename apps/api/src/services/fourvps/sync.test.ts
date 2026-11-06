@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { closeDb, getSqlite } from '@cfdm/db'
+import { closeDb, getSqlite, runWithSpaceAsync } from '@cfdm/db'
 import { resetTestDb } from '@cfdm/db/test-setup'
 import { providerAccountsRepository } from '@cfdm/db/repositories/provider-accounts'
 
@@ -136,5 +136,30 @@ describe('syncFromFourvps', () => {
       .prepare(`SELECT balance_api FROM provider_accounts WHERE id = ?`)
       .get('acc-4vps') as { balance_api: number }
     expect(bal.balance_api).toBe(77825)
+  })
+  it('writes synced rows into the current space', async () => {
+    getSqlite()
+      .prepare(`INSERT INTO spaces (id, name, slug, kind, createdAt) VALUES ('space-x', 'X', 'x', 'personal', '2026-01-01')`)
+      .run()
+    await runWithSpaceAsync('space-x', () => syncFromFourvps(account))
+    const rows = getSqlite()
+      .prepare(`SELECT spaceId FROM vps UNION ALL SELECT spaceId FROM active_tariffs`)
+      .all() as { spaceId: string }[]
+    expect(rows.length).toBe(2)
+    expect(rows.every((r) => r.spaceId === 'space-x')).toBe(true)
+  })
+
+  it('does not merge a server into another by note prefix or empty IP', async () => {
+    getSqlite()
+      .prepare(
+        `INSERT INTO vps (id, spaceId, ip, providerId, providerAccountId, notes) VALUES ('manual-12', 'space-main', '', 'prov-4vps', 'acc-4vps', '4vps-1000')`,
+      )
+      .run()
+    vi.mocked(fetchMyServers).mockResolvedValue([
+      { ...(await fetchMyServers('', ''))[0]!, id: 100, ipv4: '' },
+    ])
+    await syncFromFourvps(account)
+    const ids = (getSqlite().prepare(`SELECT id FROM vps ORDER BY id`).all() as { id: string }[]).map((r) => r.id)
+    expect(ids).toEqual(['manual-12', 'vps-4vps-acc-4vps-100'])
   })
 })

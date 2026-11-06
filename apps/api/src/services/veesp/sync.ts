@@ -2,8 +2,9 @@
  * Sync Veesp client area data into vps-tracker DB
  */
 
-import { and, eq, like, or } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { eq } from 'drizzle-orm'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
+import { findSyncedVps } from '../providers/find-synced-vps.js'
 
 import type { VeespSyncAccount } from './context.js'
 import { veespCredentialsString } from './context.js'
@@ -101,20 +102,7 @@ export async function syncFromVeesp(
       const paidUntil = vps.paidUntil || ''
       const notes = vps.notes
 
-      const existing = db
-        .select()
-        .from(schema.vps)
-        .where(
-          and(
-            eq(schema.vps.providerAccountId, accountId),
-            or(
-              ...(vps.ip ? [eq(schema.vps.ip, vps.ip)] : []),
-              like(schema.vps.notes, `%veesp-${vps.externalId}%`),
-              like(schema.vps.notes, `%veesp-${record.serviceId}%`),
-            ),
-          ),
-        )
-        .get()
+      const existing = findSyncedVps(accountId, id, [`veesp-${vps.externalId}`, `veesp-${record.serviceId}`], vps.ip)
 
       if (existing) {
         let userOverrides: string[] = []
@@ -195,6 +183,7 @@ export async function syncFromVeesp(
         syncSummary.added.push({ id, label })
         db.insert(schema.vps)
           .values({
+            spaceId: getCurrentSpaceId(),
             id,
             ip: vps.ip,
             ipv6: vps.ipv6,
@@ -255,6 +244,7 @@ export async function syncFromVeesp(
       const payId = `pay-veesp-${accountId}-${payment.externalId}`
       db.insert(schema.payments)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: payId,
           type: payment.type,
           date: payment.date,
@@ -310,6 +300,7 @@ export async function syncFromVeesp(
       }
       db.insert(schema.activeTariffs)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: tariffId,
           providerAccountId: accountId,
           providerId,

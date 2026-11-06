@@ -2,8 +2,9 @@
  * Sync 4VPS data into vps-tracker DB (Drizzle / @cfdm/db)
  */
 
-import { and, eq, like, or } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { eq } from 'drizzle-orm'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
+import { findSyncedVps } from '../providers/find-synced-vps.js'
 
 import type { FourvpsSyncAccount } from './context.js'
 import { syncFallbackCurrency } from '@cfdm/shared/utils/account-balance'
@@ -102,16 +103,7 @@ export async function syncFromFourvps(
       const paidUntil = vps.paidUntil || ''
       const notes = vps.notes
 
-      const existing = db
-        .select()
-        .from(schema.vps)
-        .where(
-          and(
-            eq(schema.vps.providerAccountId, accountId),
-            or(eq(schema.vps.ip, vps.ip), like(schema.vps.notes, `%4vps-${vps.externalId}%`)),
-          ),
-        )
-        .get()
+      const existing = findSyncedVps(accountId, id, [`4vps-${vps.externalId}`], vps.ip)
 
       if (existing) {
         let userOverrides: string[] = []
@@ -175,6 +167,7 @@ export async function syncFromFourvps(
         syncSummary.added.push({ id, label })
         db.insert(schema.vps)
           .values({
+            spaceId: getCurrentSpaceId(),
             id,
             ip: vps.ip,
             ipv6: vps.ipv6,
@@ -255,6 +248,7 @@ export async function syncFromFourvps(
       }
       db.insert(schema.activeTariffs)
         .values({
+          spaceId: getCurrentSpaceId(),
           id: tariffId,
           providerAccountId: accountId,
           providerId,
