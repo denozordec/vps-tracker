@@ -71,8 +71,8 @@ export const migrateRoutes: FastifyPluginAsync = async (app) => {
             v.ipv6 ?? '',
             additionalIps,
             v.dns ?? '',
-            v.providerId ?? '',
-            v.providerAccountId ?? '',
+            v.providerId || null,
+            v.providerAccountId || null,
             v.country ?? '',
             v.city ?? '',
             v.datacenter ?? '',
@@ -88,7 +88,7 @@ export const migrateRoutes: FastifyPluginAsync = async (app) => {
             v.purpose ?? '',
             v.environment ?? '',
             v.project ?? '',
-            v.projectId ?? null,
+            v.projectId || null,
             v.monitoringEnabled ? 1 : 0,
             v.backupEnabled ? 1 : 0,
             v.status ?? 'active',
@@ -116,8 +116,8 @@ export const migrateRoutes: FastifyPluginAsync = async (app) => {
             pm.date ?? '',
             Number(pm.amount) || 0,
             pm.currency ?? '',
-            pm.providerAccountId ?? '',
-            pm.vpsId ?? '',
+            pm.providerAccountId || null,
+            pm.vpsId || null,
             pm.note ?? '',
           )
         }
@@ -136,8 +136,8 @@ export const migrateRoutes: FastifyPluginAsync = async (app) => {
             Number(bl.amount) || 0,
             bl.currency ?? '',
             bl.direction ?? '',
-            bl.providerAccountId ?? '',
-            bl.vpsId ?? '',
+            bl.providerAccountId || null,
+            bl.vpsId || null,
             bl.note ?? '',
           )
         }

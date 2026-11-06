@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { consolidateAllProviderApiSources } from './maintenance/consolidate-api.js'
 
 const MAIN_SPACE_ID = 'space-main'
 
@@ -405,6 +406,11 @@ const COLUMN_MIGRATIONS: string[] = [
   `ALTER TABLE censorcheck_runs ADD COLUMN detectedHoster TEXT`,
 ]
 
+const PROVIDER_API_MIGRATIONS: string[] = [
+  `ALTER TABLE providers ADD COLUMN apiType TEXT`,
+  `ALTER TABLE providers ADD COLUMN apiBaseUrl TEXT`,
+]
+
 const SPACE_BACKFILL_TABLES = [
   'providers',
   'provider_accounts',
@@ -536,6 +542,17 @@ export function ensureRuntimeSchema(sqlite: Database.Database): void {
       /* column exists */
     }
   }
+  // Pre-provider-API DBs: columns appear empty, URLs still sit on accounts → move them once.
+  let providerApiAdded = false
+  for (const sql of PROVIDER_API_MIGRATIONS) {
+    try {
+      sqlite.exec(sql)
+      providerApiAdded = true
+    } catch {
+      /* column exists */
+    }
+  }
+  if (providerApiAdded) consolidateAllProviderApiSources(sqlite)
   rebuildVpsDomainsBindingUnique(sqlite)
   ensureMainSpace(sqlite)
   backfillSpaceIds(sqlite)

@@ -17,8 +17,8 @@ function normalize(input: Partial<Row>) {
     amount: Number(input.amount) || 0,
     currency: input.currency ?? '',
     direction: input.direction ?? '',
-    providerAccountId: input.providerAccountId ?? '',
-    vpsId: input.vpsId ?? '',
+    providerAccountId: input.providerAccountId || null,
+    vpsId: input.vpsId || null,
     note: input.note ?? '',
   }
 }
