@@ -1,11 +1,4 @@
 import type { ReactNode } from 'react'
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from '@/components/reui/frame'
 import { Skeleton } from '@cfdm/ui/components/skeleton'
 import { PageHeader } from '@/components/page-header'
 import { KpiStatGrid, type KpiStatCard } from './kpi-stat-grid'
@@ -16,13 +9,15 @@ interface OpsDashboardProps {
   title?: string
   description?: string
   kpiCards: OpsKpiCard[]
-  charts: ReactNode
-  queue: ReactNode
+  /** Alert between the page header and KPI (design order: title → banner → KPI → tabs). */
+  banner?: ReactNode
+  /** Page body after KPI — design «VPS-Tracker»: line tabs (Проблемы / Последние VPS / Аккаунты). */
+  children: ReactNode
   isLoading?: boolean
 }
 
 const rootClassName =
-  'text-foreground @container flex w-full flex-col gap-2 md:gap-3'
+  'text-foreground @container flex w-full flex-col gap-4 md:gap-6'
 
 function OpsDashboardSkeleton() {
   return (
@@ -45,8 +40,8 @@ export function OpsDashboard({
   title = 'Панель управления',
   description = 'Обзор VPS, платежей, тарифов и синхронизации',
   kpiCards,
-  charts,
-  queue,
+  banner,
+  children,
   isLoading = false,
 }: OpsDashboardProps) {
   if (isLoading) {
@@ -57,25 +52,13 @@ export function OpsDashboard({
     <div className={rootClassName}>
       <PageHeader title={title} description={description} />
 
+      {banner}
+
       <section aria-label="Ключевые метрики">
         <KpiStatGrid cards={kpiCards} skeletonCount={4} />
       </section>
 
-      <section aria-label="Аналитика" className="grid w-full min-w-0 gap-2">
-        {charts}
-      </section>
-
-      <section aria-label="Требуют внимания">
-        <Frame dense spacing="sm" className="w-full">
-          <FrameHeader>
-            <FrameTitle>Требуют внимания</FrameTitle>
-            <FrameDescription>
-              Проблемы оплаты, истекающие VPS и ошибки синхронизации
-            </FrameDescription>
-          </FrameHeader>
-          <FramePanel>{queue}</FramePanel>
-        </Frame>
-      </section>
+      {children}
     </div>
   )
 }

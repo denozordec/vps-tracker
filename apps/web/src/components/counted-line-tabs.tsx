@@ -17,7 +17,7 @@ interface CountedLineTabsProps {
   children?: ReactNode
 }
 
-/** Line tabs with count pills (c-tabs-2 / data-grid-filtering-2). */
+/** Page line tabs with mono counts (design «VPS-Tracker» ptabs; c-tabs-2). */
 export function CountedLineTabs({
   tabs,
   value,
@@ -37,7 +37,7 @@ export function CountedLineTabs({
           >
             <span>{tab.label}</span>
             {tab.count !== undefined ? (
-              <span className="bg-muted text-muted-foreground inline-flex min-w-5 items-center justify-center rounded-md px-1.5 py-0.5 text-xs tabular-nums">
+              <span className="text-muted-foreground font-mono text-xs tabular-nums">
                 {tab.count}
               </span>
             ) : null}

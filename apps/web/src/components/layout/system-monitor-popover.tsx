@@ -3,12 +3,16 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
   Bell,
+  ChevronRight,
   RefreshCw,
   Server,
   Wallet,
 } from 'lucide-react'
 
+import { Link } from '@tanstack/react-router'
+
 import { Badge } from '@/components/reui/badge'
+import { Button } from '@cfdm/ui/components/button'
 import { cn } from '@cfdm/ui/lib/utils'
 import { Item, ItemMedia } from '@cfdm/ui/components/item'
 import { Popover, PopoverContent, PopoverTrigger } from '@cfdm/ui/components/popover'
@@ -214,42 +218,43 @@ export function SystemMonitorPopover() {
     ],
   )
 
-  const spiking = metrics.some((m) => m.alert) || !apiOk
+  const errorCount = metrics.filter((m) => m.alert && m.tone === 'destructive').length + (apiOk ? 0 : 1)
+  const warningCount = metrics.filter((m) => m.alert && m.tone === 'warning').length
+  const spiking = errorCount + warningCount > 0
+  const statusLabel = spiking ? 'Внимание' : 'Норма'
 
   return (
     <Popover>
       <PopoverTrigger
         render={
-          <button
-            type="button"
-            aria-label="Монитор системы"
-            className={cn(
-              'relative inline-flex h-8 items-center gap-1.5 rounded-md border px-2 transition-colors outline-none',
-              'border-border hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
-            )}
+          <Button
+            variant="outline"
+            aria-label={`Монитор VPS Tracker: ${statusLabel.toLowerCase()}, ошибок ${errorCount}, предупреждений ${warningCount}`}
           />
         }
       >
-        <span className="relative flex size-3.5 items-center justify-center">
-          <Activity
-            aria-hidden
-            className={cn(
-              'size-3.5 transition-colors',
-              spiking ? 'text-destructive' : 'text-muted-foreground',
-            )}
-          />
-          {spiking ? (
-            <span className="bg-destructive/25 absolute inset-0 animate-ping rounded-full" aria-hidden />
-          ) : null}
-        </span>
-        <span className="text-foreground hidden text-xs font-medium sm:inline">Система</span>
-        <Badge
-          variant={spiking ? 'destructive-light' : 'success-light'}
-          size="xs"
-          className="h-4 px-1.5 text-[10px]"
-        >
-          {spiking ? 'Внимание' : 'Норма'}
-        </Badge>
+        <Activity
+          aria-hidden
+          className={cn(
+            errorCount > 0 ? 'text-destructive' : warningCount > 0 ? 'text-warning' : 'text-muted-foreground',
+          )}
+        />
+        <span className="hidden sm:inline">{statusLabel}</span>
+        {errorCount > 0 ? (
+          <Badge variant="destructive-light" size="sm" className="tabular-nums">
+            {errorCount}
+          </Badge>
+        ) : null}
+        {warningCount > 0 ? (
+          <Badge variant="warning-light" size="sm" className="tabular-nums">
+            {warningCount}
+          </Badge>
+        ) : null}
+        {!spiking ? (
+          <Badge variant="success-light" size="sm">
+            OK
+          </Badge>
+        ) : null}
       </PopoverTrigger>
 
       <PopoverContent align="end" sideOffset={8} className="flex w-80 flex-col gap-0! p-0!">
@@ -290,6 +295,13 @@ export function SystemMonitorPopover() {
             </>
           ) : null}
         </div>
+        <Link
+          to="/sync-journal"
+          className="border-border text-muted-foreground hover:text-foreground flex items-center justify-between border-t px-3 py-2 text-xs transition-colors"
+        >
+          Журнал синка
+          <ChevronRight aria-hidden className="size-3.5" />
+        </Link>
       </PopoverContent>
     </Popover>
   )

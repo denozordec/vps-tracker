@@ -16,6 +16,7 @@ import {
   Network,
   ShieldAlert,
   Globe,
+  ChevronDownIcon,
 } from 'lucide-react'
 
 import {
@@ -32,7 +33,13 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from '@cfdm/ui/components/sidebar'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@cfdm/ui/components/collapsible'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -41,8 +48,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@cfdm/ui/components/breadcrumb'
-import { Separator } from '@cfdm/ui/components/separator'
-import { Badge } from '@cfdm/ui/components/badge'
 import { TooltipProvider } from '@cfdm/ui/components/tooltip'
 
 import { Link, useRouterState } from '@tanstack/react-router'
@@ -50,7 +55,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 
 import { SystemMonitorPopover } from '@/components/layout/system-monitor-popover'
-import { AppsMenu } from '@/components/layout/apps-menu'
 import { SpaceSwitcher } from '@/components/layout/space-switcher'
 import { NavUser } from '@/components/layout/nav-user'
 import { AppSwitcher } from '@/components/app-switcher'
@@ -61,13 +65,16 @@ import {
   permissionForPath,
 } from '@/lib/auth'
 import { SpaceProvider, useSpaceId } from '@/lib/space'
+import { PageCrumbContext } from '@/lib/page-crumb'
 import { SKIP_TO_CONTENT_CLASS } from '@/lib/ui-surface'
+import { cn } from '@cfdm/ui/lib/utils'
 
 interface NavItem {
   to: string
   label: string
   icon: typeof LayoutDashboard
-  badge?: number
+  /** Problem dot (design `pdot`): destructive / warning. */
+  dot?: { tone: 'destructive' | 'warning'; label: string }
 }
 
 interface NavGroup {
@@ -150,7 +157,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activeItem =
     ALL_NAV_ITEMS.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`)) ??
     ALL_NAV_ITEMS[0]
-  const parentTo = PARENT_ROUTE[activeItem.to]
+  const [pageCrumb, setPageCrumb] = useState<string | null>(null)
+  // Detail routes (design: «VPS / 203.0.113.21»): section links back, page shows the record title.
+  const isDetail = pageCrumb != null && pathname !== activeItem.to
+  const parentTo = isDetail ? activeItem.to : PARENT_ROUTE[activeItem.to]
   const parentLabel = parentTo ? ROUTE_LABELS[parentTo] : null
 
   const { data: stats } = useQuery(dashboardStatsQueryOptions())
@@ -162,9 +172,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         const perm = permissionForPath(item.to)
         return !perm || can(perm)
       })
-      .map((item) => {
+      .map((item): NavItem => {
         if (item.to === '/dashboard' && stats?.issuesCount) {
-          return { ...item, badge: stats.issuesCount }
+          return {
+            ...item,
+            dot: { tone: 'destructive', label: `Проблем в инвентаре: ${stats.issuesCount}` },
+          }
+        }
+        if (item.to === '/accounts' && stats?.lowBalanceAccountCount) {
+          return {
+            ...item,
+            dot: {
+              tone: 'warning',
+              label: `Низкий баланс: ${stats.lowBalanceAccountCount}`,
+            },
+          }
         }
         return item
       }),
@@ -190,38 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
             {navGroups.map((group) => (
-              <SidebarGroup key={group.label}>
-                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const Icon = item.icon
-                      const isActive =
-                        pathname === item.to || pathname.startsWith(`${item.to}/`)
-                      return (
-                        <SidebarMenuItem key={item.to}>
-                          <SidebarMenuButton
-                            render={<Link to={item.to} />}
-                            isActive={isActive}
-                            tooltip={item.label}
-                          >
-                            <Icon className="size-4" />
-                            <span>{item.label}</span>
-                            {item.badge ? (
-                              <Badge
-                                variant="destructive"
-                                className="ml-auto size-5 justify-center p-0 text-xs"
-                              >
-                                {item.badge}
-                              </Badge>
-                            ) : null}
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              <NavGroupSection key={group.label} group={group} pathname={pathname} />
             ))}
           </SidebarContent>
           <SidebarFooter>
@@ -231,10 +222,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SidebarInset id="main-content">
           <header className="bg-background sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b px-4 md:px-6">
             <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
             <Breadcrumb>
               <BreadcrumbList>
                 {parentLabel && parentTo ? (
@@ -249,24 +236,85 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ) : null}
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    {ROUTE_LABELS[activeItem.to] ?? ''}
+                    {isDetail ? pageCrumb : (ROUTE_LABELS[activeItem.to] ?? '')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
             <div className="ml-auto flex items-center gap-2">
-              <AppsMenu />
               <SystemMonitorPopover />
             </div>
           </header>
           <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
-            <SpaceScopedMain>{children}</SpaceScopedMain>
+            <PageCrumbContext.Provider value={setPageCrumb}>
+              <SpaceScopedMain>{children}</SpaceScopedMain>
+            </PageCrumbContext.Provider>
           </div>
         </SidebarInset>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       </SidebarProvider>
     </TooltipProvider>
     </SpaceProvider>
+  )
+}
+
+/** Collapsible nav group (design `grph`): uppercase label + chevron; always open in icon rail. */
+function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: string }) {
+  const { state, isMobile } = useSidebar()
+  const [open, setOpen] = useState(true)
+  const iconRail = state === 'collapsed' && !isMobile
+
+  return (
+    <Collapsible open={open || iconRail} onOpenChange={setOpen}>
+      <SidebarGroup>
+        <SidebarGroupLabel
+          render={<CollapsibleTrigger tabIndex={iconRail ? -1 : undefined} />}
+          className="hover:text-sidebar-foreground cursor-pointer uppercase tracking-wider transition-colors"
+        >
+          {group.label}
+          <ChevronDownIcon
+            aria-hidden
+            className={cn(
+              'ml-auto transition-transform motion-reduce:transition-none',
+              !open && '-rotate-90',
+            )}
+          />
+        </SidebarGroupLabel>
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.to || pathname.startsWith(`${item.to}/`)
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      render={<Link to={item.to} />}
+                      isActive={isActive}
+                      tooltip={item.label}
+                    >
+                      <Icon className="size-4" />
+                      <span>{item.label}</span>
+                      {item.dot ? (
+                        <span
+                          role="img"
+                          aria-label={item.dot.label}
+                          className={cn(
+                            'ml-auto size-2 shrink-0 rounded-full',
+                            'group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-1 group-data-[collapsible=icon]:right-1',
+                            item.dot.tone === 'destructive' ? 'bg-destructive' : 'bg-warning',
+                          )}
+                        />
+                      ) : null}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
   )
 }
 

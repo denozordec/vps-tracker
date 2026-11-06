@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePageCrumb } from '@/lib/page-crumb'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import {
@@ -48,7 +49,7 @@ import {
 import type { Payment, Vps } from '@/types/entities'
 import { VpsDomainsCell } from '@/components/integrations/vps-domains-cell'
 
-export const Route = createFileRoute('/_auth/vps/$vpsId')({
+export const Route = createFileRoute('/_auth/vps_/$vpsId')({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(snapshotQueryOptions()),
   component: VpsDetailPage,
@@ -95,6 +96,7 @@ function VpsDetailPage() {
   const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
 
   const vps = snapshot?.vps.find((v) => v.id === vpsId)
+  usePageCrumb(vps ? vps.ip || vps.dns || 'VPS' : null)
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
   const account = snapshot?.providerAccounts.find((a) => a.id === vps?.providerAccountId)
   const provider = vps ? providerById.get(vps.providerId) : undefined
@@ -153,18 +155,17 @@ function VpsDetailPage() {
         title={vps ? (vps.ip || vps.dns || 'VPS') : 'VPS'}
         description={account ? accountSelectLabel(account, providerById) : undefined}
         actions={
-          vps ? (
-            <Button variant="outline" render={<Link to="/vps" search={{ edit: vpsId }} />}>
-              Редактировать
+          <>
+            <Button variant="outline" render={<Link to="/vps" />}>
+              <ArrowLeftIcon data-icon="inline-start" />
+              К списку VPS
             </Button>
-          ) : undefined
+            {vps ? (
+              <Button render={<Link to="/vps" search={{ edit: vpsId }} />}>Редактировать</Button>
+            ) : null}
+          </>
         }
       />
-
-      <Button variant="ghost" size="sm" className="w-fit" render={<Link to="/vps" />}>
-        <ArrowLeftIcon data-icon="inline-start" />
-        К списку VPS
-      </Button>
 
       <QueryState
         data={vps}
@@ -189,12 +190,22 @@ function VpsDetailPage() {
         }
       >
         {(row) => (
-          <Tabs defaultValue="overview">
-            <TabsList>
-              <TabsTrigger value="overview">Обзор</TabsTrigger>
-              <TabsTrigger value="finance">Финансы</TabsTrigger>
-              <TabsTrigger value="notes">Заметки</TabsTrigger>
-              <TabsTrigger value="sync">Синк</TabsTrigger>
+          <Tabs defaultValue="overview" className="flex flex-col gap-4 md:gap-6">
+            <TabsList variant="line" className="gap-5">
+              {[
+                ['overview', 'Обзор'],
+                ['finance', 'Финансы'],
+                ['notes', 'Заметки'],
+                ['sync', 'Синк'],
+              ].map(([value, label]) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="text-muted-foreground hover:text-foreground h-auto px-0 pb-3 after:bottom-0"
+                >
+                  {label}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <TabsContent value="overview" className="flex flex-col gap-4">

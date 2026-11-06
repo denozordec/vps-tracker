@@ -2,6 +2,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@cfdm/ui/components/dropdown-menu'
@@ -11,8 +12,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@cfdm/ui/components/sidebar'
+import { Link } from '@tanstack/react-router'
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
 
+import { authPortalUrl, isAuthEnabled } from '@/lib/auth'
 import {
   APP_SWITCHER_ICONS,
   CURRENT_APP_ID,
@@ -88,6 +91,19 @@ export function AppSwitcher() {
                 </DropdownMenuItem>
               )
             })}
+            <DropdownMenuSeparator />
+            {isAuthEnabled() ? (
+              <DropdownMenuItem
+                nativeButton={false}
+                render={<a href={`${authPortalUrl().replace(/\/$/, '')}/admin/apps`} />}
+              >
+                Настроить на портале
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem nativeButton={false} render={<Link to="/settings/integrations" />}>
+                Интеграции
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

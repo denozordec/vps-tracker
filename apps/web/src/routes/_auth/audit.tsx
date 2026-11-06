@@ -24,7 +24,7 @@ import {
 } from '@/components/domain/audit-labels'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@/components/reui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
+import { CountedLineTabs } from '@/components/counted-line-tabs'
 import { TableSkeleton } from '@/components/skeletons'
 
 const auditSearchSchema = z.object({
@@ -197,22 +197,15 @@ function AuditPage() {
         actions={<AuditViewToggle view={view} onViewChange={setView} />}
       />
 
-      <Tabs value={actionFilter} onValueChange={setActionFilter}>
-        <TabsList variant="line" aria-label="Фильтр по действию" className="gap-5">
-          {ACTION_FILTERS.map((option) => (
-            <TabsTrigger
-              key={option.value}
-              value={option.value}
-              className="text-muted-foreground hover:text-foreground h-auto gap-2 px-0 pb-3"
-            >
-              <span>{option.label}</span>
-              <span className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] tabular-nums">
-                {actionCounts[option.value]}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <CountedLineTabs
+        tabs={ACTION_FILTERS.map((option) => ({
+          id: option.value,
+          label: option.label,
+          count: actionCounts[option.value],
+        }))}
+        value={actionFilter}
+        onValueChange={setActionFilter}
+      />
 
       <QueryState
         data={data}

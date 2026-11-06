@@ -15,7 +15,7 @@ Project lock: **`surface: frame`**. Ops / list / dashboard / detail / settings �
 export const UI_SURFACE = 'frame' as const
 ```
 
-Settings: секции через Frame + `gap` (без hairline `Separator` под PageHeader); `SettingRow` без `FieldSeparator` по умолчанию (`separated` opt-in). Preview: [settings-3](https://reui.io/preview/base/settings-3) · [settings-16](https://reui.io/preview/base/settings-16).
+Settings: **line-tabs сверху** (Общие / Синхронизация / Уведомления / Интеграции) вместо боковой навигации; секции через Frame + `gap` (без hairline `Separator` под PageHeader); `SettingRow` без `FieldSeparator` по умолчанию (`separated` opt-in). Preview: [settings-3](https://reui.io/preview/base/settings-3) · [settings-16](https://reui.io/preview/base/settings-16).
 
 ## Canonical PRO references
 
@@ -30,6 +30,10 @@ Settings: секции через Frame + `gap` (без hairline `Separator` п�
 | Auth | `auth-13` | https://reui.io/preview/base/auth-13 |
 | Empty | `empty-state-14` (prefer) / `empty-state-12` | https://reui.io/preview/base/empty-state-14 · https://reui.io/preview/base/empty-state-12 |
 | Forms | `form-7` → Sheet/Drawer | https://reui.io/preview/base/form-7 |
+
+## Theme
+
+Палитра — нейтрали hue 264 (макет «VPS-Tracker»), шрифты **Geist / Geist Mono**. Оверрайд токенов — `apps/web/src/styles/theme.css` поверх `@cfdm/ui/globals.css` (globals — только вывод CLI). В светлой теме сайдбар остаётся тёмным. План миграции: [`ui-migration-plan.md`](ui-migration-plan.md).
 
 ## Kit API (`reui-kit/`)
 
@@ -51,7 +55,7 @@ Settings: секции через Frame + `gap` (без hairline `Separator` п�
 | App | Section order |
 |-----|---------------|
 | EvoBGP / CFDM / EvoFirewall | KPI → **QuickActionGrid** → charts / rest |
-| vps-tracker | banner → KPI → charts → attention → **QuickActionGrid** → CSV |
+| vps-tracker | banner → KPI → line-tabs «Проблемы» (QuickActionGrid → charts → attention) · «Последние VPS» · «Аккаунты» → CSV |
 | auth-portal | portal-specific; Quick Actions при наличии dashboard |
 
 Gating: DB `show_quick_actions` / `showQuickActions` / `ui_show_quick_actions` (default `true`).
@@ -67,8 +71,9 @@ Gating: DB `show_quick_actions` / `showQuickActions` / `ui_show_quick_actions` (
 | Sidebar / hover colors | theme `--sidebar` / `--sidebar-accent` — **без** AppShell `color-mix` override |
 | Header | `h-12`, `sticky`, `border-b`, `px-4 md:px-6` |
 | Header left | `SidebarTrigger` + `Separator` + Breadcrumb |
-| Header right | **AppsMenu** → **SystemMonitorPopover** (тема — в NavUser) |
-| Sidebar | AppSwitcher → groups → icons `size-4` → **NavUser** в `SidebarFooter` |
+| Header right | **SystemMonitorPopover** (пилюля «Внимание»/«Норма»; приложения — в AppSwitcher; тема — в NavUser) |
+| Sidebar | AppSwitcher (лого + подзаголовок + список приложений) → SpaceSwitcher → **сворачиваемые** группы (UPPERCASE label + шеврон, `collapsible`) → icons `size-4` → **NavUser** (muted-карточка) в `SidebarFooter` |
+| Проблемы в меню | точка `destructive`/`warning` у пункта (не числовой Badge) |
 | `main` | `gap-4 md:gap-6`, `px-4 py-4 md:px-6 md:py-5` |
 | Search | hotkey ⌘K / Ctrl+K only (не кнопка в header) |
 

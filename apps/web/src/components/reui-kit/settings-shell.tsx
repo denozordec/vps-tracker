@@ -7,11 +7,9 @@ import {
   SettingsIcon,
 } from 'lucide-react'
 
-import { useIsMobile } from '@cfdm/ui/hooks/use-mobile'
-import { cn } from '@cfdm/ui/lib/utils'
 import { PageShell } from '@/components/page-shell'
 import { PageHeader } from '@/components/page-header'
-import { Separator } from '@cfdm/ui/components/separator'
+import { Tabs, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
 
 export interface SettingsTabConfig {
   id: string
@@ -55,69 +53,42 @@ interface SettingsShellProps {
   tabs?: SettingsTabConfig[]
 }
 
-/** Settings shell — preview https://reui.io/preview/base/settings-16 */
+/** Settings shell — line tabs on top (design «VPS-Tracker»); sections: https://reui.io/preview/base/settings-16 */
 export function SettingsShell({
   title = 'Настройки',
   description = 'Параметры приложения и связи с другими сервисами',
   tabs = DEFAULT_TABS,
 }: SettingsShellProps) {
-  const isMobile = useIsMobile()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const active =
+    tabs.find((tab) =>
+      tab.exact ? pathname === tab.to || pathname === `${tab.to}/` : pathname.startsWith(tab.to),
+    ) ?? tabs[0]
 
   return (
     <PageShell>
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
-        <div className="flex flex-col gap-3">
-          <PageHeader title={title} description={description} />
-          <Separator />
-        </div>
-
-        <div
-          className={cn(
-            'flex gap-5',
-            isMobile ? 'flex-col' : 'flex-row items-start',
-          )}
-        >
-          {tabs.length > 1 ? (
-            <nav
-              aria-label="Разделы настроек"
-              className={cn(
-                'flex gap-1',
-                isMobile
-                  ? 'scrollbar-none -mx-1 overflow-x-auto overflow-y-hidden pb-1'
-                  : 'w-44 shrink-0 flex-col',
-              )}
-            >
-              {tabs.map((tab) => {
-                const isActive = tab.exact
-                  ? pathname === tab.to || pathname === `${tab.to}/`
-                  : pathname.startsWith(tab.to)
-                return (
-                  <Link
-                    key={tab.id}
-                    to={tab.to}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-                      isMobile && 'shrink-0',
-                      !isMobile && 'w-full',
-                      isActive
-                        ? 'bg-muted text-foreground font-medium shadow-sm ring-1 ring-border/60'
-                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                    )}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </Link>
-                )
-              })}
-            </nav>
-          ) : null}
-
-          <div className="min-w-0 flex-1">
-            <Outlet />
-          </div>
-        </div>
+      <PageHeader title={title} description={description} />
+      {/* Design «VPS-Tracker»: settings sections as page line tabs. */}
+      {tabs.length > 1 ? (
+        <Tabs value={active?.id}>
+          <TabsList variant="line" aria-label="Разделы настроек" className="gap-5">
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                nativeButton={false}
+                render={<Link to={tab.to} />}
+                className="text-muted-foreground hover:text-foreground h-auto gap-2 px-0 pb-3 after:bottom-0"
+              >
+                {tab.icon}
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      ) : null}
+      <div className="min-w-0">
+        <Outlet />
       </div>
     </PageShell>
   )

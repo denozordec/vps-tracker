@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { usePageCrumb } from '@/lib/page-crumb'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import {
@@ -51,7 +52,7 @@ import {
 } from '@/lib/project-analytics'
 import type { Vps } from '@/types/entities'
 
-export const Route = createFileRoute('/_auth/projects/$projectId')({
+export const Route = createFileRoute('/_auth/projects_/$projectId')({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(snapshotQueryOptions()),
   component: ProjectDetailPage,
@@ -73,6 +74,7 @@ function ProjectDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
 
   const project = snapshot ? findProject(snapshot, projectId) : undefined
+  usePageCrumb(project?.name)
   const projectVps = useMemo(
     () => (snapshot ? projectVpsList(snapshot, projectId) : []),
     [snapshot, projectId],

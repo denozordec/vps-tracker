@@ -6,12 +6,12 @@ interface PageHeaderProps {
   actions?: ReactNode
 }
 
-/** Page-level section header — etalon EvoBGP. */
+/** Page header — design «VPS-Tracker»: 20px title + muted sub, actions bottom-aligned right. */
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-0.5">
+        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {description ? (
           <p className="text-muted-foreground text-sm">{description}</p>
         ) : null}
