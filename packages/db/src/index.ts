@@ -98,3 +98,4 @@ export {
   consolidateProviderApiFromAccounts,
   heuristicBillmanagerProviderApi,
 } from './maintenance/consolidate-api.js'
+export { pruneOldLogs, RETENTION_DAYS, type PruneResult } from './maintenance/retention.js'

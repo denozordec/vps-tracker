@@ -88,6 +88,26 @@ async function mapVdsWithSpecs(
   return vps
 }
 
+/** vds.edit lookups are one HTTP call per VPS — run a few at once, not all (hoster rate limits). */
+const VDS_SPECS_CONCURRENCY = 4
+
+export async function mapConcurrent<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i]!)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
+}
+
 export async function syncFromBillmanager(
   account: BillmanagerSyncAccount,
   opts: SyncFromBillmanagerOptions = {},
@@ -138,20 +158,9 @@ export async function syncFromBillmanager(
   const syncSummary: SyncSummary = { added: [], updated: [], paymentsAdded: 0 }
 
   if (fetchVpsPayments) {
-    const mappedRaw: Awaited<ReturnType<typeof mapVdsWithSpecs>>[] = []
-    for (const item of vdsItems) {
-      mappedRaw.push(
-        await mapVdsWithSpecs(
-          profile,
-          item,
-          providerId,
-          accountId,
-          tariffItems,
-          apiBaseUrl,
-          authinfo,
-        ),
-      )
-    }
+    const mappedRaw = await mapConcurrent(vdsItems, VDS_SPECS_CONCURRENCY, (item) =>
+      mapVdsWithSpecs(profile, item, providerId, accountId, tariffItems, apiBaseUrl, authinfo),
+    )
     const mappedList = profile.map.enrichVdsBatch
       ? profile.map.enrichVdsBatch(mappedRaw, {
           balance: dashboardInfo?.balance ?? null,

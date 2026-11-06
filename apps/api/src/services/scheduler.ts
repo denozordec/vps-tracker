@@ -1,5 +1,5 @@
 import { eq, sql } from 'drizzle-orm'
-import { getDb, schema, runWithSpaceAsync, MAIN_SPACE_ID } from '@cfdm/db'
+import { getDb, getSqlite, pruneOldLogs, schema, runWithSpaceAsync, MAIN_SPACE_ID } from '@cfdm/db'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
 
 import { resolveSyncAccount, getProviderAdapter, type SyncReadyAccount } from './providers/index.js'
@@ -25,6 +25,8 @@ let notifyIntervalId: ReturnType<typeof setInterval> | null = null
 let uptimeIntervalId: ReturnType<typeof setInterval> | null = null
 let cfdmSyncIntervalId: ReturnType<typeof setInterval> | null = null
 let cfdmSyncInFlight = false
+let retentionIntervalId: ReturnType<typeof setInterval> | null = null
+const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 type AccountRow = typeof schema.providerAccounts.$inferSelect
 type SettingsRow = typeof schema.settings.$inferSelect
@@ -109,6 +111,12 @@ export const runNotificationTick = () => exclusive('notify', notificationTick)
 export const runScheduledSync = () => exclusive('sync', scheduledSync)
 export const runScheduledSyncTariffs = () => exclusive('tariffs', scheduledSyncTariffs)
 export const runScheduledUptimeChecks = () => exclusive('uptime', scheduledUptimeChecks)
+export const runRetention = () =>
+  exclusive('retention', async () => {
+    const r = pruneOldLogs(getSqlite())
+    const total = r.notificationLog + r.syncLog + r.vpsHealthChecks + r.staleSyncs
+    if (total > 0) console.log('Retention:', JSON.stringify(r))
+  })
 
 async function notificationTick(): Promise<void> {
   for (const settings of allSettings()) {
@@ -334,6 +342,8 @@ export function startScheduler(): void {
   uptimeIntervalId = null
   if (cfdmSyncIntervalId) clearInterval(cfdmSyncIntervalId)
   cfdmSyncIntervalId = null
+  if (retentionIntervalId) clearInterval(retentionIntervalId)
+  retentionIntervalId = null
 
   try {
     const rows = allSettings()
@@ -350,6 +360,8 @@ export function startScheduler(): void {
     )
     void runNotificationTick()
     void runScheduledUptimeChecks()
+    retentionIntervalId = setInterval(() => void runRetention(), RETENTION_INTERVAL_MS)
+    void runRetention()
 
     const parts = [
       `notify every ${notifyInterval} min`,
@@ -393,6 +405,8 @@ export function stopScheduler(): void {
   uptimeIntervalId = null
   if (cfdmSyncIntervalId) clearInterval(cfdmSyncIntervalId)
   cfdmSyncIntervalId = null
+  if (retentionIntervalId) clearInterval(retentionIntervalId)
+  retentionIntervalId = null
 }
 
 export function restartScheduler(): void {

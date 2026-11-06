@@ -49,6 +49,23 @@ function listVpsWithShared(): VpsDto[] {
   return [...owned, ...shared]
 }
 
+export type DashboardSnapshot = Pick<
+  Snapshot,
+  'vps' | 'providers' | 'providerAccounts' | 'payments' | 'balanceLedger' | 'syncLog'
+>
+
+/** What dashboard stats read — skips tariffs, domains, projects and settings of the full snapshot. */
+export function getDashboardSnapshot(): DashboardSnapshot {
+  return {
+    vps: listVpsWithShared(),
+    providers: providersRepository.list(),
+    providerAccounts: providerAccountsRepository.list(),
+    payments: paymentsRepository.list(),
+    balanceLedger: balanceLedgerRepository.list(),
+    syncLog: syncLogRepository.listRecent(50),
+  }
+}
+
 export function getSnapshot(): Snapshot {
   const spaceId = getCurrentSpaceId()
   return {

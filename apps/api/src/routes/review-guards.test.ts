@@ -135,3 +135,55 @@ describe('space viewer cannot write', () => {
     await app.close()
   })
 })
+
+describe('whole-DB operations need a global admin', () => {
+  beforeEach(() => {
+    process.env.AUTH_REQUIRED = 'true'
+    process.env.AUTH_JWT_SECRET = 'test-secret-at-least-8'
+    resetTestDb()
+  })
+  afterEach(() => {
+    delete process.env.AUTH_REQUIRED
+    delete process.env.AUTH_JWT_SECRET
+    closeDb()
+  })
+
+  it('403 for settings admin, 200 for global admin', async () => {
+    const app = await buildApp()
+    const token = (sub: string, isAdmin: boolean) =>
+      app.jwt.sign({
+        sub,
+        email: `${sub}@t`,
+        name: sub,
+        apps: ['vps'],
+        permissions: ['vps:settings:admin'],
+        is_admin: isAdmin,
+        iss: app.authConfig.issuer,
+      })
+    const get = (t: string) =>
+      app.inject({ url: '/api/backup/json', headers: { authorization: `Bearer ${t}` } })
+    expect((await get(token('space-admin', false))).statusCode).toBe(403)
+    const migrate = await app.inject({
+      method: 'POST',
+      url: '/api/migrate',
+      headers: { authorization: `Bearer ${token('space-admin', false)}` },
+      payload: {},
+    })
+    expect(migrate.statusCode).toBe(403)
+    expect((await get(token('root', true))).statusCode).toBe(200)
+    await app.close()
+  })
+})
+
+describe('dashboard stats', () => {
+  beforeEach(() => resetTestDb())
+  afterEach(() => closeDb())
+
+  it('computes from the slim snapshot', async () => {
+    const app = await buildApp()
+    const res = await app.inject({ url: '/api/dashboard/stats' })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({ totalVpsCount: 0, providerCount: 0 })
+    await app.close()
+  })
+})

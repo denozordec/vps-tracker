@@ -1,4 +1,4 @@
-import { getSnapshot } from '@cfdm/db/repositories/snapshot'
+import { getDashboardSnapshot } from '@cfdm/db/repositories/snapshot'
 import { countExpiringWithin7Days, countInventoryIssues } from '@cfdm/shared/utils/inventory-health'
 import { accountBalanceApi } from '@cfdm/shared/utils/account-balance'
 import { isSyncApiType } from '@cfdm/shared/contracts/provider'
@@ -76,7 +76,7 @@ export interface DashboardStats {
 }
 
 export function computeDashboardStats(): DashboardStats {
-  const snap = getSnapshot()
+  const snap = getDashboardSnapshot()
   const now = new Date()
 
   const activeVps = snap.vps.filter((v) => v.status === 'active')
