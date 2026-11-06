@@ -556,5 +556,10 @@ export function ensureRuntimeSchema(sqlite: Database.Database): void {
   rebuildVpsDomainsBindingUnique(sqlite)
   ensureMainSpace(sqlite)
   backfillSpaceIds(sqlite)
+  // Non-main spaces' notification_state rows written before key prefixing would block main's inserts.
+  sqlite.exec(
+    `UPDATE notification_state SET key = spaceId || '::' || key
+     WHERE spaceId != '${MAIN_SPACE_ID}' AND instr(key, '::') = 0`,
+  )
   migrated = true
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq } from 'drizzle-orm'
 import { getDb, schema } from '../index.js'
-import { getCurrentSpaceId } from '../space-context.js'
+import { getCurrentSpaceId, MAIN_SPACE_ID } from '../space-context.js'
 
 export type NotificationChannel = 'telegram' | 'webhook'
 export type NotificationLogStatus = 'sent' | 'failed' | 'skipped'
@@ -42,6 +42,14 @@ function toLogDto(row: typeof schema.notificationLog.$inferSelect): Notification
   }
 }
 
+/**
+ * notification_state.key is the table's sole PRIMARY KEY, so two spaces with the same event key collided
+ * (insert failed after sending → re-sent every tick). Non-main spaces get a prefixed key; main keeps old rows.
+ */
+function stateKeyForSpace(key: string, spaceId: string): string {
+  return spaceId === MAIN_SPACE_ID ? key : `${spaceId}::${key}`
+}
+
 export const notificationRepository = {
   listRecent(limit = 50): NotificationLogRow[] {
     const spaceId = getCurrentSpaceId()
@@ -79,8 +87,9 @@ export const notificationRepository = {
       .run()
   },
 
-  getState(key: string) {
+  getState(rawKey: string) {
     const spaceId = getCurrentSpaceId()
+    const key = stateKeyForSpace(rawKey, spaceId)
     return getDb()
       .select()
       .from(schema.notificationState)
@@ -93,10 +102,11 @@ export const notificationRepository = {
       .get()
   },
 
-  upsertState(key: string, patch: { lastFingerprint?: string; lastSentAt?: string; lastStatus?: string }) {
+  upsertState(rawKey: string, patch: { lastFingerprint?: string; lastSentAt?: string; lastStatus?: string }) {
     const db = getDb()
     const spaceId = getCurrentSpaceId()
-    const existing = this.getState(key)
+    const existing = this.getState(rawKey)
+    const key = stateKeyForSpace(rawKey, spaceId)
     const values = {
       key,
       spaceId,

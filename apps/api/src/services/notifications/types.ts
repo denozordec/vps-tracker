@@ -11,7 +11,7 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number]
 
 export type NotificationChannel = 'telegram' | 'webhook'
 
-export type DedupMode = 'daily' | 'fingerprint' | 'state_transition'
+export type DedupMode = 'daily' | 'fingerprint' | 'state_transition' | 'none'
 
 export interface NotificationPayload {
   event: NotificationEvent

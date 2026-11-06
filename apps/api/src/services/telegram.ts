@@ -61,6 +61,25 @@ export function formatTelegramApiError(
   return `${chatId}: ${fallback}`
 }
 
+const TELEGRAM_TIMEOUT_MS = 10_000
+/** Telegram rejects text over 4096 chars; cut at a line break so no HTML entity/tag is split. */
+const TELEGRAM_MAX_TEXT = 4096
+
+export function fitTelegramText(text: string): string {
+  if (text.length <= TELEGRAM_MAX_TEXT) return text
+  const lines = text.split('\n')
+  const kept: string[] = []
+  let len = 0
+  const reserve = 40 // room for the "and N more" tail
+  for (const line of lines) {
+    if (len + line.length + 1 > TELEGRAM_MAX_TEXT - reserve) break
+    kept.push(line)
+    len += line.length + 1
+  }
+  if (kept.length === 0) return text.slice(0, TELEGRAM_MAX_TEXT - 1) + '…'
+  return `${kept.join('\n')}\n… и ещё ${lines.length - kept.length} строк`
+}
+
 export async function sendTelegramMessage(
   token: string,
   chatIds: string | string[],
@@ -81,7 +100,7 @@ export async function sendTelegramMessage(
 
   const threadId = messageThreadId != null && messageThreadId !== '' ? Number(messageThreadId) : null
   const payload: Record<string, unknown> = {
-    text,
+    text: fitTelegramText(text),
     parse_mode: 'HTML',
     disable_web_page_preview: true,
   }
@@ -97,6 +116,8 @@ export async function sendTelegramMessage(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, chat_id: chatId }),
+        // A hung API/proxy would otherwise block the notify tick (and every tick skipped behind it).
+        signal: AbortSignal.timeout(TELEGRAM_TIMEOUT_MS),
       })
       const rawBody = await res.text()
       let data: TelegramApiResponse = {}
@@ -119,6 +140,7 @@ export async function sendTelegramMessage(
     }
   }
 
-  if (anyOk) return { ok: true }
+  // Partial delivery counts as sent, but the failed chats still reach the journal.
+  if (anyOk) return errors.length ? { ok: true, error: errors.join('; ') } : { ok: true }
   return { ok: false, error: errors.join('; ') || 'Не удалось отправить' }
 }

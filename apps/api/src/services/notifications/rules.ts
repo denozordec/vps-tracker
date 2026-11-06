@@ -1,19 +1,40 @@
-import { desc } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { desc, eq } from 'drizzle-orm'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
 import { getPaidUntilDate } from '@cfdm/shared/utils/paid-until'
 import type { NotificationPayload } from './types.js'
 
 const UPCOMING_DAYS = 7
 
+/** Names/errors come from hosters and users; Telegram parse_mode=HTML rejects the whole message on a stray < or &. */
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+const htmlLines = (lines: string[]) => lines.map(escapeHtml).join('\n')
+
 type VpsRow = typeof schema.vps.$inferSelect
 
 export function buildPaymentExpiryNotification(now = new Date()): NotificationPayload | null {
   const db = getDb()
-  const vpsList = db.select().from(schema.vps).orderBy(desc(schema.vps.createdAt)).all()
-  const providerAccounts = db.select().from(schema.providerAccounts).all()
-  const payments = db.select().from(schema.payments).all()
-  const balanceLedger = db.select().from(schema.balanceLedger).all()
-  const providers = db.select().from(schema.providers).all()
+  const spaceId = getCurrentSpaceId()
+  const vpsList = db
+    .select()
+    .from(schema.vps)
+    .where(eq(schema.vps.spaceId, spaceId))
+    .orderBy(desc(schema.vps.createdAt))
+    .all()
+  const providerAccounts = db
+    .select()
+    .from(schema.providerAccounts)
+    .where(eq(schema.providerAccounts.spaceId, spaceId))
+    .all()
+  const payments = db.select().from(schema.payments).where(eq(schema.payments.spaceId, spaceId)).all()
+  const balanceLedger = db
+    .select()
+    .from(schema.balanceLedger)
+    .where(eq(schema.balanceLedger.spaceId, spaceId))
+    .all()
+  const providers = db.select().from(schema.providers).where(eq(schema.providers.spaceId, spaceId)).all()
 
   const threshold = new Date(now)
   threshold.setDate(threshold.getDate() + UPCOMING_DAYS)
@@ -36,7 +57,7 @@ export function buildPaymentExpiryNotification(now = new Date()): NotificationPa
     return `• ${vps.dns || vps.ip} (${provider}) — до ${dateStr}`
   })
   const plain = `Истекает оплата (ближайшие ${UPCOMING_DAYS} дней):\n\n${lines.join('\n')}`
-  const html = `⚠️ <b>Истекает оплата</b> (ближайшие ${UPCOMING_DAYS} дней):\n\n${lines.join('\n')}`
+  const html = `⚠️ <b>Истекает оплата</b> (ближайшие ${UPCOMING_DAYS} дней):\n\n${htmlLines(lines)}`
   const fingerprint = upcoming
     .map(({ vps, paidUntil }) => `${vps.id}:${paidUntil.toISOString().slice(0, 10)}`)
     .sort()
@@ -56,7 +77,7 @@ export function buildSyncDigestNotification(digestLines: string[]): Notification
   const changed = digestLines.filter((line) => !line.includes('без изменений'))
   if (changed.length === 0) return null
   const plain = `Синхронизация VPS:\n\n${changed.join('\n')}`
-  const html = `📋 <b>Синхронизация VPS</b>\n\n${changed.join('\n')}`
+  const html = `📋 <b>Синхронизация VPS</b>\n\n${htmlLines(changed)}`
   return {
     event: 'sync_digest',
     fingerprint: changed.sort().join('|'),
@@ -70,7 +91,7 @@ export function buildSyncDigestNotification(digestLines: string[]): Notification
 export function buildLowBalanceNotification(lines: string[]): NotificationPayload | null {
   if (lines.length === 0) return null
   const plain = `Низкий баланс:\n\n${lines.join('\n')}`
-  const html = `💰 <b>Низкий баланс</b>\n\n${lines.join('\n')}`
+  const html = `💰 <b>Низкий баланс</b>\n\n${htmlLines(lines)}`
   return {
     event: 'low_balance',
     fingerprint: lines.sort().join('|'),
@@ -88,7 +109,7 @@ export function buildNewTariffsNotification(
   if (tariffs.length === 0) return null
   const lines = tariffs.slice(0, 15).map((t) => `• ${t.name || '—'} — ${t.price || '—'}`)
   const plain = `Новые тарифы (${providerName}):\n\n${lines.join('\n')}`
-  const html = `🆕 <b>Новые тарифы</b> (${providerName}):\n\n${lines.join('\n')}`
+  const html = `🆕 <b>Новые тарифы</b> (${escapeHtml(providerName)}):\n\n${htmlLines(lines)}`
   const fingerprint = tariffs
     .map((t) => `${t.name}:${t.price}`)
     .sort()
@@ -112,7 +133,7 @@ export function buildVpsHealthNotification(
   const title = event === 'vps_down' ? 'VPS недоступны' : 'VPS восстановлены'
   const icon = event === 'vps_down' ? '🔴' : '🟢'
   const plain = `${title}:\n\n${lines.join('\n')}`
-  const html = `${icon} <b>${title}</b>\n\n${lines.join('\n')}`
+  const html = `${icon} <b>${title}</b>\n\n${htmlLines(lines)}`
   const fingerprint = hosts
     .map((h) => h.id)
     .sort()
@@ -123,8 +144,7 @@ export function buildVpsHealthNotification(
     messagePlain: plain,
     messageHtml: html,
     data: { hosts: hosts.map((h) => h.id) },
-    dedup: 'state_transition',
-    stateKey: `vps_health:${event}`,
-    newStatus: fingerprint,
+    // newlyDown/newlyUp are already transitions (last_health_status); deduping again hid a repeat outage.
+    dedup: 'none',
   }
 }

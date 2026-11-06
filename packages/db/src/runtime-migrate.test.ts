@@ -65,3 +65,18 @@ describe('ensureRuntimeSchema (legacy DB without providers.apiType)', () => {
     expect(sqlite.prepare(`SELECT apiCredentials FROM provider_accounts`).get()).toEqual({ apiCredentials: 'u:p' })
   })
 })
+
+describe('ensureRuntimeSchema (notification_state keys)', () => {
+  afterEach(() => resetRuntimeMigrate())
+
+  it('prefixes plain keys of non-main spaces so main can insert its own', () => {
+    const sqlite = new Database(':memory:')
+    resetRuntimeMigrate()
+    ensureRuntimeSchema(sqlite)
+    sqlite.exec(`INSERT INTO notification_state (key, spaceId) VALUES ('payment_expiry', 'space-x'), ('low_balance', 'space-main')`)
+    resetRuntimeMigrate()
+    ensureRuntimeSchema(sqlite)
+    const keys = (sqlite.prepare(`SELECT key FROM notification_state ORDER BY key`).all() as { key: string }[]).map((r) => r.key)
+    expect(keys).toEqual(['low_balance', 'space-x::payment_expiry'])
+  })
+})

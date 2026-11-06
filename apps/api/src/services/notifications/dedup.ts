@@ -10,6 +10,7 @@ export function shouldSkipDedup(
   stateKey?: string,
   newStatus?: string,
 ): boolean {
+  if (mode === 'none') return false
   const key = stateKey ?? event
   const state = notificationRepository.getState(key)
   const now = Date.now()
