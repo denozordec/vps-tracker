@@ -29,9 +29,9 @@ import { dataGridCellStack } from '@/components/data-grid-cells'
 import { KpiStatGridSkeleton, TableSkeleton } from '@/components/skeletons'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@/components/reui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@cfdm/ui/components/tabs'
+import { TabsContent } from '@cfdm/ui/components/tabs'
+import { CountedLineTabs } from '@/components/counted-line-tabs'
 import { StatusBadge } from '@/components/status-badge'
-import { cn } from '@cfdm/ui/lib/utils'
 
 import { computeInventoryHealth } from '@/lib/inventory-health'
 import { buildAtRiskAccounts, type AtRiskAccount } from '@/lib/account-health'
@@ -46,9 +46,6 @@ import {
 import { DashboardInventoryAlert } from '@/components/domain/dashboard-inventory-alert'
 
 import type { Vps } from '@/types/entities'
-
-const DASHBOARD_TAB_TRIGGER_CLASS =
-  'flex-none rounded-none border-0 border-b-2 border-transparent px-3 pb-2.5 pt-2 shadow-none after:hidden data-active:border-foreground data-active:bg-transparent data-active:shadow-none dark:data-active:border-foreground dark:data-active:bg-transparent'
 
 const DASHBOARD_QUICK_ACTIONS: QuickActionItem[] = [
   {
@@ -371,111 +368,92 @@ function DashboardPage() {
 
           return (
             <div className="flex flex-col gap-4 md:gap-6">
-              <DashboardInventoryAlert issuesCount={issuesCount} onGoToIssues={handleGoToIssues} />
-
               <OpsDashboard
+                banner={
+                  <DashboardInventoryAlert issuesCount={issuesCount} onGoToIssues={handleGoToIssues} />
+                }
                 title="Дашборд"
                 description="Сводка по VPS, балансам и здоровью инвентаря"
                 kpiCards={statsLoading ? [] : kpiCards}
                 isLoading={statsLoading}
-                charts={
-                  <ChartsGrid>
-                    <DashboardPaymentsChart
-                      payments={snap.payments}
-                      settings={snap.settings}
-                      ratesData={ratesData}
-                      className="h-full"
-                    />
-                    <DashboardExpensesChart
-                      payments={snap.payments}
-                      balanceLedger={snap.balanceLedger ?? []}
-                      vps={snap.vps}
-                      providers={snap.providers}
-                      settings={snap.settings}
-                      ratesData={ratesData}
-                      className="h-full"
-                    />
-                  </ChartsGrid>
-                }
-                queue={
-                  <div ref={tabsRef}>
-                    <Tabs
-                      value={activeTab}
-                      onValueChange={setActiveTab}
-                      className="flex w-full flex-col gap-4"
-                    >
-                      <TabsList variant="line" className="mb-0 h-auto w-fit gap-1 border-b border-border p-0">
-                        <TabsTrigger value="issues" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
-                          Проблемы
-                          {issues.length > 0 ? (
-                            <Badge variant="secondary" size="sm" radius="full">
-                              {issues.length}
-                            </Badge>
-                          ) : null}
-                        </TabsTrigger>
-                        <TabsTrigger value="recent" className={DASHBOARD_TAB_TRIGGER_CLASS}>
-                          Последние VPS
-                        </TabsTrigger>
-                        <TabsTrigger value="risk" className={cn(DASHBOARD_TAB_TRIGGER_CLASS, 'gap-2')}>
-                          Аккаунты
-                          {atRisk.length > 0 ? (
-                            <Badge variant="outline" size="sm" radius="full">
-                              {atRisk.length}
-                            </Badge>
-                          ) : null}
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="issues" className="mt-0">
-                        <ResourcePage
-                          title="Здоровье инвентаря"
-                          description="Ставка, оплата, синк, баланс аккаунтов"
-                          columns={columnDefFromDataGrid(issueColumns)}
-                          data={issues}
-                          getRowId={(i) => i.key}
-                          emptyTitle="Проблем не найдено"
-                          emptyDescription="Критичных проблем в инвентаре не обнаружено"
-                          pagination={false}
+              >
+                <div ref={tabsRef} className="scroll-mt-16">
+                  <CountedLineTabs
+                    tabs={[
+                      { id: 'issues', label: 'Проблемы', count: issues.length || undefined },
+                      { id: 'recent', label: 'Последние VPS' },
+                      { id: 'risk', label: 'Аккаунты', count: atRisk.length || undefined },
+                    ]}
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    className="flex w-full flex-col gap-4 md:gap-6"
+                  >
+                    <TabsContent value="issues" className="mt-0 flex flex-col gap-4 md:gap-6">
+                      {snap.settings?.[0]?.showQuickActions !== false ? (
+                        <QuickActionGrid
+                          actions={DASHBOARD_QUICK_ACTIONS}
+                          description="Частые разделы учёта и аналитики"
                         />
-                      </TabsContent>
-                      <TabsContent value="recent" className="mt-0">
-                        <ResourcePage
-                          title="Последние VPS"
-                          description="Активные серверы"
-                          actions={
-                            <Button variant="outline" size="sm" render={<Link to="/vps" />}>
-                              Все VPS
-                            </Button>
-                          }
-                          columns={columnDefFromDataGrid(vpsColumns)}
-                          data={activeVps.slice(0, 8)}
-                          getRowId={(v) => v.id}
-                          pagination={false}
-                          onRowClick={(v) => navigate({ to: '/vps', search: { edit: v.id } })}
+                      ) : null}
+                      <ChartsGrid>
+                        <DashboardPaymentsChart
+                          payments={snap.payments}
+                          settings={snap.settings}
+                          ratesData={ratesData}
+                          className="h-full"
                         />
-                      </TabsContent>
-                      <TabsContent value="risk" className="mt-0">
-                        <ResourcePage
-                          title="Аккаунты под риском"
-                          description="Низкий баланс или устаревший синк BILLmanager"
-                          columns={columnDefFromDataGrid(riskColumns)}
-                          data={atRisk}
-                          getRowId={(r) => r.id}
-                          emptyTitle="Рисков нет"
-                          emptyDescription="Балансы и синхронизация в норме"
-                          pagination={false}
+                        <DashboardExpensesChart
+                          payments={snap.payments}
+                          balanceLedger={snap.balanceLedger ?? []}
+                          vps={snap.vps}
+                          providers={snap.providers}
+                          settings={snap.settings}
+                          ratesData={ratesData}
+                          className="h-full"
                         />
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                }
-              />
-
-              {snap.settings?.[0]?.showQuickActions !== false ? (
-                <QuickActionGrid
-                  actions={DASHBOARD_QUICK_ACTIONS}
-                  description="Частые разделы учёта и аналитики"
-                />
-              ) : null}
+                      </ChartsGrid>
+                      <ResourcePage
+                        title="Здоровье инвентаря"
+                        description="Ставка, оплата, синк, баланс аккаунтов"
+                        columns={columnDefFromDataGrid(issueColumns)}
+                        data={issues}
+                        getRowId={(i) => i.key}
+                        emptyTitle="Проблем не найдено"
+                        emptyDescription="Критичных проблем в инвентаре не обнаружено"
+                        pagination={false}
+                      />
+                    </TabsContent>
+                    <TabsContent value="recent" className="mt-0">
+                      <ResourcePage
+                        title="Последние VPS"
+                        description="Активные серверы"
+                        actions={
+                          <Button variant="outline" size="sm" render={<Link to="/vps" />}>
+                            Все VPS
+                          </Button>
+                        }
+                        columns={columnDefFromDataGrid(vpsColumns)}
+                        data={activeVps.slice(0, 8)}
+                        getRowId={(v) => v.id}
+                        pagination={false}
+                        onRowClick={(v) => navigate({ to: '/vps', search: { edit: v.id } })}
+                      />
+                    </TabsContent>
+                    <TabsContent value="risk" className="mt-0">
+                      <ResourcePage
+                        title="Аккаунты под риском"
+                        description="Низкий баланс или устаревший синк BILLmanager"
+                        columns={columnDefFromDataGrid(riskColumns)}
+                        data={atRisk}
+                        getRowId={(r) => r.id}
+                        emptyTitle="Рисков нет"
+                        emptyDescription="Балансы и синхронизация в норме"
+                        pagination={false}
+                      />
+                    </TabsContent>
+                  </CountedLineTabs>
+                </div>
+              </OpsDashboard>
 
               <div className="flex flex-wrap gap-2">
                 <Button

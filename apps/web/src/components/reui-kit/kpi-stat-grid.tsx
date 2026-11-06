@@ -63,11 +63,17 @@ function isSelected(item: KpiStatItem): boolean {
   return Boolean(item.selected ?? item.active)
 }
 
+const HINT_BADGE_VARIANT = {
+  default: 'outline',
+  warning: 'warning-light',
+  destructive: 'destructive-light',
+} as const
+
 function resolveFooter(item: KpiStatItem): ReactNode {
   if (item.footer) return item.footer
   if (typeof item.hint === 'string') {
     return (
-      <Badge variant="outline" size="sm">
+      <Badge variant={HINT_BADGE_VARIANT[item.variant ?? 'default']} size="sm">
         {item.hint}
       </Badge>
     )
@@ -81,7 +87,7 @@ function KpiStatCardBody({ item }: { item: KpiStatItem }) {
   const valueVariant = item.variant ?? 'default'
 
   return (
-    <div className="relative z-10 flex h-full items-start gap-3">
+    <div className="relative z-10 flex h-full items-center gap-3">
       {item.icon ? (
         <IconTile
           variant="elevated"
@@ -92,18 +98,19 @@ function KpiStatCardBody({ item }: { item: KpiStatItem }) {
         </IconTile>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="text-muted-foreground text-sm font-medium">{item.label}</div>
-          {footer ? <div className="shrink-0">{footer}</div> : null}
-        </div>
-        <div
-          className={cn(
-            'text-2xl leading-none font-bold tabular-nums',
-            VALUE_VARIANT_CLASS[valueVariant],
-          )}
-        >
-          {item.value}
+      {/* Design «VPS-Tracker» KPI: label, then value + hint Badge on one baseline. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="text-muted-foreground truncate text-sm font-medium">{item.label}</div>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span
+            className={cn(
+              'text-2xl leading-none font-semibold tracking-tight tabular-nums',
+              VALUE_VARIANT_CLASS[valueVariant],
+            )}
+          >
+            {item.value}
+          </span>
+          {footer ? <span className="shrink-0">{footer}</span> : null}
         </div>
       </div>
     </div>

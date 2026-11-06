@@ -141,12 +141,12 @@ export function NavUser() {
             render={
               <SidebarMenuButton
                 size="lg"
-                className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
+                className="bg-muted/50 data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
               />
             }
           >
-            <Avatar className="size-8 rounded-lg">
-              <AvatarFallback className="rounded-lg text-xs">
+            <Avatar className="size-8 rounded-full border">
+              <AvatarFallback className="bg-background text-xs">
                 {fallback}
               </AvatarFallback>
             </Avatar>
@@ -166,8 +166,8 @@ export function NavUser() {
           >
             <DropdownMenuGroup>
               <DropdownMenuLabel className="flex items-center gap-2 py-2 font-normal text-foreground">
-                <Avatar className="size-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg text-xs">
+                <Avatar className="size-8 rounded-full border">
+                  <AvatarFallback className="bg-background text-xs">
                     {fallback}
                   </AvatarFallback>
                 </Avatar>
