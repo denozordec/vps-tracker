@@ -266,7 +266,7 @@ function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: strin
           className="group/label hover:text-sidebar-foreground cursor-pointer uppercase tracking-wider transition-colors"
         >
           {group.label}
-          <ChevronDownIcon className="ml-auto transition-transform group-not-data-panel-open/label:-rotate-90" />
+          <ChevronDownIcon className="ml-auto transition-transform motion-reduce:transition-none group-not-data-panel-open/label:-rotate-90" />
         </SidebarGroupLabel>
         <CollapsibleContent>
           <SidebarGroupContent>
