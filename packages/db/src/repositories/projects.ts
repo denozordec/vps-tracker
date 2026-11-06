@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, eq, like, asc, sql } from 'drizzle-orm'
+import { and, eq, asc, sql } from 'drizzle-orm'
 import { getDb, schema } from '../index.js'
 import { getCurrentSpaceId } from '../space-context.js'
 
@@ -13,17 +13,18 @@ export function findProjectByNameCaseInsensitive(
 ): (typeof schema.serverProjects.$inferSelect) | undefined {
   const n = normalizeProjectNameInput(name)
   if (!n) return undefined
-  const spaceId = getCurrentSpaceId()
+  // SQLite LOWER()/LIKE fold ASCII only — «Сайт» never matched «сайт», so each VPS created a duplicate project.
+  const key = n.toLowerCase()
+  return listSpaceProjects().find((p) => p.name.trim().toLowerCase() === key)
+}
+
+function listSpaceProjects() {
   return getDb()
     .select()
     .from(schema.serverProjects)
-    .where(
-      and(
-        eq(schema.serverProjects.spaceId, spaceId),
-        eq(sql`LOWER(${schema.serverProjects.name})`, n.toLowerCase()),
-      ),
-    )
-    .get()
+    .where(eq(schema.serverProjects.spaceId, getCurrentSpaceId()))
+    .orderBy(asc(schema.serverProjects.name))
+    .all()
 }
 
 export function resolveOrCreateProject(
@@ -67,20 +68,11 @@ export function projectSuggestions(
       .limit(lim)
       .all()
   }
-  const esc = term.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
-  const pattern = `%${esc.toLowerCase()}%`
-  return db
-    .select({ id: schema.serverProjects.id, name: schema.serverProjects.name })
-    .from(schema.serverProjects)
-    .where(
-      and(
-        eq(schema.serverProjects.spaceId, spaceId),
-        like(sql`LOWER(${schema.serverProjects.name})`, pattern),
-      ),
-    )
-    .orderBy(asc(schema.serverProjects.name))
-    .limit(lim)
-    .all()
+  const needle = term.toLowerCase()
+  return listSpaceProjects()
+    .filter((p) => p.name.toLowerCase().includes(needle))
+    .slice(0, lim)
+    .map(({ id, name }) => ({ id, name }))
 }
 
 export function getProjectNameById(id: string): string {

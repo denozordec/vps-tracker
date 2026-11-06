@@ -30,6 +30,18 @@ describe('projects routes', () => {
     expect(body[0]?.color).toBe('#ff0000')
   })
 
+  it('reuses a Cyrillic project regardless of case and suggests it', async () => {
+    projectsRepository.create({ name: 'Сайт и API' })
+    for (const project of ['Сайт и API', 'сайт и api']) {
+      const res = await app.inject({ method: 'POST', url: '/api/vps', payload: { ip: '10.0.0.1', project } })
+      expect(res.statusCode).toBe(201)
+    }
+    const list = (await app.inject({ url: '/api/projects' })).json() as { name: string }[]
+    expect(list.map((p) => p.name)).toEqual(['Сайт и API'])
+    const sug = (await app.inject({ url: `/api/projects/suggest?q=${encodeURIComponent('сай')}` })).json() as { name: string }[]
+    expect(sug.map((p) => p.name)).toEqual(['Сайт и API'])
+  })
+
   it('creates project with color and notes', async () => {
     const res = await app.inject({
       method: 'POST',
