@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeDb } from '@cfdm/db'
 import { settingsRepository } from '@cfdm/db/repositories/settings'
 import { resetTestDb } from '@cfdm/db/test-setup'
