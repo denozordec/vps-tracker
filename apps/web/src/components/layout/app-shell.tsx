@@ -65,6 +65,7 @@ import {
   permissionForPath,
 } from '@/lib/auth'
 import { SpaceProvider, useSpaceId } from '@/lib/space'
+import { PageCrumbContext } from '@/lib/page-crumb'
 import { SKIP_TO_CONTENT_CLASS } from '@/lib/ui-surface'
 import { cn } from '@cfdm/ui/lib/utils'
 
@@ -156,7 +157,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activeItem =
     ALL_NAV_ITEMS.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`)) ??
     ALL_NAV_ITEMS[0]
-  const parentTo = PARENT_ROUTE[activeItem.to]
+  const [pageCrumb, setPageCrumb] = useState<string | null>(null)
+  // Detail routes (design: «VPS / 203.0.113.21»): section links back, page shows the record title.
+  const isDetail = pageCrumb != null && pathname !== activeItem.to
+  const parentTo = isDetail ? activeItem.to : PARENT_ROUTE[activeItem.to]
   const parentLabel = parentTo ? ROUTE_LABELS[parentTo] : null
 
   const { data: stats } = useQuery(dashboardStatsQueryOptions())
@@ -232,7 +236,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ) : null}
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    {ROUTE_LABELS[activeItem.to] ?? ''}
+                    {isDetail ? pageCrumb : (ROUTE_LABELS[activeItem.to] ?? '')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -242,7 +246,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
           <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-5">
-            <SpaceScopedMain>{children}</SpaceScopedMain>
+            <PageCrumbContext.Provider value={setPageCrumb}>
+              <SpaceScopedMain>{children}</SpaceScopedMain>
+            </PageCrumbContext.Provider>
           </div>
         </SidebarInset>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
@@ -262,11 +268,17 @@ function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: strin
     <Collapsible open={open || iconRail} onOpenChange={setOpen}>
       <SidebarGroup>
         <SidebarGroupLabel
-          render={<CollapsibleTrigger />}
-          className="group/label hover:text-sidebar-foreground cursor-pointer uppercase tracking-wider transition-colors"
+          render={<CollapsibleTrigger tabIndex={iconRail ? -1 : undefined} />}
+          className="hover:text-sidebar-foreground cursor-pointer uppercase tracking-wider transition-colors"
         >
           {group.label}
-          <ChevronDownIcon className="ml-auto transition-transform motion-reduce:transition-none group-not-data-panel-open/label:-rotate-90" />
+          <ChevronDownIcon
+            aria-hidden
+            className={cn(
+              'ml-auto transition-transform motion-reduce:transition-none',
+              !open && '-rotate-90',
+            )}
+          />
         </SidebarGroupLabel>
         <CollapsibleContent>
           <SidebarGroupContent>

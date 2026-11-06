@@ -44,7 +44,8 @@ const DEFAULT_ICON_CLASS = 'text-muted-foreground [&_svg]:text-current'
 
 const VALUE_VARIANT_CLASS: Record<KpiStatVariant, string> = {
   default: 'text-foreground',
-  warning: 'text-warning',
+  // text-warning on white fails contrast; readable *-foreground in light theme.
+  warning: 'text-warning-foreground dark:text-warning',
   destructive: 'text-destructive',
 }
 

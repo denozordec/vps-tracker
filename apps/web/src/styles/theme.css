@@ -53,7 +53,7 @@
 }
 
 /* Dark-sidebar scope in light theme: inner text/border/muted tokens follow the sidebar. */
-:root:not(.dark) [data-slot='sidebar-inner'] {
+:root:not(.dark) :is([data-slot='sidebar-inner'], [data-slot='sidebar'][data-mobile='true']) {
   --foreground: oklch(0.92 0 0);
   --muted-foreground: oklch(0.648 0.008 264.376);
   --border: oklch(1 0 0 / 8%);

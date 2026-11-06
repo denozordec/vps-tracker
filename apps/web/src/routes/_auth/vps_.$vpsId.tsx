@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePageCrumb } from '@/lib/page-crumb'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import {
@@ -95,6 +96,7 @@ function VpsDetailPage() {
   const ratesData = normalizeRatesPayload(rawRates) ?? rawRates ?? null
 
   const vps = snapshot?.vps.find((v) => v.id === vpsId)
+  usePageCrumb(vps ? vps.ip || vps.dns || 'VPS' : null)
   const providerById = snapshot ? providerByIdMap(snapshot.providers) : new Map()
   const account = snapshot?.providerAccounts.find((a) => a.id === vps?.providerAccountId)
   const provider = vps ? providerById.get(vps.providerId) : undefined
