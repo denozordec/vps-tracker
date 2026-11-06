@@ -3,7 +3,7 @@
  */
 
 import { eq } from 'drizzle-orm'
-import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
+import { getCurrentSpaceId, getDb, getSqlite, schema } from '@cfdm/db'
 import { findSyncedVps } from '../providers/find-synced-vps.js'
 
 import type { FourvpsSyncAccount } from './context.js'
@@ -223,56 +223,59 @@ export async function syncFromFourvps(
 
   let tariffsCount = 0
   const newTariffs: { name: string; price: string; providerId: string }[] = []
-  if (fetchTariffs) {
-    const existingTariffIds = new Set(
-      db
-        .select({ id: schema.activeTariffs.id })
-        .from(schema.activeTariffs)
+  // Fetch errors come back as [] — keep the old list instead of wiping it (and re-announcing all as new).
+  if (fetchTariffs && tariffItems.length > 0) {
+    getSqlite().transaction(() => {
+      const existingTariffIds = new Set(
+        db
+          .select({ id: schema.activeTariffs.id })
+          .from(schema.activeTariffs)
+          .where(eq(schema.activeTariffs.providerAccountId, accountId))
+          .all()
+          .map((r) => r.id),
+      )
+      const syncedAt = new Date().toISOString()
+      db.delete(schema.activeTariffs)
         .where(eq(schema.activeTariffs.providerAccountId, accountId))
-        .all()
-        .map((r) => r.id),
-    )
-    const syncedAt = new Date().toISOString()
-    db.delete(schema.activeTariffs)
-      .where(eq(schema.activeTariffs.providerAccountId, accountId))
-      .run()
-
-    for (const t of tariffItems) {
-      const dcKey = t.datacenterKey ?? ''
-      const dcName = t.datacenterName ?? ''
-      const tariffId = dcKey
-        ? `tariff-4vps-${accountId}-${t.externalId}-${dcKey}`
-        : `tariff-4vps-${accountId}-${t.externalId}`
-      if (!existingTariffIds.has(tariffId)) {
-        newTariffs.push({ name: t.name || '', price: t.price || '', providerId })
-      }
-      db.insert(schema.activeTariffs)
-        .values({
-          spaceId: getCurrentSpaceId(),
-          id: tariffId,
-          providerAccountId: accountId,
-          providerId,
-          externalId: t.externalId,
-          datacenterKey: dcKey,
-          datacenterName: dcName,
-          name: t.name || '',
-          desc: t.desc || '',
-          vcpu: t.vcpu || 0,
-          ramGb: t.ramGb || 0,
-          diskGb: t.diskGb || 0,
-          diskType: t.diskType || 'NVMe',
-          virtualization: t.virtualization || 'KVM',
-          channel: t.channel || '',
-          location: t.location || '',
-          country: t.country || '',
-          cpuModel: t.cpuModel || '',
-          orderAvailable: t.orderAvailable ? 1 : 0,
-          price: t.price || '',
-          syncedAt,
-        })
         .run()
-      tariffsCount++
-    }
+
+      for (const t of tariffItems) {
+        const dcKey = t.datacenterKey ?? ''
+        const dcName = t.datacenterName ?? ''
+        const tariffId = dcKey
+          ? `tariff-4vps-${accountId}-${t.externalId}-${dcKey}`
+          : `tariff-4vps-${accountId}-${t.externalId}`
+        if (!existingTariffIds.has(tariffId)) {
+          newTariffs.push({ name: t.name || '', price: t.price || '', providerId })
+        }
+        db.insert(schema.activeTariffs)
+          .values({
+            spaceId: getCurrentSpaceId(),
+            id: tariffId,
+            providerAccountId: accountId,
+            providerId,
+            externalId: t.externalId,
+            datacenterKey: dcKey,
+            datacenterName: dcName,
+            name: t.name || '',
+            desc: t.desc || '',
+            vcpu: t.vcpu || 0,
+            ramGb: t.ramGb || 0,
+            diskGb: t.diskGb || 0,
+            diskType: t.diskType || 'NVMe',
+            virtualization: t.virtualization || 'KVM',
+            channel: t.channel || '',
+            location: t.location || '',
+            country: t.country || '',
+            cpuModel: t.cpuModel || '',
+            orderAvailable: t.orderAvailable ? 1 : 0,
+            price: t.price || '',
+            syncedAt,
+          })
+          .run()
+        tariffsCount++
+      }
+    })()
   }
 
   if (!fetchVpsData) {

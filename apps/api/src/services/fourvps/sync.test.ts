@@ -162,4 +162,13 @@ describe('syncFromFourvps', () => {
     const ids = (getSqlite().prepare(`SELECT id FROM vps ORDER BY id`).all() as { id: string }[]).map((r) => r.id)
     expect(ids).toEqual(['manual-12', 'vps-4vps-acc-4vps-100'])
   })
+  it('keeps tariffs when the tariff fetch fails and does not re-announce them', async () => {
+    await syncFromFourvps(account)
+    vi.mocked(fetchTarifList).mockRejectedValueOnce(new Error('timeout'))
+    await syncFromFourvps(account)
+    const count = getSqlite().prepare(`SELECT COUNT(*) as c FROM active_tariffs`).get() as { c: number }
+    expect(count.c).toBe(1)
+    const third = await syncFromFourvps(account)
+    expect(third.newTariffs).toEqual([])
+  })
 })
