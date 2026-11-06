@@ -25,7 +25,12 @@ type MonitorCheck = {
   to: '/sync-journal' | '/settings/notifications' | '/accounts' | '/vps' | '/dashboard'
 }
 
-const TONE_TEXT: Record<Tone, string> = { er: 'text-destructive', wn: 'text-warning', ok: 'text-success' }
+// text-warning/text-success на белом фоне не проходят контраст — *-foreground в светлой теме (как в KPI).
+const TONE_TEXT: Record<Tone, string> = {
+  er: 'text-destructive',
+  wn: 'text-warning-foreground dark:text-warning',
+  ok: 'text-success-foreground dark:text-success',
+}
 const TONE_BG: Record<Tone, string> = { er: 'bg-destructive', wn: 'bg-warning', ok: 'bg-success' }
 
 type SyncStatusRow = {
@@ -195,7 +200,7 @@ export function SystemMonitorPopover() {
       >
         <Activity className={cn('size-4', alert ? 'text-warning' : 'text-success')} aria-hidden />
         <span
-          className={cn('hidden text-sm font-medium min-[1000px]:inline', alert ? 'text-warning' : 'text-success')}
+          className={cn('hidden text-sm font-medium min-[1000px]:inline', alert ? 'text-warning-foreground dark:text-warning' : 'text-success-foreground dark:text-success')}
         >
           {alert ? 'Внимание' : 'Норма'}
         </span>
