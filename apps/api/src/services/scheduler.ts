@@ -63,9 +63,57 @@ function allSettings(): SettingsRow[] {
   return settingsRepository.listAllSpaces()
 }
 
-export async function runNotificationTick(): Promise<void> {
+function spaceIntervals(s: SettingsRow) {
+  return {
+    notify: Math.max(15, Number(s.notifyIntervalMinutes) || 60),
+    uptime: Math.max(1, Number(s.uptimeCheckIntervalMinutes) || 5),
+    sync: Math.max(15, Number(s.syncIntervalMinutes) || 60),
+    tariffs: Math.max(60, Number(s.syncTariffsIntervalMinutes) || 1440),
+  }
+}
+
+const runningJobs = new Set<string>()
+
+/** A tick that finds the previous run of the same job still going is skipped, not stacked. */
+async function exclusive(job: string, fn: () => Promise<void>): Promise<void> {
+  if (runningJobs.has(job)) {
+    console.warn(`Scheduler: ${job} ещё выполняется — тик пропущен`)
+    return
+  }
+  runningJobs.add(job)
+  try {
+    await fn()
+  } finally {
+    runningJobs.delete(job)
+  }
+}
+
+const lastRunAt = new Map<string, number>()
+
+/** Timers tick at the smallest interval of all spaces; each space still runs at its own. */
+function dueForSpace(job: string, spaceId: string, minutes: number): boolean {
+  const key = `${job}:${spaceId}`
+  const now = Date.now()
+  const last = lastRunAt.get(key)
+  if (last != null && now - last < minutes * 60_000 - 30_000) return false
+  lastRunAt.set(key, now)
+  return true
+}
+
+export function resetSchedulerState(): void {
+  runningJobs.clear()
+  lastRunAt.clear()
+}
+
+export const runNotificationTick = () => exclusive('notify', notificationTick)
+export const runScheduledSync = () => exclusive('sync', scheduledSync)
+export const runScheduledSyncTariffs = () => exclusive('tariffs', scheduledSyncTariffs)
+export const runScheduledUptimeChecks = () => exclusive('uptime', scheduledUptimeChecks)
+
+async function notificationTick(): Promise<void> {
   for (const settings of allSettings()) {
     const spaceId = settings.spaceId || MAIN_SPACE_ID
+    if (!dueForSpace('notify', spaceId, spaceIntervals(settings).notify)) continue
     try {
       await runWithSpaceAsync(spaceId, async () => {
         const payload = buildPaymentExpiryNotification()
@@ -80,10 +128,11 @@ export async function runNotificationTick(): Promise<void> {
   }
 }
 
-export async function runScheduledSync(): Promise<void> {
+async function scheduledSync(): Promise<void> {
   for (const settings of allSettings()) {
     if (!settings.syncEnabled) continue
     const spaceId = settings.spaceId || MAIN_SPACE_ID
+    if (!dueForSpace('sync', spaceId, spaceIntervals(settings).sync)) continue
     try {
       await runWithSpaceAsync(spaceId, async () => {
         const entries = getSyncableAccounts(spaceId)
@@ -134,10 +183,11 @@ export async function runScheduledSync(): Promise<void> {
   }
 }
 
-export async function runScheduledSyncTariffs(): Promise<void> {
+async function scheduledSyncTariffs(): Promise<void> {
   for (const settings of allSettings()) {
     if (!settings.syncEnabled) continue
     const spaceId = settings.spaceId || MAIN_SPACE_ID
+    if (!dueForSpace('tariffs', spaceId, spaceIntervals(settings).tariffs)) continue
     try {
       await runWithSpaceAsync(spaceId, async () => {
         const entries = getSyncableAccounts(spaceId)
@@ -178,9 +228,10 @@ export async function runScheduledSyncTariffs(): Promise<void> {
   }
 }
 
-export async function runScheduledUptimeChecks(): Promise<void> {
+async function scheduledUptimeChecks(): Promise<void> {
   for (const settings of allSettings()) {
     const spaceId = settings.spaceId || MAIN_SPACE_ID
+    if (!dueForSpace('uptime', spaceId, spaceIntervals(settings).uptime)) continue
     try {
       await runWithSpaceAsync(spaceId, async () => {
         const { newlyDown, newlyUp } = await runVpsUptimeChecks()
@@ -261,19 +312,12 @@ function pickSchedulerIntervals(rows: SettingsRow[]): {
   let tariffsInterval: number | null = null
 
   for (const s of rows) {
-    notifyInterval = Math.min(
-      notifyInterval,
-      Math.max(15, Number(s.notifyIntervalMinutes) || 60),
-    )
-    uptimeInterval = Math.min(
-      uptimeInterval,
-      Math.max(1, Number(s.uptimeCheckIntervalMinutes) || 5),
-    )
+    const i = spaceIntervals(s)
+    notifyInterval = Math.min(notifyInterval, i.notify)
+    uptimeInterval = Math.min(uptimeInterval, i.uptime)
     if (s.syncEnabled) {
-      const si = Math.max(15, Number(s.syncIntervalMinutes) || 60)
-      const ti = Math.max(60, Number(s.syncTariffsIntervalMinutes) || 1440)
-      syncInterval = syncInterval == null ? si : Math.min(syncInterval, si)
-      tariffsInterval = tariffsInterval == null ? ti : Math.min(tariffsInterval, ti)
+      syncInterval = syncInterval == null ? i.sync : Math.min(syncInterval, i.sync)
+      tariffsInterval = tariffsInterval == null ? i.tariffs : Math.min(tariffsInterval, i.tariffs)
     }
   }
   return { notifyInterval, uptimeInterval, syncInterval, tariffsInterval }

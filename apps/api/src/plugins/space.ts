@@ -62,6 +62,26 @@ export async function ensureUserSpaces(request: FastifyRequest): Promise<void> {
  */
 import { runWithSpace } from '@cfdm/db'
 
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+/** Routes without their own requireSpaceRole: a space viewer must not write here. */
+const MEMBER_WRITE_PREFIXES = [
+  '/api/payments',
+  '/api/balance-ledger',
+  '/api/providers',
+  '/api/provider-accounts',
+  '/api/projects',
+]
+
+export function needsMemberRole(method: string, url: string): boolean {
+  const path = url.split('?')[0] ?? url
+  // Every /api/sync call hits the hoster and writes (GET .../balance too), except the log.
+  if (path === '/api/sync' || path.startsWith('/api/sync/')) return path !== '/api/sync/status'
+  return (
+    WRITE_METHODS.has(method.toUpperCase()) &&
+    MEMBER_WRITE_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))
+  )
+}
+
 export const spacePlugin = fp(async (app) => {
   app.addHook('onRequest', (request, reply, done) => {
     void (async () => {
@@ -122,6 +142,16 @@ export const spacePlugin = fp(async (app) => {
         done(err as Error)
       }
     })()
+  })
+
+  app.addHook('preHandler', async (request, reply) => {
+    if (!app.authConfig?.required || !request.authUser) return
+    if (!needsMemberRole(request.method, request.url)) return
+    if (!canWriteInSpace(request)) {
+      return reply.code(403).send({
+        error: { code: 'FORBIDDEN', message: 'Недостаточно прав в пространстве (нужно: member)' },
+      })
+    }
   })
 })
 

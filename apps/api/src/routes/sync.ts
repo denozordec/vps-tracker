@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { desc, eq } from 'drizzle-orm'
-import { getDb, schema } from '@cfdm/db'
+import { getCurrentSpaceId, getDb, schema } from '@cfdm/db'
 import { providerAccountsRepository } from '@cfdm/db/repositories/provider-accounts'
 import { providersRepository } from '@cfdm/db/repositories/providers'
 
@@ -9,7 +9,7 @@ import {
   resolveSyncAccount,
   SYNC_SETUP_ERRORS,
 } from '../services/providers/index.js'
-import { runAccountSync } from '../services/providers/sync-job.js'
+import { runAccountSync, SyncInProgressError } from '../services/providers/sync-job.js'
 
 interface SyncLogRow {
   id: string
@@ -54,6 +54,7 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
     const rows = getDb()
       .select()
       .from(schema.syncLog)
+      .where(eq(schema.syncLog.spaceId, getCurrentSpaceId()))
       .orderBy(desc(schema.syncLog.startedAt))
       .limit(50)
       .all()
@@ -89,6 +90,9 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
           },
         }
       } catch (err) {
+        if (err instanceof SyncInProgressError) {
+          return reply.code(409).send({ ok: false, error: err.message })
+        }
         req.log.error(err)
         const message = err instanceof Error ? err.message : 'Sync failed'
         return reply.code(500).send({ ok: false, error: message })

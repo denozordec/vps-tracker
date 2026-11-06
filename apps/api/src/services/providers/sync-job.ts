@@ -8,13 +8,37 @@ export interface RunAccountSyncResult extends SyncResult {
   logId: string
 }
 
+/** Manual and scheduled syncs of one account must not interleave (duplicate inserts, tariff wipe). */
+const inFlightAccounts = new Set<string>()
+
+export class SyncInProgressError extends Error {
+  constructor() {
+    super('Синхронизация этого аккаунта уже выполняется')
+  }
+}
+
 export async function runAccountSync(
   adapter: ProviderAdapter,
   account: unknown,
   opts: { skipTariffs?: boolean; skipVpsPayments?: boolean } = {},
 ): Promise<RunAccountSyncResult> {
-  const db = getDb()
   const accountRow = account as { id: string; spaceId?: string }
+  if (inFlightAccounts.has(accountRow.id)) throw new SyncInProgressError()
+  inFlightAccounts.add(accountRow.id)
+  try {
+    return await runAccountSyncLocked(adapter, account, accountRow, opts)
+  } finally {
+    inFlightAccounts.delete(accountRow.id)
+  }
+}
+
+async function runAccountSyncLocked(
+  adapter: ProviderAdapter,
+  account: unknown,
+  accountRow: { id: string; spaceId?: string },
+  opts: { skipTariffs?: boolean; skipVpsPayments?: boolean },
+): Promise<RunAccountSyncResult> {
+  const db = getDb()
   const logId = `sync-${accountRow.id}-${Date.now()}`
   const spaceId = accountRow.spaceId ?? getCurrentSpaceId()
 
