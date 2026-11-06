@@ -210,13 +210,11 @@ function ResourcePageSimple<T extends object>({
 
   return (
     <div className="w-full">
-      {toolbarExtra ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2">{toolbarExtra}</div>
-      ) : null}
       <FrameDataGrid
         title={hideHeader ? undefined : title || undefined}
         description={hideHeader ? undefined : description}
         actions={hideHeader ? undefined : headerActions}
+        toolbar={toolbarExtra}
         columns={columns}
         data={data}
         rowId={getRowId}
@@ -429,39 +427,48 @@ function ResourcePageFiltered<T extends object>({
         })}
       >
         <Frame dense variant="default" spacing="sm" className="w-full">
-          {!hideHeader ? (
-            <FrameHeader className="flex-row items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-col gap-px">
+          {/* Раскладка MikrotikManager v2: заголовок, затем фильтры/поиск/сброс и действия в одной шапке. */}
+          <FrameHeader className="flex-row flex-wrap items-center gap-x-3 gap-y-2">
+            {!hideHeader ? (
+              <div className="flex min-w-0 flex-1 basis-52 flex-col gap-px">
                 <FrameTitle className="text-balance">{title}</FrameTitle>
                 {description ? (
-                  <FrameDescription className="flex flex-wrap items-center gap-1.5 text-xs text-pretty">
-                    <span>{description}</span>
-                    <span
-                      className="bg-input size-1 shrink-0 rounded-full"
-                      aria-hidden="true"
-                    />
-                    <span className="tabular-nums">
-                      {filteredData.length} записей
-                    </span>
-                    {selectedCount > 0 ? (
-                      <>
-                        <span
-                          className="bg-input size-1 shrink-0 rounded-full"
-                          aria-hidden="true"
-                        />
-                        <span>{selectedCount} выбрано</span>
-                      </>
-                    ) : null}
-                  </FrameDescription>
+                  <FrameDescription className="text-xs text-pretty">{description}</FrameDescription>
                 ) : null}
               </div>
-              {headerActions ? (
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  {headerActions}
-                </div>
-              ) : null}
-            </FrameHeader>
-          ) : null}
+            ) : (
+              <div className="flex-1" />
+            )}
+            {showFilters ? (
+              <Filters
+                filters={filters}
+                fields={filterFields}
+                onChange={handleFiltersChange}
+                size="default"
+                trigger={
+                  <Button type="button" variant="outline" aria-label="Фильтры">
+                    <FilterIcon className="size-4" aria-hidden="true" />
+                    Фильтры
+                    {filters.length > 0 ? (
+                      <Badge size="xs" variant="secondary" radius="full">
+                        {filters.length}
+                      </Badge>
+                    ) : null}
+                  </Button>
+                }
+              />
+            ) : null}
+            {toolbarExtra}
+            {showFilters && onClearFilters && filters.length > 0 ? (
+              <Button type="button" variant="outline" onClick={handleClear}>
+                <FilterXIcon className="size-4" aria-hidden="true" />
+                Сбросить
+              </Button>
+            ) : null}
+            {headerActions && !hideHeader ? (
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{headerActions}</div>
+            ) : null}
+          </FrameHeader>
 
           <FramePanel className="p-0 shadow-none!">
             {countedTabs.length > 0 ? (
@@ -476,41 +483,6 @@ function ResourcePageFiltered<T extends object>({
                 <Separator />
               </>
             ) : null}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 px-(--frame-panel-header-px) py-(--frame-panel-header-py)">
-              {showFilters ? (
-                <Filters
-                  filters={filters}
-                  fields={filterFields}
-                  onChange={handleFiltersChange}
-                  size="default"
-                  trigger={
-                    <Button type="button" variant="outline" aria-label="Фильтры">
-                      <FilterIcon className="size-4" aria-hidden="true" />
-                      Фильтры
-                    </Button>
-                  }
-                />
-              ) : (
-                <div />
-              )}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {toolbarExtra}
-                {selectedCount > 0 ? (
-                  <Badge size="sm" variant="secondary">
-                    {selectedCount} выбрано
-                  </Badge>
-                ) : null}
-                {showFilters && onClearFilters ? (
-                  <Button type="button" variant="outline" onClick={handleClear}>
-                    <FilterXIcon className="size-4" aria-hidden="true" />
-                    Сбросить
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
-            {(showFilters || toolbarExtra || selectedCount > 0) ? <Separator /> : null}
 
             <DataGridContainer border={false}>
               <DataGridTable />

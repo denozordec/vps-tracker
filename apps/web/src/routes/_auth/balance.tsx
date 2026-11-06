@@ -237,6 +237,8 @@ function BalancePage() {
               ]}
             />
             <ResourcePage
+              title="Движения по аккаунтам"
+              description="Журнал баланса · удаление записи с подтверждением"
               columns={columnDefFromDataGrid(columns)}
               data={rows}
               getRowId={(r) => r.id}

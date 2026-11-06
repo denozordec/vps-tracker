@@ -150,6 +150,8 @@ function ProvidersPage() {
     >
       {(snap) => (
         <ResourcePage
+          title="Хостеры"
+          description="Провайдеры и тип API"
           columns={columnDefFromDataGrid(columns)}
           data={snap.providers}
           getRowId={(p) => p.id}

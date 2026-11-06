@@ -5,9 +5,10 @@ import { BLOCKING_MATRIX_GRID } from '../censorcheck/blocking-grid'
 import { GEO_MATRIX_GRID } from '../ipregion/geo-grid'
 
 describe('kitDataGridTableLayout', () => {
-  it('CRUD defaults: без bg-muted header и width fixed', () => {
+  it('CRUD defaults: подложка шапки, без зебры, width fixed', () => {
     const layout = kitDataGridTableLayout()
-    expect(layout.headerBackground).toBe(false)
+    expect(layout.headerBackground).toBe(true)
+    expect(layout.stripped).toBe(false)
     expect(layout.width).toBe('fixed')
     expect(layout.headerSticky).toBe(true)
     expect(layout.columnsPinnable).toBe(false)
@@ -20,7 +21,8 @@ describe('kitDataGridTableLayout', () => {
     })
     expect(layout.width).toBe('auto')
     expect(layout.columnsPinnable).toBe(true)
-    expect(layout.headerBackground).toBe(false)
+    expect(layout.headerBackground).toBe(true)
+    expect(layout.stripped).toBe(false)
   })
 })
 

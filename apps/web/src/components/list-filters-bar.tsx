@@ -32,7 +32,7 @@ export function ListFiltersSearch({
   spellCheck = false,
 }: ListFiltersSearchProps) {
   return (
-    <div className={cn('relative w-full', className)}>
+    <div className={cn('relative w-[220px] max-w-full', className)}>
       <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         placeholder={placeholder}
@@ -140,30 +140,19 @@ export function ListFiltersBar({
   showReset,
   toggles,
 }: ListFiltersBarProps) {
-  const hasMeta =
-    chips?.length ||
-    (shown != null && total != null) ||
-    resultsSuffix ||
-    (showReset && onReset)
-
+  // Однострочный тулбар для шапки Frame (MikrotikManager v2): контролы → поиск → сброс; чипы — строкой ниже.
+  // «Показано N из M» показываем только когда фильтр что-то скрыл; общий счёт — в футере пагинации.
+  const filtered = shown != null && total != null && shown !== total
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+      {controls}
+      {toggles}
       {search ? <ListFiltersSearch {...search} /> : null}
-      {controls || toggles ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {controls}
-          {toggles}
-          {onReset ? <FilterResetButton onClick={onReset} visible={Boolean(showReset)} /> : null}
-        </div>
-      ) : null}
-      {hasMeta ? (
-        <div className="flex flex-col gap-1.5">
-          {chips?.length ? <FilterActiveChips chips={chips} /> : null}
-          {shown != null && total != null ? (
-            <FilterResultsCount shown={shown} total={total} suffix={resultsSuffix} />
-          ) : resultsSuffix ? (
-            <div className="text-xs text-muted-foreground">{resultsSuffix}</div>
-          ) : null}
+      {onReset ? <FilterResetButton onClick={onReset} visible={Boolean(showReset)} /> : null}
+      {filtered ? <FilterResultsCount shown={shown} total={total} suffix={resultsSuffix} /> : null}
+      {chips?.length ? (
+        <div className="basis-full">
+          <FilterActiveChips chips={chips} />
         </div>
       ) : null}
     </div>

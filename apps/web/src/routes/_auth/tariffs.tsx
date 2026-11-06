@@ -385,8 +385,10 @@ function TariffsPage() {
                 </AlertDescription>
               </Alert>
             ) : null}
-            {toolbar}
             <ResourcePage
+              title="Тарифы"
+              description="Прайс-листы хостеров по дата-центрам"
+              toolbarExtra={toolbar}
               columns={columnDefFromDataGrid(columns)}
               data={filteredTariffs}
               getRowId={(t) => t.id}

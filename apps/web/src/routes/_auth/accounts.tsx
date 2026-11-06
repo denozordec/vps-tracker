@@ -444,17 +444,21 @@ function AccountsPage() {
       {() => (
         <div className="flex flex-col gap-4">
           {snapshot ? <KpiStatGrid items={summaryCards} /> : null}
-          {snapshot ? (
-            <AccountFiltersToolbar
-              filters={filters}
-              onChange={setFilters}
-              providers={snapshot.providers}
-              shownCount={filteredAccounts.length}
-              totalCount={snapshot.providerAccounts.length}
-            />
-          ) : null}
           {health ? <HealthModeBanner health={health} exitTo="/accounts" /> : null}
           <ResourcePage
+            title="Аккаунты"
+            description="Поиск по названию и логину"
+            toolbarExtra={
+              snapshot ? (
+                <AccountFiltersToolbar
+                  filters={filters}
+                  onChange={setFilters}
+                  providers={snapshot.providers}
+                  shownCount={filteredAccounts.length}
+                  totalCount={snapshot.providerAccounts.length}
+                />
+              ) : undefined
+            }
             columns={columnDefFromDataGrid(columns)}
             data={filteredAccounts}
             getRowId={(a) => a.id}

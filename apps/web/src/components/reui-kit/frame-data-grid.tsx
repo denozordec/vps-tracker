@@ -105,10 +105,11 @@ export function kitDataGridTableLayout(opts: {
 } = {}) {
   return {
     dense: opts.dense ?? true,
-    stripped: true,
+    // MikrotikManager v2 / макет `gh` + `rowv`: подложка у шапки, строки без зебры, разделитель.
+    stripped: false,
     rowBorder: true,
     headerSticky: true,
-    headerBackground: false,
+    headerBackground: true,
     headerBorder: true,
     width: opts.width ?? ('fixed' as const),
     columnsVisibility: opts.columnsVisibility ?? false,
@@ -146,6 +147,8 @@ export interface FrameDataGridProps<TData extends object> {
   title?: ReactNode
   description?: ReactNode
   actions?: ReactNode
+  /** Поиск / фильтры страницы — в шапке рамки рядом с заголовком (раскладка MikrotikManager v2). */
+  toolbar?: ReactNode
   columns: DataGridColumnDef<TData>[]
   data: TData[]
   /** Ключ строки — функция, возвращающая уникальный id. */
@@ -199,25 +202,29 @@ export interface FrameDataGridProps<TData extends object> {
   columnPinControls?: boolean
 }
 
-function DataGridSectionHeader({
+/** Шапка рамки: заголовок слева, справа тулбар (фильтры, поиск) и действия — переносятся строкой ниже на узком экране. */
+export function DataGridSectionHeader({
   title,
   description,
   actions,
+  toolbar,
 }: {
   title?: ReactNode
   description?: ReactNode
   actions?: ReactNode
+  toolbar?: ReactNode
 }) {
-  if (!title && !description && !actions) return null
+  if (!title && !description && !actions && !toolbar) return null
 
   return (
-    <FrameHeader className="flex-row items-start justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-px">
+    <FrameHeader className="flex-row flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex min-w-0 flex-1 basis-52 flex-col gap-px">
         {title ? <FrameTitle className="text-balance">{title}</FrameTitle> : null}
         {description ? (
           <FrameDescription className="text-xs text-pretty">{description}</FrameDescription>
         ) : null}
       </div>
+      {toolbar ? <div className="flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div> : null}
       {actions ? (
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>
       ) : null}
@@ -315,6 +322,7 @@ export function FrameDataGrid<TData extends object>({
   title,
   description,
   actions,
+  toolbar,
   columns,
   data,
   rowId,
@@ -480,13 +488,13 @@ export function FrameDataGrid<TData extends object>({
     columnVisibilityAction
   )
 
-  const hasHeader = Boolean(title || description || actions || showColumnVisibilityTrigger)
+  const hasHeader = Boolean(title || description || actions || toolbar || showColumnVisibilityTrigger)
 
   if (data.length === 0) {
     return (
       <Frame dense variant="default" spacing="sm" className={cn('w-full min-w-0', className)}>
         {hasHeader ? (
-          <DataGridSectionHeader title={title} description={description} actions={headerActions} />
+          <DataGridSectionHeader title={title} description={description} actions={headerActions} toolbar={toolbar} />
         ) : null}
         <FramePanel className="flex min-h-72 w-full flex-col items-center justify-center">
           <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
@@ -516,7 +524,7 @@ export function FrameDataGrid<TData extends object>({
   return (
     <Frame dense variant="default" spacing="sm" className={cn('w-full min-w-0', className)}>
       {hasHeader ? (
-        <DataGridSectionHeader title={title} description={description} actions={headerActions} />
+        <DataGridSectionHeader title={title} description={description} actions={headerActions} toolbar={toolbar} />
       ) : null}
       <FramePanel className="p-0 shadow-none!">{gridBody}</FramePanel>
     </Frame>

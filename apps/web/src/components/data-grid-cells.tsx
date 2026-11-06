@@ -48,7 +48,7 @@ export function DataGridNameCell({
 }) {
   return (
     <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
-      <IconTile variant="elevated" className="size-10.5" aria-hidden>
+      <IconTile variant="elevated" className="size-8 shrink-0" aria-hidden>
         <Icon className={iconClassName} />
       </IconTile>
       <div className="flex min-w-0 flex-col gap-0.5">

@@ -247,6 +247,8 @@ function PaymentsPage() {
               ]}
             />
             <ResourcePage
+              title="Платежи"
+              description="Журнал платежей"
               columns={columnDefFromDataGrid(columns)}
               data={sorted}
               getRowId={(p) => p.id}

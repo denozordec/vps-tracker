@@ -26,7 +26,6 @@ import {
 } from '@/components/project-filters'
 import { Button } from '@cfdm/ui/components/button'
 import { Badge } from '@/components/reui/badge'
-import { EmptyState } from '@/components/empty-state'
 import { ProjectColorDot } from '@/components/project-color-dot'
 import { ProjectEditSheet, projectFormDefaults } from '@/components/domain/project-edit-sheet'
 import type { ProjectFormValues } from '@/lib/schemas'
@@ -277,35 +276,37 @@ function ProjectsPage() {
               ]}
             />
           ) : null}
-          <ProjectFiltersToolbar
-            filters={filters}
-            onChange={setFilters}
-            shownCount={rows.length}
-            totalCount={allRows.length}
-          />
-          {rows.length === 0 && hasActiveProjectFilters(filters) ? (
-            <EmptyState
-              title="Ничего не найдено"
-              description="Измените фильтры или сбросьте их"
-              action={
+          {/* Пустой результат фильтра рисует сама рамка: поиск остаётся в шапке, чтобы его поправить. */}
+          <ResourcePage
+            title="Проекты"
+            description="Клик открывает проект"
+            toolbarExtra={
+              <ProjectFiltersToolbar
+                filters={filters}
+                onChange={setFilters}
+                shownCount={rows.length}
+                totalCount={allRows.length}
+              />
+            }
+            columns={columnDefFromDataGrid(columns)}
+            data={rows}
+            getRowId={(r) => r.id}
+            emptyTitle={hasActiveProjectFilters(filters) ? 'Ничего не найдено' : 'Нет проектов'}
+            emptyDescription={hasActiveProjectFilters(filters) ? 'Измените фильтры или сбросьте их' : undefined}
+            emptyAction={
+              hasActiveProjectFilters(filters) ? (
                 <Button variant="outline" onClick={() => setFilters(buildDefaultProjectFilters())}>
                   Сбросить фильтры
                 </Button>
-              }
-            />
-          ) : (
-            <ResourcePage
-              columns={columnDefFromDataGrid(columns)}
-              data={rows}
-              getRowId={(r) => r.id}
-              onRowClick={(row) =>
-                void navigate({
-                  to: '/projects/$projectId',
-                  params: { projectId: row.id },
-                })
-              }
-            />
-          )}
+              ) : undefined
+            }
+            onRowClick={(row) =>
+              void navigate({
+                to: '/projects/$projectId',
+                params: { projectId: row.id },
+              })
+            }
+          />
         </div>
       )}
     </CrudListPage>

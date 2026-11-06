@@ -344,6 +344,9 @@ function VpsPage() {
       key: 'ip',
       header: 'IP / DNS',
       icon: GlobeIcon,
+      // Полный IPv4 + иконка не помещались в равную долю fixed-таблицы и обрезались.
+      size: 240,
+      minSize: 220,
       sortValue: (v) => v.ip || v.dns || '',
       cell: (v) => (
         <DataGridNameCell
@@ -352,7 +355,7 @@ function VpsPage() {
             v.ip ? (
               <button
                 type="button"
-                className="truncate text-left font-medium hover:underline"
+                className="text-left font-mono font-medium tabular-nums whitespace-nowrap hover:underline"
                 onClick={() => void copyText(v.ip, 'IP скопирован')}
               >
                 {v.ip}
@@ -654,17 +657,8 @@ function VpsPage() {
             )
           }
 
-          return (
-          <div className="flex flex-col gap-4">
-            {health ? <HealthModeBanner health={health} exitTo="/vps" /> : null}
-            <VpsBulkToolbar
-              selectedCount={selectedIds.length}
-              projectOptions={projectNameOptions}
-              busy={bulkMutation.isPending}
-              onSetStatus={(status) => bulkMutation.mutate({ ids: selectedIds, action: 'status', value: status })}
-              onSetProject={(project) => bulkMutation.mutate({ ids: selectedIds, action: 'project', value: project })}
-              onDelete={() => bulkMutation.mutate({ ids: selectedIds, action: 'delete' })}
-            />
+          // Один набор фильтров: в шапке таблицы (MikrotikManager v2), при группировке — над секциями.
+          const filtersToolbar = (
             <VpsFiltersToolbar
               filters={filters}
               onChange={setFilters}
@@ -680,9 +674,24 @@ function VpsPage() {
               columnVisibility={columnVisibility}
               onColumnVisibilityChange={handleColumnVisibilityChange}
             />
+          )
+
+          return (
+          <div className="flex flex-col gap-4">
+            {health ? <HealthModeBanner health={health} exitTo="/vps" /> : null}
+            <VpsBulkToolbar
+              selectedCount={selectedIds.length}
+              projectOptions={projectNameOptions}
+              busy={bulkMutation.isPending}
+              onSetStatus={(status) => bulkMutation.mutate({ ids: selectedIds, action: 'status', value: status })}
+              onSetProject={(project) => bulkMutation.mutate({ ids: selectedIds, action: 'project', value: project })}
+              onDelete={() => bulkMutation.mutate({ ids: selectedIds, action: 'delete' })}
+            />
+            {tableSections.length > 1 ? filtersToolbar : null}
             {tableSections.map((section) => (
               <ResourcePage
                 key={section.key}
+                toolbarExtra={tableSections.length === 1 ? filtersToolbar : undefined}
                 title={section.label ?? 'Инвентарь VPS'}
                 description={
                   section.label ? undefined : 'Поиск по IP, DNS, проекту, назначению, ОС'

@@ -99,6 +99,8 @@ function SyncJournalPage() {
     >
       {(snap) => (
         <ResourcePage
+          title="Запуски синхронизации"
+          description="Последние запуски по аккаунтам"
           columns={columnDefFromDataGrid(columns)}
           data={snap.syncLog ?? []}
           getRowId={(r) => r.id}
