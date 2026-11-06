@@ -15,6 +15,7 @@ import {
   type FullBackupPayload,
 } from '../services/backup-full.js'
 import { restartScheduler } from '../services/scheduler.js'
+import { requireGlobalAdmin } from '../plugins/space.js'
 
 /** Лимит тела для импорта бэкапа (Fastify default = 1 MiB → 413). */
 function backupBodyLimitBytes(): number {
@@ -28,6 +29,10 @@ function backupBodyLimitBytes(): number {
 
 export const backupRoutes: FastifyPluginAsync = async (app) => {
   const bodyLimit = backupBodyLimitBytes()
+
+  app.addHook('preHandler', async (req, reply) => {
+    if (!requireGlobalAdmin(req, reply)) return reply
+  })
 
   app.addContentTypeParser(
     'application/octet-stream',

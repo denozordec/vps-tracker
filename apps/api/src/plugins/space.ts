@@ -186,6 +186,20 @@ export function requireSpaceRole(
   return true
 }
 
+/**
+ * Whole-DB operations (backup download/restore, legacy import) cross every space and carry API credentials,
+ * so per-space settings admin is not enough.
+ */
+export function requireGlobalAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+  const user = request.authUser
+  if (!user) return true
+  if (user.isAdmin || hasPermission(user.permissions, 'vps:spaces:admin')) return true
+  void reply.code(403).send({
+    error: { code: 'FORBIDDEN', message: 'Операция доступна только глобальному администратору' },
+  })
+  return false
+}
+
 export function canWriteInSpace(request: FastifyRequest): boolean {
   const role = request.spaceRole ?? 'viewer'
   return roleAtLeast(role, 'member')

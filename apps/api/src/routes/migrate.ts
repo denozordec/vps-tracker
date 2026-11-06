@@ -1,8 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { consolidateAllProviderApiSources, getSqlite } from '@cfdm/db'
+import { requireGlobalAdmin } from '../plugins/space.js'
 
 export const migrateRoutes: FastifyPluginAsync = async (app) => {
   app.post('/api/migrate', async (req, reply) => {
+    if (!requireGlobalAdmin(req, reply)) return reply
     const data = req.body
     if (!data || typeof data !== 'object') {
       return reply.code(400).send({ error: { code: 'VALIDATION', message: 'Invalid payload' } })
