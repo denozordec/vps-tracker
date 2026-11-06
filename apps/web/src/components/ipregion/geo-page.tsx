@@ -38,7 +38,7 @@ import { GeoServiceGrid, GeoVpsGrid } from './geo-grid'
 import { GeoRunSheet } from './geo-run-sheet'
 import {
   filterIpregionRuns,
-  isGeoMismatch,
+  hasGeoDisagreement,
   serviceMatrixRows,
   uniqueCountries,
 } from './geo-filters'
@@ -135,7 +135,10 @@ export function GeoPage() {
     () => mergeCensorcheckRuns(currentQuery.data?.items ?? [], historyQuery.data?.items ?? []),
     [currentQuery.data?.items, historyQuery.data?.items],
   )
-  const ticks = useMemo(() => collectSnapshotTicks(allRuns), [allRuns])
+  const ticks = useMemo(
+    () => collectSnapshotTicks(allRuns, (run) => (hasGeoDisagreement(run) ? 'wn' : 'ok')),
+    [allRuns],
+  )
   const resolvedIndex = resolveSnapshotIndex(ticks.length, snapshotIndex)
   const snapshotRuns = useMemo(() => {
     const asOf = ticks[resolvedIndex]?.asOf
@@ -150,7 +153,7 @@ export function GeoPage() {
 
   const matched = filtered.filter((row) => row.matchedVpsId).length
   const countries = uniqueCountries(filtered).length
-  const mismatches = filtered.filter(isGeoMismatch).length
+  const mismatches = filtered.filter(hasGeoDisagreement).length
 
   const copyLauncher = (
     <>
@@ -186,6 +189,35 @@ export function GeoPage() {
         <RouterIcon data-icon="inline-start" />
         MikroTik · день
       </Button>
+    </>
+  )
+
+  const matrixToolbar = (
+    <>
+      <Filters
+        filters={filters}
+        fields={FILTER_FIELDS}
+        onChange={setFilters}
+        trigger={
+          <Button type="button" variant="outline">
+            Фильтры
+          </Button>
+        }
+      />
+      <ToggleGroup
+        variant="outline"
+        size="sm"
+        spacing={0}
+        value={[group]}
+        onValueChange={(next) => {
+          const selectedMode = next[0]
+          if (selectedMode === 'vps' || selectedMode === 'service') setGroup(selectedMode)
+        }}
+        aria-label="Группировка"
+      >
+        <ToggleGroupItem value="vps">По VPS</ToggleGroupItem>
+        <ToggleGroupItem value="service">По сервису</ToggleGroupItem>
+      </ToggleGroup>
     </>
   )
 
@@ -242,33 +274,8 @@ export function GeoPage() {
             ticks={ticks}
             index={resolvedIndex}
             onIndexChange={setSnapshotIndex}
+            issueLabel="с расхождениями"
           />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Filters
-              filters={filters}
-              fields={FILTER_FIELDS}
-              onChange={setFilters}
-              trigger={
-                <Button type="button" variant="outline">
-                  Фильтры
-                </Button>
-              }
-            />
-            <ToggleGroup
-              variant="outline"
-              size="sm"
-              spacing={0}
-              value={[group]}
-              onValueChange={(next) => {
-                const selectedMode = next[0]
-                if (selectedMode === 'vps' || selectedMode === 'service') setGroup(selectedMode)
-              }}
-              aria-label="Группировка"
-            >
-              <ToggleGroupItem value="vps">По VPS</ToggleGroupItem>
-              <ToggleGroupItem value="service">По сервису</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
           <QueryState
             data={filtered}
             isLoading={currentQuery.isLoading}
@@ -284,12 +291,14 @@ export function GeoPage() {
             {(rows) =>
               group === 'vps' ? (
                 <GeoVpsGrid
+                  toolbar={matrixToolbar}
                   runs={rows}
                   onRowClick={setSelected}
                   emptyAction={copyLauncher}
                 />
               ) : (
                 <GeoServiceGrid
+                  toolbar={matrixToolbar}
                   groups={serviceGroups}
                   runs={rows}
                   onProbeClick={setSelected}

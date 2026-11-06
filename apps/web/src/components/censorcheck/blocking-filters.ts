@@ -121,9 +121,17 @@ export type MatrixColumn = {
   title: string
 }
 
+/** Короткие подписи колонок матрицы: полный хост остаётся в подсказке и карточке прогона. */
+const HOST_ALIASES: Record<string, string> = {
+  'redirector.googlevideo.com': 'googlevideo',
+  'api.telegram.org': 'telegram',
+  'play.google.com': 'google play',
+  'copilot.microsoft.com': 'copilot',
+}
+
 export function shortHostLabel(value: string): string {
-  const host = value.trim().split('/')[0] ?? value
-  return host.replace(/\.(com|org|net|io|ag|is)$/i, '')
+  const host = (value.trim().split('/')[0] ?? value).toLowerCase()
+  return HOST_ALIASES[host] ?? host.replace(/\.(com|org|net|io|ag|is)$/i, '')
 }
 
 const CANONICAL_SERVICES = [...CENSORCHECK_DPI_HOSTS, ...CENSORCHECK_GEOBLOCK_HOSTS]

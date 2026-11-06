@@ -174,56 +174,92 @@ for (const [key, status] of Object.entries(health)) {
     .run(`nlog-demo-${i}`, event, channel, status, message, new Date(Date.now() - (i + 1) * 47 * 60_000).toISOString()),
 )
 
-// --- censorcheck (blocking) & ipregion (GeoIP) via the real ingest API
-const ccServices: [string, Record<string, number>][] = [
-  ['youtube.com', { vpn1: 200, vpn2: 200, vpn3: 200, web1: 200 }],
-  ['instagram.com', { vpn1: 200, vpn2: 200, vpn3: 403, web1: 200 }],
-  ['chatgpt.com', { vpn1: 200, vpn2: 200, vpn3: 403, web1: 200 }],
-  ['discord.com', { vpn1: 200, vpn2: 0, vpn3: 200, web1: 200 }],
-  ['x.com', { vpn1: 200, vpn2: 200, vpn3: 200, web1: 200 }],
-  ['netflix.com', { vpn1: 302, vpn2: 200, vpn3: 403, web1: 200 }],
-  ['spotify.com', { vpn1: 200, vpn2: 200, vpn3: 403, web1: 200 }],
-  ['linkedin.com', { vpn1: 200, vpn2: 200, vpn3: 200, web1: 200 }],
+// --- censorcheck (blocking) & ipregion (GeoIP) via the real ingest API, with a week of history
+const HOURS_AGO = [166, 142, 118, 94, 70, 48, 30, 18, 9, 4, 0] // points on the snapshot timeline
+const CC_DPI = [
+  'youtube.com', 'redirector.googlevideo.com', 'discord.com', 'instagram.com', 'facebook.com', 'x.com',
+  'linkedin.com', 'rutracker.org', 'digitalocean.com', 'amnezia.org', 'getoutline.org', 'mailfence.com',
+  'flibusta.is', 'rezka.ag', 'api.telegram.org', 'play.google.com',
 ]
-const auth = () => ({ authorization: `Bearer ${mintIngestToken(SECRET)}` })
-let n = 0
-for (const key of ['vpn1', 'vpn2', 'vpn3', 'web1']) {
-  const ip = vpsList.find((v) => v.key === key)!.ip as string
-  n++
-  await api('POST', '/api/integrations/censorcheck/runs', {
-    schemaVersion: 1,
-    runId: `00000000-0000-4000-8000-00000000000${n}`,
-    probe: { publicIp: ip },
-    launcherVersion: '1',
-    censorcheck: { version: '12c5839', mode: 'both' },
-    results: ccServices.map(([service, codes]) => ({ service, raw: { https: { ipv4: { status: codes[key] } } } })),
-  }, auth())
+const CC_GEO = [
+  'spotify.com', 'netflix.com', 'patreon.com', 'swagger.io', 'snyk.io', 'mongodb.com', 'autodesk.com',
+  'graylog.org', 'redis.io', 'copilot.microsoft.com',
+]
+const RU_DPI = new Set(['youtube.com', 'redirector.googlevideo.com', 'discord.com', 'instagram.com', 'facebook.com', 'x.com', 'linkedin.com', 'rutracker.org', 'flibusta.is', 'rezka.ag', 'amnezia.org', 'getoutline.org'])
+/** HTTP code a probe sees: 200 ok, 403 geoblock, -1 DPI block, 0 timeout. step = index in HOURS_AGO. */
+function ccCode(key: string, service: string, step: number): number {
+  if (key === 'mon') return RU_DPI.has(service) ? (service === 'youtube.com' && step < 4 ? 200 : -1) : CC_GEO.includes(service) && ['netflix.com', 'copilot.microsoft.com'].includes(service) ? 403 : 200
+  if (key === 'vpn3') {
+    if (['spotify.com', 'netflix.com', 'patreon.com', 'copilot.microsoft.com'].includes(service)) return 403
+    if (['instagram.com', 'facebook.com'].includes(service) && step >= 6) return -1
+    return 200
+  }
+  if (key === 'vpn2' && service === 'discord.com' && step % 3 === 1) return 0
+  if (key === 'vpn1' && service === 'netflix.com') return 302
+  return 200
 }
-const geo: Record<string, string> = { vpn1: 'FI', vpn2: 'DE', vpn3: 'KZ', web1: 'NL', us1: 'US' }
+const auth = () => ({ authorization: `Bearer ${mintIngestToken(SECRET)}` })
+const ipOf = (key: string) => vpsList.find((v) => v.key === key)!.ip as string
+const backdate = (table: string, runId: string, hoursAgo: number) => {
+  const at = new Date(Date.now() - hoursAgo * 3600_000 - Math.floor(Math.random() * 20) * 60_000).toISOString()
+  sqlite.prepare(`UPDATE ${table} SET createdAt = ?, completedAt = ? WHERE runId = ?`).run(at, at, runId)
+}
+let n = 0
+const uuid = (kind: number) => `00000000-0000-4000-${kind}000-${String(++n).padStart(12, '0')}`
+for (const key of ['web1', 'vpn1', 'vpn2', 'vpn3', 'mon', 'us1']) {
+  for (const [step, hoursAgo] of HOURS_AGO.entries()) {
+    const runId = uuid(8)
+    await api('POST', '/api/integrations/censorcheck/runs', {
+      schemaVersion: 1,
+      runId,
+      probe: { publicIp: ipOf(key) },
+      launcherVersion: '1',
+      censorcheck: { version: '12c5839', mode: 'both' },
+      results: [...CC_DPI, ...CC_GEO].map((service) => ({
+        service,
+        raw: { https: { ipv4: { status: ccCode(key, service, step) } } },
+      })),
+    }, auth())
+    backdate('censorcheck_runs', runId, hoursAgo)
+  }
+}
+
 // Keys from IPREGION_*_SERVICES so the matrix columns line up with the real vernette/ipregion list
 const geoServices: [string, string][] = [
   ['maxmind.com', 'primary'], ['rdap.db.ripe.net', 'primary'], ['ipinfo.io', 'primary'], ['cloudflare.com', 'primary'],
   ['ipregistry.co', 'primary'], ['ipapi.co', 'primary'], ['ifconfig.co', 'primary'], ['ip2location.io', 'primary'],
-  ['google', 'custom'], ['youtube', 'custom'], ['netflix', 'custom'], ['chatgpt', 'custom'],
-  ['cloudflare cdn', 'cdn'], ['youtube cdn', 'cdn'],
+  ['iplocation.com', 'primary'], ['country.is', 'primary'], ['ipwho.is', 'primary'], ['ip-api.com', 'primary'],
+  ['google', 'custom'], ['youtube', 'custom'], ['netflix', 'custom'], ['chatgpt', 'custom'], ['spotify', 'custom'],
+  ['apple', 'custom'], ['steam', 'custom'], ['tiktok', 'custom'],
+  ['cloudflare cdn', 'cdn'], ['youtube cdn', 'cdn'], ['netflix cdn', 'cdn'],
 ]
+const geo: Record<string, string> = { web1: 'NL', vpn1: 'FI', vpn2: 'DE', vpn3: 'KZ', mon: 'RU', us1: 'US' }
 for (const [key, cc] of Object.entries(geo)) {
-  const ip = vpsList.find((v) => v.key === key)!.ip as string
-  n++
-  await api('POST', '/api/integrations/ipregion/runs', {
-    schemaVersion: 1,
-    runId: `00000000-0000-4000-9000-0000000000${String(n).padStart(2, '0')}`,
-    probe: { publicIp: ip },
-    launcherVersion: '1',
-    ipregion: { version: '7d1c25c' },
-    results: geoServices.map(([service, group], i) => ({
-      service,
-      group,
-      // a few services see the KZ node elsewhere — the kind of mismatch the matrix highlights
-      ipv4: key === 'vpn3' && (i === 4 || i === 10) ? 'RU' : key === 'vpn1' && i === 9 ? 'SE' : cc,
-      ipv6: key === 'web1' ? cc : null,
-    })),
-  }, auth())
+  for (const [step, hoursAgo] of HOURS_AGO.entries()) {
+    const runId = uuid(9)
+    await api('POST', '/api/integrations/ipregion/runs', {
+      schemaVersion: 1,
+      runId,
+      probe: { publicIp: ipOf(key) },
+      launcherVersion: '1',
+      ipregion: { version: '7d1c25c' },
+      results: geoServices.map(([service, group], i) => ({
+        service,
+        group,
+        // KZ node: some bases and services still place it in RU — the mismatch the matrix highlights
+        ipv4:
+          key === 'vpn3' && (i === 4 || i === 9 || i === 14 || (step >= 7 && i === 12))
+            ? 'RU'
+            : key === 'vpn1' && service === 'youtube'
+              ? 'SE'
+              : key === 'us1' && service === 'tiktok'
+                ? 'N/A'
+                : cc,
+        ipv6: key === 'web1' ? cc : null,
+      })),
+    }, auth())
+    backdate('ipregion_runs', runId, hoursAgo)
+  }
 }
 
 // --- topology diagram

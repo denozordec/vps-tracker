@@ -1,4 +1,5 @@
 import { Badge } from '@/components/reui/badge'
+import { CountryFlag } from '@/components/country-flag'
 import {
   Tooltip,
   TooltipContent,
@@ -43,7 +44,10 @@ export function CountryMatrixCell({
   vpsLabel,
   checkedAt,
   onSelect,
+  expected,
 }: {
+  /** Ожидаемая страна (большинство сервисов в строке) — отличие подсвечивается как расхождение. */
+  expected?: string | null
   status?: string | null
   countryIpv4?: string | null
   countryIpv6?: string | null
@@ -56,8 +60,17 @@ export function CountryMatrixCell({
   const badgeIso = countryBadgeText(stored)
   const statusLabel = status ? (IPREGION_STATUS_LABELS[status] ?? status) : 'Нет результата'
   const display = status === 'ok' && badgeIso ? badgeIso : status ? (IPREGION_STATUS_LABELS[status] ?? status) : '—'
-  const variant = status ? (STATUS_VARIANT[status] ?? 'outline') : 'outline'
+  const mismatch = status === 'ok' && Boolean(badgeIso) && Boolean(expected) && badgeIso !== expected
+  const variant =
+    status === 'ok' && badgeIso
+      ? mismatch
+        ? 'warning-light'
+        : 'outline'
+      : status
+        ? (STATUS_VARIANT[status] ?? 'outline')
+        : 'outline'
   const tip = [
+    mismatch ? `Расхождение: большинство сервисов видят ${expected}` : null,
     serviceLabel,
     vpsLabel,
     formatTipCountry(stored) ?? statusLabel,
@@ -69,7 +82,8 @@ export function CountryMatrixCell({
     .join(' · ')
 
   const badge = (
-    <Badge variant={variant} size="sm" radius="full" aria-label={tip}>
+    <Badge variant={variant} size="sm" radius="full" aria-label={tip} className="gap-1 tabular-nums">
+      {status === 'ok' && badgeIso ? <CountryFlag code={badgeIso} className="size-3.5" /> : null}
       {display}
     </Badge>
   )

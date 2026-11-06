@@ -4,10 +4,26 @@ export type SnapshotRun = {
   probePublicIp: string
 }
 
+export type SnapshotTone = 'ok' | 'wn' | 'er'
+
 export type BlockingSnapshotTick = {
+  /** Час измерения `YYYY-MM-DDTHH` (UTC) — точка на шкале времени. */
   key: string
   asOf: string
   count: number
+  /** Худший результат среди прогонов этого часа — цвет столбика на шкале. */
+  tone: SnapshotTone
+  /** Сколько прогонов часа с проблемой (блокировка / расхождение). */
+  issues: number
+}
+
+const TONE_RANK: Record<SnapshotTone, number> = { ok: 0, wn: 1, er: 2 }
+
+/** Ключ точки шкалы: прогоны группируются по часу — несколько проверок за день видны отдельно. */
+export function snapshotHourKey(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 13)
+  return date.toISOString().slice(0, 13)
 }
 
 export function snapshotDayKey(iso: string): string {
@@ -38,25 +54,42 @@ export function mergeCensorcheckRuns<T extends { id: string }>(
   return [...map.values()]
 }
 
-export function collectSnapshotTicks(runs: SnapshotRun[]): BlockingSnapshotTick[] {
-  const byDay = new Map<string, SnapshotRun[]>()
+export function collectSnapshotTicks<T extends SnapshotRun>(
+  runs: T[],
+  toneOf: (run: T) => SnapshotTone = () => 'ok',
+): BlockingSnapshotTick[] {
+  const byHour = new Map<string, T[]>()
   for (const run of runs) {
-    const key = snapshotDayKey(run.createdAt)
-    const list = byDay.get(key)
+    const key = snapshotHourKey(run.createdAt)
+    const list = byHour.get(key)
     if (list) list.push(run)
-    else byDay.set(key, [run])
+    else byHour.set(key, [run])
   }
 
-  return [...byDay.entries()]
+  return [...byHour.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, list]) => ({
-      key,
-      count: list.length,
-      asOf: list.reduce(
-        (latest, run) => (run.createdAt > latest ? run.createdAt : latest),
-        list[0]!.createdAt,
-      ),
-    }))
+    .map(([key, list]) => {
+      const tones = list.map(toneOf)
+      return {
+        key,
+        count: list.length,
+        tone: tones.reduce<SnapshotTone>((worst, t) => (TONE_RANK[t] > TONE_RANK[worst] ? t : worst), 'ok'),
+        issues: tones.filter((t) => t !== 'ok').length,
+        asOf: list.reduce(
+          (latest, run) => (run.createdAt > latest ? run.createdAt : latest),
+          list[0]!.createdAt,
+        ),
+      }
+    })
+}
+
+/** Индекс последней точки не позже `atMs` (для пресетов «−1 ч», «−24 ч»); -1 — раньше первой точки. */
+export function tickIndexAtOrBefore(ticks: BlockingSnapshotTick[], atMs: number): number {
+  let found = -1
+  ticks.forEach((tick, i) => {
+    if (new Date(tick.asOf).getTime() <= atMs) found = i
+  })
+  return found
 }
 
 /** Latest run per probe IP at or before `asOf`. */

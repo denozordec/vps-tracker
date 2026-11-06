@@ -5,6 +5,8 @@ import { ServerIcon, ShieldAlertIcon } from 'lucide-react'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { columnDefFromDataGrid, FrameDataGrid } from '@/components/reui-kit'
+import { CountryFlag } from '@/components/country-flag'
+import { Progress } from '@cfdm/ui/components/progress'
 import {
   collectProbeColumns,
   collectServiceColumns,
@@ -51,7 +53,10 @@ function vpsIdentityColumn(): DataGridColumn<CensorcheckRunDto> {
       ) : (
         <span className="font-medium">Unknown VPS</span>
       )
-      return dataGridCellStack(link, secondary)
+      return dataGridCellWithIcon(
+        <CountryFlag country={row.vps?.country} className="size-5" />,
+        dataGridCellStack(link, secondary),
+      )
     },
   }
 }
@@ -60,20 +65,55 @@ export function BlockingVpsGrid({
   runs,
   onRowClick,
   emptyAction,
+  toolbar,
 }: {
   runs: CensorcheckRunDto[]
   onRowClick: (run: CensorcheckRunDto) => void
   emptyAction?: ReactNode
+  /** Фильтры и вид — в шапке рамки (MikrotikManager v2). */
+  toolbar?: ReactNode
 }) {
   const serviceCols = useMemo(() => collectServiceColumns(runs), [runs])
   const columns = useMemo((): DataGridColumn<CensorcheckRunDto>[] => {
     return [
       vpsIdentityColumn(),
+      {
+        key: 'availability',
+        header: 'Доступно',
+        size: 150,
+        minSize: 130,
+        sortValue: (row) => (row.summary.total ? row.summary.available / row.summary.total : 0),
+        sortingFn: 'basic',
+        cell: (row) => {
+          const { available, total, blocked } = row.summary
+          const pct = total ? Math.round((available / total) * 100) : 0
+          // Литералы целиком — Tailwind не видит классы, собранные шаблонной строкой.
+          const bar =
+            blocked > 0
+              ? '**:data-[slot=progress-indicator]:bg-destructive'
+              : pct < 100
+                ? '**:data-[slot=progress-indicator]:bg-warning'
+                : '**:data-[slot=progress-indicator]:bg-success'
+          return (
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-sm font-medium tabular-nums">
+                {available}
+                <span className="text-muted-foreground text-xs font-normal"> из {total}</span>
+              </span>
+              <Progress
+                value={pct}
+                aria-label={`Доступно ${available} из ${total}`}
+                className={bar}
+              />
+            </div>
+          )
+        },
+      },
       ...serviceCols.map(
         (svc): DataGridColumn<CensorcheckRunDto> => ({
           key: `svc:${svc.key}`,
           header: svc.label,
-          headerTitle: svc.title,
+          headerTitle: svc.label,
           icon: resolveServiceIcon(svc.key),
           className: MATRIX_CELL,
           headerClassName: MATRIX_CELL,
@@ -100,6 +140,9 @@ export function BlockingVpsGrid({
 
   return (
     <FrameDataGrid
+      title="Текущие пробы"
+      description="Доступность сервисов с каждого VPS"
+      toolbar={toolbar}
       columns={columnDefFromDataGrid(columns)}
       data={runs}
       rowId={(row) => row.id}
@@ -120,11 +163,14 @@ export function BlockingServiceGrid({
   runs,
   onProbeClick,
   emptyAction,
+  toolbar,
 }: {
   groups: BlockingServiceRow[]
   runs: CensorcheckRunDto[]
   onProbeClick: (run: CensorcheckRunDto) => void
   emptyAction?: ReactNode
+  /** Фильтры и вид — в шапке рамки (MikrotikManager v2). */
+  toolbar?: ReactNode
 }) {
   const probeCols = useMemo(() => collectProbeColumns(runs), [runs])
   const runById = useMemo(() => new Map(runs.map((row) => [row.id, row])), [runs])
@@ -180,6 +226,9 @@ export function BlockingServiceGrid({
 
   return (
     <FrameDataGrid
+      title="Текущие пробы"
+      description="Доступность сервисов с каждого VPS"
+      toolbar={toolbar}
       columns={columnDefFromDataGrid(columns)}
       data={groups}
       rowId={(row) => row.id}

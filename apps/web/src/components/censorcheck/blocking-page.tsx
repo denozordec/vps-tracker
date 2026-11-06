@@ -131,7 +131,15 @@ export function BlockingPage() {
     () => mergeCensorcheckRuns(currentQuery.data?.items ?? [], historyQuery.data?.items ?? []),
     [currentQuery.data?.items, historyQuery.data?.items],
   )
-  const ticks = useMemo(() => collectSnapshotTicks(allRuns), [allRuns])
+  const ticks = useMemo(
+    () =>
+      collectSnapshotTicks(allRuns, (run) => {
+        const s = run.summary
+        if (s.blocked > 0) return 'er'
+        return s.denied + s.timeout + s.error > 0 ? 'wn' : 'ok'
+      }),
+    [allRuns],
+  )
   const resolvedIndex = resolveSnapshotIndex(ticks.length, snapshotIndex)
   const snapshotRuns = useMemo(() => {
     const asOf = ticks[resolvedIndex]?.asOf
@@ -181,6 +189,35 @@ export function BlockingPage() {
         <RouterIcon data-icon="inline-start" />
         MikroTik · день
       </Button>
+    </>
+  )
+
+  const matrixToolbar = (
+    <>
+      <Filters
+        filters={filters}
+        fields={FILTER_FIELDS}
+        onChange={setFilters}
+        trigger={
+          <Button type="button" variant="outline">
+            Фильтры
+          </Button>
+        }
+      />
+      <ToggleGroup
+        variant="outline"
+        size="sm"
+        spacing={0}
+        value={[group]}
+        onValueChange={(next) => {
+          const selectedMode = next[0]
+          if (selectedMode === 'vps' || selectedMode === 'service') setGroup(selectedMode)
+        }}
+        aria-label="Группировка"
+      >
+        <ToggleGroupItem value="vps">По VPS</ToggleGroupItem>
+        <ToggleGroupItem value="service">По сервису</ToggleGroupItem>
+      </ToggleGroup>
     </>
   )
 
@@ -237,33 +274,8 @@ export function BlockingPage() {
             ticks={ticks}
             index={resolvedIndex}
             onIndexChange={setSnapshotIndex}
+            issueLabel="с ограничениями"
           />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Filters
-              filters={filters}
-              fields={FILTER_FIELDS}
-              onChange={setFilters}
-              trigger={
-                <Button type="button" variant="outline">
-                  Фильтры
-                </Button>
-              }
-            />
-            <ToggleGroup
-              variant="outline"
-              size="sm"
-              spacing={0}
-              value={[group]}
-              onValueChange={(next) => {
-                const selectedMode = next[0]
-                if (selectedMode === 'vps' || selectedMode === 'service') setGroup(selectedMode)
-              }}
-              aria-label="Группировка"
-            >
-              <ToggleGroupItem value="vps">По VPS</ToggleGroupItem>
-              <ToggleGroupItem value="service">По сервису</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
           <QueryState
             data={filtered}
             isLoading={currentQuery.isLoading}
@@ -279,12 +291,14 @@ export function BlockingPage() {
             {(rows) =>
               group === 'vps' ? (
                 <BlockingVpsGrid
+                  toolbar={matrixToolbar}
                   runs={rows}
                   onRowClick={setSelected}
                   emptyAction={copyLauncher}
                 />
               ) : (
                 <BlockingServiceGrid
+                  toolbar={matrixToolbar}
                   groups={serviceGroups}
                   runs={rows}
                   onProbeClick={setSelected}

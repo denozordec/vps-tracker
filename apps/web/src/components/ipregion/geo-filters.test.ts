@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Filter } from '@/components/reui/filters'
 import {
   collectServiceColumns,
+  countryAgreement,
   filterIpregionRuns,
+  hasGeoDisagreement,
   isGeoMismatch,
   uniqueCountries,
 } from './geo-filters'
@@ -176,5 +178,17 @@ describe('uniqueCountries / mismatch', () => {
         }),
       ),
     ).toBe(false)
+  })
+})
+
+describe('hasGeoDisagreement', () => {
+  it('сервис, видящий другую страну, — расхождение даже при совпадении с инвентарём', () => {
+    const base = run().results![0]!
+    const agree = run({ results: [base, { ...base, id: 'r3', serviceKey: 'ipinfo.io' }] })
+    expect(hasGeoDisagreement(agree)).toBe(false)
+    expect(countryAgreement(agree)).toEqual({ iso: 'NL', same: 2, total: 2 })
+    const split = run({ results: [base, { ...base, id: 'r3' }, { ...base, id: 'r4', countryIpv4: 'RU' }] })
+    expect(countryAgreement(split)).toEqual({ iso: 'NL', same: 2, total: 3 })
+    expect(hasGeoDisagreement(split)).toBe(true)
   })
 })

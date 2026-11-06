@@ -65,6 +65,27 @@ export function isGeoMismatch(run: IpregionRunDto): boolean {
   return inventory !== geo
 }
 
+/** Сколько ok-ответов совпадают с большинством: «совпадает N из M» в колонке «Страна». */
+export function countryAgreement(run: IpregionRunDto): { iso: string | null; same: number; total: number } {
+  const iso = majorityCountry(run)
+  let same = 0
+  let total = 0
+  for (const row of run.results ?? []) {
+    const code = resultCountryIso(row.countryIpv4) || resultCountryIso(row.countryIpv6)
+    if (row.status !== 'ok' || !code) continue
+    total += 1
+    if (code === iso) same += 1
+  }
+  return { iso, same, total }
+}
+
+/** Расхождение для KPI и шкалы: страна ≠ инвентарю или хоть один сервис видит другую страну. */
+export function hasGeoDisagreement(run: IpregionRunDto): boolean {
+  if (isGeoMismatch(run)) return true
+  const { same, total } = countryAgreement(run)
+  return same < total
+}
+
 export function uniqueCountries(runs: IpregionRunDto[]): string[] {
   const set = new Set<string>()
   for (const run of runs) {

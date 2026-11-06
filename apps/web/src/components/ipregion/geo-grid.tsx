@@ -5,9 +5,13 @@ import { GlobeIcon, ServerIcon } from 'lucide-react'
 import type { DataGridColumn } from '@/components/data-grid-types'
 import { dataGridCellStack, dataGridCellWithIcon } from '@/components/data-grid-cells'
 import { columnDefFromDataGrid, FrameDataGrid } from '@/components/reui-kit'
+import { CountryFlag } from '@/components/country-flag'
+import { Progress } from '@cfdm/ui/components/progress'
 import {
   collectProbeColumns,
   collectServiceColumns,
+  countryAgreement,
+  majorityCountry,
   resultByService,
   type GeoServiceRow,
 } from './geo-filters'
@@ -51,7 +55,10 @@ function vpsIdentityColumn(): DataGridColumn<IpregionRunDto> {
       ) : (
         <span className="font-medium">Unknown VPS</span>
       )
-      return dataGridCellStack(link, secondary)
+      return dataGridCellWithIcon(
+        <CountryFlag country={row.vps?.country} className="size-5" />,
+        dataGridCellStack(link, secondary),
+      )
     },
   }
 }
@@ -60,20 +67,50 @@ export function GeoVpsGrid({
   runs,
   onRowClick,
   emptyAction,
+  toolbar,
 }: {
   runs: IpregionRunDto[]
   onRowClick: (run: IpregionRunDto) => void
   emptyAction?: ReactNode
+  /** Фильтры и вид — в шапке рамки (MikrotikManager v2). */
+  toolbar?: ReactNode
 }) {
   const serviceCols = useMemo(() => collectServiceColumns(runs), [runs])
   const columns = useMemo((): DataGridColumn<IpregionRunDto>[] => {
     return [
       vpsIdentityColumn(),
+      {
+        key: 'consensus',
+        header: 'Страна',
+        size: 170,
+        minSize: 150,
+        sortValue: (row) => majorityCountry(row) ?? '',
+        cell: (row) => {
+          const { iso, same, total } = countryAgreement(row)
+          const pct = total ? Math.round((same / total) * 100) : 0
+          return (
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="flex items-center gap-1.5 text-sm font-medium tabular-nums">
+                {iso ? <CountryFlag code={iso} /> : null}
+                {iso ?? '—'}
+                <span className="text-muted-foreground text-xs font-normal">
+                  {same}/{total}
+                </span>
+              </span>
+              <Progress
+                value={pct}
+                aria-label={`Совпадает ${same} из ${total}`}
+                className={pct < 100 ? '**:data-[slot=progress-indicator]:bg-warning' : '**:data-[slot=progress-indicator]:bg-success'}
+              />
+            </div>
+          )
+        },
+      },
       ...serviceCols.map(
         (svc): DataGridColumn<IpregionRunDto> => ({
           key: `svc:${svc.key}`,
           header: svc.label,
-          headerTitle: svc.title,
+          headerTitle: svc.label,
           icon: resolveServiceIcon(svc.key),
           className: MATRIX_CELL,
           headerClassName: MATRIX_CELL,
@@ -85,6 +122,7 @@ export function GeoVpsGrid({
             const item = resultByService(row, svc.key)
             return (
               <CountryMatrixCell
+                expected={majorityCountry(row)}
                 status={item?.status}
                 countryIpv4={item?.countryIpv4}
                 countryIpv6={item?.countryIpv6}
@@ -101,6 +139,9 @@ export function GeoVpsGrid({
 
   return (
     <FrameDataGrid
+      title="Страны по сервисам"
+      description="Какую страну видят GeoIP-базы и сервисы"
+      toolbar={toolbar}
       columns={columnDefFromDataGrid(columns)}
       data={runs}
       rowId={(row) => row.id}
@@ -121,11 +162,14 @@ export function GeoServiceGrid({
   runs,
   onProbeClick,
   emptyAction,
+  toolbar,
 }: {
   groups: GeoServiceRow[]
   runs: IpregionRunDto[]
   onProbeClick: (run: IpregionRunDto) => void
   emptyAction?: ReactNode
+  /** Фильтры и вид — в шапке рамки (MikrotikManager v2). */
+  toolbar?: ReactNode
 }) {
   const probeCols = useMemo(() => collectProbeColumns(runs), [runs])
   const runById = useMemo(() => new Map(runs.map((row) => [row.id, row])), [runs])
@@ -184,6 +228,9 @@ export function GeoServiceGrid({
 
   return (
     <FrameDataGrid
+      title="Страны по сервисам"
+      description="Какую страну видят GeoIP-базы и сервисы"
+      toolbar={toolbar}
       columns={columnDefFromDataGrid(columns)}
       data={groups}
       rowId={(row) => row.id}

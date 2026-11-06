@@ -5,7 +5,7 @@ import {
   latestRunsAsOf,
   mergeCensorcheckRuns,
   resolveSnapshotIndex,
-  snapshotDayKey,
+  tickIndexAtOrBefore,
 } from './blocking-snapshots'
 import type { CensorcheckRunDto } from './types'
 
@@ -48,18 +48,30 @@ describe('mergeCensorcheckRuns', () => {
 })
 
 describe('collectSnapshotTicks', () => {
-  it('группирует по дню и берёт max createdAt', () => {
+  it('группирует по часу и берёт max createdAt', () => {
+    const ticks = collectSnapshotTicks(
+      [
+        run({ id: '1', createdAt: '2026-08-20T08:05:00.000Z' }),
+        run({ id: '2', createdAt: '2026-08-20T08:40:00.000Z', summary: { ...run().summary, blocked: 2 } }),
+        run({ id: '3', createdAt: '2026-08-20T18:00:00.000Z' }),
+      ],
+      (r) => (r.summary.blocked > 0 ? 'er' : 'ok'),
+    )
+    expect(ticks.map((tick) => tick.key)).toEqual(['2026-08-20T08', '2026-08-20T18'])
+    expect(ticks[0]?.count).toBe(2)
+    expect(ticks[0]?.asOf).toBe('2026-08-20T08:40:00.000Z')
+    expect(ticks[0]?.tone).toBe('er')
+    expect(ticks[0]?.issues).toBe(1)
+    expect(ticks[1]?.tone).toBe('ok')
+  })
+
+  it('tickIndexAtOrBefore находит точку для пресета «−N ч»', () => {
     const ticks = collectSnapshotTicks([
       run({ id: '1', createdAt: '2026-08-20T08:00:00.000Z' }),
-      run({ id: '2', createdAt: '2026-08-20T18:00:00.000Z' }),
-      run({ id: '3', createdAt: '2026-08-21T12:00:00.000Z' }),
+      run({ id: '2', createdAt: '2026-08-20T12:00:00.000Z' }),
     ])
-    expect(ticks.map((tick) => tick.key)).toEqual([
-      snapshotDayKey('2026-08-20T08:00:00.000Z'),
-      snapshotDayKey('2026-08-21T12:00:00.000Z'),
-    ])
-    expect(ticks[0]?.count).toBe(2)
-    expect(ticks[0]?.asOf).toBe('2026-08-20T18:00:00.000Z')
+    expect(tickIndexAtOrBefore(ticks, Date.parse('2026-08-20T10:00:00.000Z'))).toBe(0)
+    expect(tickIndexAtOrBefore(ticks, Date.parse('2026-08-20T07:00:00.000Z'))).toBe(-1)
   })
 })
 

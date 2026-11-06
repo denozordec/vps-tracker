@@ -168,7 +168,8 @@ describe('collectProbeColumns', () => {
 describe('shortHostLabel', () => {
   it('отрезает типичный TLD', () => {
     expect(shortHostLabel('youtube.com')).toBe('youtube')
-    expect(shortHostLabel('api.telegram.org')).toBe('api.telegram')
+    expect(shortHostLabel('api.telegram.org')).toBe('telegram')
+    expect(shortHostLabel('redirector.googlevideo.com')).toBe('googlevideo')
   })
 })
 
