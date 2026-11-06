@@ -31,11 +31,11 @@ import { Route as AuthAuditRouteImport } from './routes/_auth/audit'
 import { Route as AuthAccountsRouteImport } from './routes/_auth/accounts'
 import { Route as AuthSettingsRouteRouteImport } from './routes/_auth/settings/route'
 import { Route as AuthSettingsIndexRouteImport } from './routes/_auth/settings/index'
-import { Route as AuthVpsVpsIdRouteImport } from './routes/_auth/vps.$vpsId'
+import { Route as AuthVpsVpsIdRouteImport } from './routes/_auth/vps_.$vpsId'
 import { Route as AuthSettingsSyncRouteImport } from './routes/_auth/settings/sync'
 import { Route as AuthSettingsNotificationsRouteImport } from './routes/_auth/settings/notifications'
 import { Route as AuthSettingsIntegrationsRouteImport } from './routes/_auth/settings/integrations'
-import { Route as AuthProjectsProjectIdRouteImport } from './routes/_auth/projects.$projectId'
+import { Route as AuthProjectsProjectIdRouteImport } from './routes/_auth/projects_.$projectId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -147,9 +147,9 @@ const AuthSettingsIndexRoute = AuthSettingsIndexRouteImport.update({
   getParentRoute: () => AuthSettingsRouteRoute,
 } as any)
 const AuthVpsVpsIdRoute = AuthVpsVpsIdRouteImport.update({
-  id: '/$vpsId',
-  path: '/$vpsId',
-  getParentRoute: () => AuthVpsRoute,
+  id: '/vps_/$vpsId',
+  path: '/vps/$vpsId',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthSettingsSyncRoute = AuthSettingsSyncRouteImport.update({
   id: '/sync',
@@ -169,9 +169,9 @@ const AuthSettingsIntegrationsRoute =
     getParentRoute: () => AuthSettingsRouteRoute,
   } as any)
 const AuthProjectsProjectIdRoute = AuthProjectsProjectIdRouteImport.update({
-  id: '/$projectId',
-  path: '/$projectId',
-  getParentRoute: () => AuthProjectsRoute,
+  id: '/projects_/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => AuthRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -184,7 +184,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthDashboardRoute
   '/geo': typeof AuthGeoRoute
   '/payments': typeof AuthPaymentsRoute
-  '/projects': typeof AuthProjectsRouteWithChildren
+  '/projects': typeof AuthProjectsRoute
   '/providers': typeof AuthProvidersRoute
   '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
@@ -193,7 +193,7 @@ export interface FileRoutesByFullPath {
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/topology': typeof AuthTopologyRoute
-  '/vps': typeof AuthVpsRouteWithChildren
+  '/vps': typeof AuthVpsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/settings/integrations': typeof AuthSettingsIntegrationsRoute
@@ -211,7 +211,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthDashboardRoute
   '/geo': typeof AuthGeoRoute
   '/payments': typeof AuthPaymentsRoute
-  '/projects': typeof AuthProjectsRouteWithChildren
+  '/projects': typeof AuthProjectsRoute
   '/providers': typeof AuthProvidersRoute
   '/renewals': typeof AuthRenewalsRoute
   '/reports': typeof AuthReportsRoute
@@ -220,7 +220,7 @@ export interface FileRoutesByTo {
   '/sync-journal': typeof AuthSyncJournalRoute
   '/tariffs': typeof AuthTariffsRoute
   '/topology': typeof AuthTopologyRoute
-  '/vps': typeof AuthVpsRouteWithChildren
+  '/vps': typeof AuthVpsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/projects/$projectId': typeof AuthProjectsProjectIdRoute
   '/settings/integrations': typeof AuthSettingsIntegrationsRoute
@@ -241,7 +241,7 @@ export interface FileRoutesById {
   '/_auth/dashboard': typeof AuthDashboardRoute
   '/_auth/geo': typeof AuthGeoRoute
   '/_auth/payments': typeof AuthPaymentsRoute
-  '/_auth/projects': typeof AuthProjectsRouteWithChildren
+  '/_auth/projects': typeof AuthProjectsRoute
   '/_auth/providers': typeof AuthProvidersRoute
   '/_auth/renewals': typeof AuthRenewalsRoute
   '/_auth/reports': typeof AuthReportsRoute
@@ -250,13 +250,13 @@ export interface FileRoutesById {
   '/_auth/sync-journal': typeof AuthSyncJournalRoute
   '/_auth/tariffs': typeof AuthTariffsRoute
   '/_auth/topology': typeof AuthTopologyRoute
-  '/_auth/vps': typeof AuthVpsRouteWithChildren
+  '/_auth/vps': typeof AuthVpsRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/_auth/projects/$projectId': typeof AuthProjectsProjectIdRoute
+  '/_auth/projects_/$projectId': typeof AuthProjectsProjectIdRoute
   '/_auth/settings/integrations': typeof AuthSettingsIntegrationsRoute
   '/_auth/settings/notifications': typeof AuthSettingsNotificationsRoute
   '/_auth/settings/sync': typeof AuthSettingsSyncRoute
-  '/_auth/vps/$vpsId': typeof AuthVpsVpsIdRoute
+  '/_auth/vps_/$vpsId': typeof AuthVpsVpsIdRoute
   '/_auth/settings/': typeof AuthSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -338,11 +338,11 @@ export interface FileRouteTypes {
     | '/_auth/topology'
     | '/_auth/vps'
     | '/auth/callback'
-    | '/_auth/projects/$projectId'
+    | '/_auth/projects_/$projectId'
     | '/_auth/settings/integrations'
     | '/_auth/settings/notifications'
     | '/_auth/settings/sync'
-    | '/_auth/vps/$vpsId'
+    | '/_auth/vps_/$vpsId'
     | '/_auth/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -508,12 +508,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSettingsIndexRouteImport
       parentRoute: typeof AuthSettingsRouteRoute
     }
-    '/_auth/vps/$vpsId': {
-      id: '/_auth/vps/$vpsId'
-      path: '/$vpsId'
+    '/_auth/vps_/$vpsId': {
+      id: '/_auth/vps_/$vpsId'
+      path: '/vps/$vpsId'
       fullPath: '/vps/$vpsId'
       preLoaderRoute: typeof AuthVpsVpsIdRouteImport
-      parentRoute: typeof AuthVpsRoute
+      parentRoute: typeof AuthRoute
     }
     '/_auth/settings/sync': {
       id: '/_auth/settings/sync'
@@ -536,12 +536,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSettingsIntegrationsRouteImport
       parentRoute: typeof AuthSettingsRouteRoute
     }
-    '/_auth/projects/$projectId': {
-      id: '/_auth/projects/$projectId'
-      path: '/$projectId'
+    '/_auth/projects_/$projectId': {
+      id: '/_auth/projects_/$projectId'
+      path: '/projects/$projectId'
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof AuthProjectsProjectIdRouteImport
-      parentRoute: typeof AuthProjectsRoute
+      parentRoute: typeof AuthRoute
     }
   }
 }
@@ -563,29 +563,6 @@ const AuthSettingsRouteRouteChildren: AuthSettingsRouteRouteChildren = {
 const AuthSettingsRouteRouteWithChildren =
   AuthSettingsRouteRoute._addFileChildren(AuthSettingsRouteRouteChildren)
 
-interface AuthProjectsRouteChildren {
-  AuthProjectsProjectIdRoute: typeof AuthProjectsProjectIdRoute
-}
-
-const AuthProjectsRouteChildren: AuthProjectsRouteChildren = {
-  AuthProjectsProjectIdRoute: AuthProjectsProjectIdRoute,
-}
-
-const AuthProjectsRouteWithChildren = AuthProjectsRoute._addFileChildren(
-  AuthProjectsRouteChildren,
-)
-
-interface AuthVpsRouteChildren {
-  AuthVpsVpsIdRoute: typeof AuthVpsVpsIdRoute
-}
-
-const AuthVpsRouteChildren: AuthVpsRouteChildren = {
-  AuthVpsVpsIdRoute: AuthVpsVpsIdRoute,
-}
-
-const AuthVpsRouteWithChildren =
-  AuthVpsRoute._addFileChildren(AuthVpsRouteChildren)
-
 interface AuthRouteChildren {
   AuthSettingsRouteRoute: typeof AuthSettingsRouteRouteWithChildren
   AuthAccountsRoute: typeof AuthAccountsRoute
@@ -595,7 +572,7 @@ interface AuthRouteChildren {
   AuthDashboardRoute: typeof AuthDashboardRoute
   AuthGeoRoute: typeof AuthGeoRoute
   AuthPaymentsRoute: typeof AuthPaymentsRoute
-  AuthProjectsRoute: typeof AuthProjectsRouteWithChildren
+  AuthProjectsRoute: typeof AuthProjectsRoute
   AuthProvidersRoute: typeof AuthProvidersRoute
   AuthRenewalsRoute: typeof AuthRenewalsRoute
   AuthReportsRoute: typeof AuthReportsRoute
@@ -604,7 +581,9 @@ interface AuthRouteChildren {
   AuthSyncJournalRoute: typeof AuthSyncJournalRoute
   AuthTariffsRoute: typeof AuthTariffsRoute
   AuthTopologyRoute: typeof AuthTopologyRoute
-  AuthVpsRoute: typeof AuthVpsRouteWithChildren
+  AuthVpsRoute: typeof AuthVpsRoute
+  AuthProjectsProjectIdRoute: typeof AuthProjectsProjectIdRoute
+  AuthVpsVpsIdRoute: typeof AuthVpsVpsIdRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -616,7 +595,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthDashboardRoute: AuthDashboardRoute,
   AuthGeoRoute: AuthGeoRoute,
   AuthPaymentsRoute: AuthPaymentsRoute,
-  AuthProjectsRoute: AuthProjectsRouteWithChildren,
+  AuthProjectsRoute: AuthProjectsRoute,
   AuthProvidersRoute: AuthProvidersRoute,
   AuthRenewalsRoute: AuthRenewalsRoute,
   AuthReportsRoute: AuthReportsRoute,
@@ -625,7 +604,9 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthSyncJournalRoute: AuthSyncJournalRoute,
   AuthTariffsRoute: AuthTariffsRoute,
   AuthTopologyRoute: AuthTopologyRoute,
-  AuthVpsRoute: AuthVpsRouteWithChildren,
+  AuthVpsRoute: AuthVpsRoute,
+  AuthProjectsProjectIdRoute: AuthProjectsProjectIdRoute,
+  AuthVpsVpsIdRoute: AuthVpsVpsIdRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

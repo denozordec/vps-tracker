@@ -51,7 +51,7 @@ import {
 } from '@/lib/project-analytics'
 import type { Vps } from '@/types/entities'
 
-export const Route = createFileRoute('/_auth/projects/$projectId')({
+export const Route = createFileRoute('/_auth/projects_/$projectId')({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(snapshotQueryOptions()),
   component: ProjectDetailPage,
