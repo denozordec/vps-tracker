@@ -1,95 +1,60 @@
 # VPS Tracker
 
-**VPS Tracker** — это веб-приложение для учёта виртуальных серверов, хостинг-провайдеров, счетов и балансов. Всё работает в браузере: данные хранятся у вас на компьютере или сервере, можно подключить синхронизацию с BILLmanager.
+**VPS Tracker** — self-hosted учёт виртуальных серверов: где они стоят, сколько стоят, когда продлевать, сколько денег осталось у хостера и доступны ли с них нужные сервисы. Данные синхронизируются с биллингом хостеров (BILLmanager и др.), хранятся в одном SQLite-файле у вас на сервере, интерфейс работает в браузере и на телефоне.
 
-Ниже описано, как **запустить готовую программу в Linux** с помощью Docker. Отдельно устанавливать Node.js не нужно.
+![Дашборд VPS Tracker](docs/screenshots/dashboard.png)
+
+> Все скриншоты сделаны на демо-данных: хостеры вымышленные, IP из документационных диапазонов (RFC 5737). Как пересоздать — [docs/screenshots/README.md](docs/screenshots/README.md).
+
+---
+
+## Главное
+
+| | |
+|---|---|
+| 🖥️ **Инвентарь VPS** | IP/IPv6, DNS, локация с флагом, ресурсы, ОС, проект, окружение, статус, произвольные поля, массовые действия |
+| 🔄 **Синхронизация с хостерами** | BILLmanager 6, 4VPS, Маклауд, VDSina, Veesp, RuVDS: серверы, платежи, баланс, тарифы — вручную или по расписанию |
+| 💰 **Деньги под контролем** | Платежи, журнал баланса, расход в месяц, «запас дней» до нуля, календарь продлений, отчёты и CSV-экспорт; мультивалютность с курсами ЦБ |
+| 🩺 **Здоровье инвентаря** | Uptime-проверки по TCP, истекающая оплата, низкий баланс, расхождения API и журнала — всё на дашборде |
+| 🌍 **Блокировки и GeoIP** | Проверка доступности сервисов (YouTube, ChatGPT, Discord…) и GeoIP-страны прямо с VPS или MikroTik одной командой |
+| 🗺️ **Схема инфраструктуры** | Визуальный редактор: VPS, связи (сеть, туннель, VPN, зависимость), группы и сервисы CFDM |
+| 🔔 **Уведомления** | Telegram (в т.ч. топики и свой Bot API) и webhook: оплата, низкий баланс, дайджест синка, новые тарифы, VPS упал/поднялся |
+| 👥 **Команда и пространства** | SSO через auth-portal (JWT), личные и общие пространства с ролями, шаринг VPS между пространствами, журнал изменений |
+| 💾 **Бэкапы** | Выгрузка/загрузка JSON или файла БД из интерфейса; данные — один файл `vps-tracker.db` |
+
+Подробно по каждому разделу — **[docs/features.md](docs/features.md)**. Переменные окружения, роли и права — **[docs/configuration.md](docs/configuration.md)**.
 
 ---
 
 ## Скриншоты
 
-Дашборд со сводкой по VPS, балансам и графикам:
-
-![Дашборд VPS Tracker](docs/screenshots/dashboard.png)
-
-Список виртуальных серверов (IP-адреса на скриншоте замаскированы):
-
-![Список VPS](docs/screenshots/vps.png)
-
 | | |
 |---|---|
-| ![Хостеры](docs/screenshots/providers.png) | ![Аккаунты хостеров](docs/screenshots/accounts.png) |
-| ![Платежи](docs/screenshots/payments.png) | ![Активные тарифы](docs/screenshots/tariffs.png) |
-| ![Отчёты](docs/screenshots/reports.png) | ![Настройки](docs/screenshots/settings.png) |
+| ![Список VPS](docs/screenshots/vps.png) | ![Карточка VPS](docs/screenshots/vps-detail.png) |
+| **VPS** — инвентарь с фильтрами, видами и массовыми действиями | **Карточка VPS** — сеть, ресурсы, финансы, заметки, синк |
+| ![Схема инфраструктуры](docs/screenshots/topology.png) | ![Статус блокировок](docs/screenshots/blocking.png) |
+| **Схема** — редактор топологии с узлами VPS и типами связей | **Блокировки** — доступность сервисов с каждого VPS |
+| ![GeoIP](docs/screenshots/geo.png) | ![Аккаунты хостеров](docs/screenshots/accounts.png) |
+| **GeoIP** — какую страну видят GeoIP-базы и сервисы | **Аккаунты** — баланс по API, готовность к синку, пороги |
+| ![Платежи](docs/screenshots/payments.png) | ![Отчёты](docs/screenshots/reports.png) |
+| **Платежи** — пополнения и прямые оплаты, итоги по валютам | **Отчёты** — расходы по проектам и хостерам, CSV |
+| ![Продления](docs/screenshots/renewals.png) | ![Уведомления](docs/screenshots/settings-notifications.png) |
+| **Продления** — календарь ближайших оплат | **Уведомления** — Telegram и webhook |
+
+<p align="center">
+  <img src="docs/screenshots/mobile-dashboard.png" width="260" alt="Дашборд на телефоне">
+  &nbsp;
+  <img src="docs/screenshots/mobile-vps.png" width="260" alt="Список VPS на телефоне">
+</p>
 
 ---
 
-## Содержание
+## Быстрый старт (Docker)
 
-1. [Скриншоты](#скриншоты)
-2. [Что понадобится](#req)
-3. [Самый простой способ: готовый образ](#quick)
-4. [Запуск через Docker Compose](#compose)
-5. [Production: Traefik + Cloudflare HTTPS](#traefik)
-6. [Сборка образа у себя](#build-local)
-7. [Сохранение данных и резервная копия](#data)
-8. [Другой порт и доступ по сети](#port)
-9. [Обновление программы](#update)
-10. [Для разработчиков](#dev)
-
----
-
-<span id="req"></span>
-
-## Что понадобится
-
-- Компьютер или сервер с **Linux** (подойдут Ubuntu, Debian, Fedora и другие дистрибутивы).
-- Установленные **Docker** и плагин **Compose**. Официальные инструкции: [Установка Docker Engine](https://docs.docker.com/engine/install/) и обзор [Compose](https://docs.docker.com/compose/).
-
-Проверка в терминале:
-
-```bash
-docker --version
-docker compose version
-```
-
----
-
-<span id="quick"></span>
-
-## Самый простой способ: готовый образ
-
-Подойдёт, если у вас есть только терминал и вы хотите быстро поднять сервис.
-
-### Шаг 1. Скачать образ
-
-```bash
-docker pull ghcr.io/denozordec/vps-tracker:latest
-```
-
-> **Если запросили логин:** пакет на GitHub может быть закрытым. Войдите в аккаунт GitHub и создайте [Personal Access Token](https://github.com/settings/tokens) с правом `read:packages`, затем выполните:
->
-> ```bash
-> echo ВАШ_ТОКЕН | docker login ghcr.io -u ВАШ_ЛОГИН_GITHUB --password-stdin
-> ```
->
-> Либо откройте на GitHub страницу пакета **vps-tracker** → **Package settings** и сделайте пакет **public** — тогда `docker pull` без входа.
-
-### Шаг 2. Папка для данных
-
-Все записи приложения лежат в одном файле базы. Его нужно хранить **вне** контейнера, иначе при удалении контейнера данные пропадут.
+Нужны Linux-сервер (или любая машина) с [Docker](https://docs.docker.com/engine/install/). Node.js ставить не нужно.
 
 ```bash
 mkdir -p ~/vps-tracker-data
-```
-
-Можно выбрать любой каталог вместо `~/vps-tracker-data` — главное, запомнить путь для команды ниже.
-
-### Шаг 3. Запуск
-
-**Вариант А — в фоне** (удобно на сервере, контейнер переживёт закрытие терминала):
-
-```bash
 docker run -d \
   --name vps-tracker \
   --restart unless-stopped \
@@ -98,42 +63,24 @@ docker run -d \
   ghcr.io/denozordec/vps-tracker:latest
 ```
 
-**Вариант Б — в переднем плане** (логи видны в терминале, остановка — `Ctrl+C`):
+Откройте **http://localhost:3001** (или `http://IP_СЕРВЕРА:3001`). База появится в `~/vps-tracker-data/vps-tracker.db`.
 
-```bash
-docker run --rm \
-  -p 3001:3001 \
-  -v ~/vps-tracker-data:/app/data \
-  ghcr.io/denozordec/vps-tracker:latest
-```
+> **`docker pull` просит логин?** Пакет на GitHub может быть закрытым: войдите через [Personal Access Token](https://github.com/settings/tokens) с правом `read:packages` — `echo ТОКЕН | docker login ghcr.io -u ЛОГИН --password-stdin` — или сделайте пакет public в его настройках.
 
-### Шаг 4. Открыть в браузере
+Первые шаги в интерфейсе:
 
-На той же машине откройте:
-
-**http://localhost:3001**
-
-Если заходите с другого компьютера в сети — подставьте IP сервера: `http://192.168.1.10:3001` (ваш адрес может отличаться). На сервере может понадобиться открыть порт в брандмауэре, например для Ubuntu с UFW:
-
-```bash
-sudo ufw allow 3001/tcp
-sudo ufw reload
-```
-
-Остановка фонового контейнера:
-
-```bash
-docker stop vps-tracker
-docker rm vps-tracker
-```
+1. **Хостеры** → добавьте хостера; для синка укажите тип API и URL биллинга.
+2. **Аккаунты хостеров** → добавьте аккаунт с логином/токеном API и нажмите «Синхронизировать» — серверы, платежи и баланс подтянутся сами.
+3. **Настройки → Общие** → базовая валюта и URL курсов (например `https://www.cbr-xml-daily.ru/daily_json.js`).
+4. **Настройки → Синхронизация / Уведомления** → автосинк по расписанию и Telegram.
 
 ---
 
-<span id="compose"></span>
+## Варианты установки
 
-## Запуск через Docker Compose
+### Docker Compose
 
-Имеет смысл, если вы **склонировали этот репозиторий**: в [docker-compose.yml](docker-compose.yml) указан готовый образ **ghcr.io/denozordec/vps-tracker** — при `up` он подтягивается с GitHub Container Registry (локальная сборка не нужна).
+В [docker-compose.yml](docker-compose.yml) уже указан образ с GHCR, данные — в `./data`:
 
 ```bash
 git clone https://github.com/denozordec/vps-tracker.git
@@ -141,140 +88,77 @@ cd vps-tracker
 docker compose up -d
 ```
 
-**То же через Docker CLI** (без Compose) — эквивалент [docker-compose.yml](docker-compose.yml): том `./data`, порт **3001**, переменная **PORT=3001**.
+### Production: Traefik + HTTPS (Cloudflare DNS-01)
 
-```bash
-mkdir -p ./data
-docker pull ghcr.io/denozordec/vps-tracker:latest
-docker run -d \
-  --name vps-tracker \
-  --restart unless-stopped \
-  -p 3001:3001 \
-  -e PORT=3001 \
-  -v "$(pwd)/data:/app/data" \
-  ghcr.io/denozordec/vps-tracker:latest
-```
-
-В PowerShell из каталога проекта подставьте путь к данным так: `-v "${PWD}/data:/app/data"`.
-
-Данные по умолчанию сохраняются в папку `data` внутри каталога проекта на диске.
-
-Остановка:
-
-```bash
-docker compose down
-```
-
----
-
-<span id="traefik"></span>
-
-## Production: Traefik + Cloudflare HTTPS (Linux)
-
-На VPS с доменом в Cloudflare: Traefik (Let's Encrypt **DNS-01**) + контейнер VPS Tracker за HTTPS, без публикации порта `3001` наружу.
-
-Пошаговая инструкция, compose и `.env`: **[docs/deploy-traefik.md](docs/deploy-traefik.md)**  
-Файлы: [`deploy/docker-compose.traefik.yml`](deploy/docker-compose.traefik.yml), [`deploy/env.traefik.example`](deploy/env.traefik.example).
-
-Кратко:
+Готовый compose с Traefik и Let's Encrypt, без публикации порта `3001` наружу, плюс короткий домен для launcher-скриптов блокировок/GeoIP:
+**[docs/deploy-traefik.md](docs/deploy-traefik.md)** · [`deploy/docker-compose.traefik.yml`](deploy/docker-compose.traefik.yml) · [`deploy/env.traefik.example`](deploy/env.traefik.example)
 
 ```bash
 mkdir -p /opt/vps-tracker/data && cd /opt/vps-tracker
-curl -fsSL -o docker-compose.yml \
-  https://raw.githubusercontent.com/denozordec/vps-tracker/main/deploy/docker-compose.traefik.yml
-curl -fsSL -o .env \
-  https://raw.githubusercontent.com/denozordec/vps-tracker/main/deploy/env.traefik.example
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/denozordec/vps-tracker/main/deploy/docker-compose.traefik.yml
+curl -fsSL -o .env https://raw.githubusercontent.com/denozordec/vps-tracker/main/deploy/env.traefik.example
 nano .env   # CF_DNS_API_TOKEN, LETSENCRYPT_EMAIL, VPS_DOMAIN
 docker compose pull && docker compose up -d
 curl -fsS https://ВАШ_ДОМЕН/health
 ```
 
----
-
-<span id="build-local"></span>
-
-## Сборка образа у себя
-
-Если нужен свой образ из исходников (после `git clone`):
+### Свой образ из исходников
 
 ```bash
-cd vps-tracker
 docker build -t vps-tracker:local .
-mkdir -p ./data
-docker run -d \
-  --name vps-tracker \
-  --restart unless-stopped \
-  -p 3001:3001 \
-  -v "$(pwd)/data:/app/data" \
-  vps-tracker:local
+docker run -d --name vps-tracker --restart unless-stopped \
+  -p 3001:3001 -v "$(pwd)/data:/app/data" vps-tracker:local
 ```
 
 ---
 
-<span id="data"></span>
+## Данные, бэкап и обновление
 
-## Сохранение данных и резервная копия
+- **Всё хранится в одном файле** `vps-tracker.db` (SQLite) в смонтированной папке (`/app/data` в контейнере). Скопировать его — и есть бэкап.
+- **Из интерфейса:** *Настройки → Общие* — выгрузка/загрузка JSON-бэкапа и файла БД (при включённой авторизации — только глобальный админ).
+- **Старые базы** обновляются автоматически при старте: недостающие колонки и таблицы добавляются, данные не теряются.
+- **Журналы чистятся сами:** уведомления и журнал синка старше 90 дней, uptime-проверки старше 30 дней.
 
-Файл базы в примерах выше лежит на хосте:
-
-| Способ запуска | Где лежит база на диске |
-|----------------|-------------------------|
-| `docker run` с `-v ~/vps-tracker-data:/app/data` | `~/vps-tracker-data/vps-tracker.db` |
-| Docker Compose из репозитория | `./data/vps-tracker.db` в папке проекта |
-
-Скопируйте файл `vps-tracker.db` в безопасное место — это и есть резервная копия. Пока приложение не запущено, можно просто скопировать файл обратно для восстановления.
-
----
-
-<span id="port"></span>
-
-## Другой порт и доступ по сети
-
-Внутри контейнера приложение слушает порт **3001**. Сменить внешний порт (например, **8080** снаружи, 3001 внутри):
-
-```bash
-docker run -d \
-  --name vps-tracker \
-  --restart unless-stopped \
-  -p 8080:3001 \
-  -v ~/vps-tracker-data:/app/data \
-  ghcr.io/denozordec/vps-tracker:latest
-```
-
-Тогда в браузере: **http://localhost:8080**
-
-Чтобы сменить и внутренний порт (редко нужно), добавьте `-e PORT=8080` и согласуйте с `-p`, например `-p 8080:8080` и `-e PORT=8080`.
-
----
-
-<span id="update"></span>
-
-## Обновление программы
-
-Если используете образ с GitHub:
+Обновление:
 
 ```bash
 docker pull ghcr.io/denozordec/vps-tracker:latest
-docker stop vps-tracker
-docker rm vps-tracker
+docker stop vps-tracker && docker rm vps-tracker
+# и снова docker run из «Быстрого старта» с тем же -v …:/app/data
 ```
 
-Затем снова выполните команду `docker run` из раздела [«Самый простой способ»](#quick) (том `-v ...:/app/data` оставьте тот же — данные сохранятся).
+С Compose: `git pull && docker compose up -d` (`pull_policy: always` подтянет свежий образ).
 
-При Docker Compose из репозитория:
-
-```bash
-cd vps-tracker
-git pull
-docker compose up -d
-```
-
-Файл Compose настроен с `pull_policy: always`, поэтому при каждом `up` запрашивается актуальный образ с GHCR.
+Другой порт снаружи: `-p 8080:3001` → `http://localhost:8080`. Сменить порт внутри контейнера: `-e PORT=8080 -p 8080:8080`.
 
 ---
 
-<span id="dev"></span>
+## Документация
+
+| Документ | О чём |
+|---|---|
+| [docs/features.md](docs/features.md) | Все разделы интерфейса и как ими пользоваться |
+| [docs/configuration.md](docs/configuration.md) | Переменные окружения, авторизация, роли, синк, уведомления, планировщик |
+| [docs/deploy-traefik.md](docs/deploy-traefik.md) | Production за Traefik с HTTPS |
+| [docs/screenshots/README.md](docs/screenshots/README.md) | Демо-данные и пересъёмка скриншотов |
+| [apps/api/src/services/billmanager/profiles/README.md](apps/api/src/services/billmanager/profiles/README.md) | Как добавить профиль нового BILLmanager-хостера |
+| [AGENTS.md](AGENTS.md) | Архитектура и карта кода (для разработчиков и ИИ-агентов) |
+
+---
 
 ## Для разработчиков
 
-Локальный запуск без Docker: `npm install` и `npm run dev`. Подробности по коду, API и синхронизации — в [AGENTS.md](AGENTS.md).
+Monorepo на **pnpm**: `apps/web` (Vite + React 19 + TanStack Router/Query + shadcn/ui + ReUI), `apps/api` (Fastify 5), `packages/db` (Drizzle + better-sqlite3), `packages/shared` (Zod-контракты).
+
+```bash
+pnpm install
+pnpm --filter api dev      # API на :3001 (база — apps/api/data/vps-tracker.db или DB_PATH)
+pnpm --filter web dev      # фронтенд с hot reload
+pnpm --filter api test     # тесты API (Vitest)
+pnpm --filter web test     # тесты фронтенда
+pnpm --filter web build    # production-сборка фронтенда
+```
+
+Демо-данные для разработки: `cd apps/api && DB_PATH=../../data/demo.db VITEST=1 npx tsx scripts/seed-demo.ts --serve` → http://127.0.0.1:3101.
+
+Подробнее об устройстве кода — [AGENTS.md](AGENTS.md).
