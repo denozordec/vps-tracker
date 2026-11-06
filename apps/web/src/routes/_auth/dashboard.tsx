@@ -35,7 +35,7 @@ import { StatusBadge } from '@/components/status-badge'
 
 import { computeInventoryHealth } from '@/lib/inventory-health'
 import { buildAtRiskAccounts, type AtRiskAccount } from '@/lib/account-health'
-import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel, convertVpsMonthlyBurnToBase, formatCurrency } from '@/lib/format'
+import { formatInBaseCurrency, normalizeRatesPayload, vpsStatusLabel, convertVpsMonthlyBurnToBase, convertWithProviderRate, formatCurrency } from '@/lib/format'
 import { providerByIdMap } from '@/lib/billmanager'
 import { exportActiveVpsCsv } from '@/lib/export-csv'
 import {
@@ -245,6 +245,20 @@ function DashboardPage() {
           const expiringCount = stats?.expiringWithin7Days ?? 0
           const issuesCount = issues.length
           const providerById = providerByIdMap(snap.providers)
+          // Each account's balance is in its own currency — sum after converting, not raw (EUR + RUB ≠ ₽).
+          const balanceBase = snap.providerAccounts.reduce((sum, a) => {
+            if (a.balanceApi == null || !Number.isFinite(Number(a.balanceApi))) return sum
+            return (
+              sum +
+              convertWithProviderRate(
+                Number(a.balanceApi),
+                a.balanceCurrency || a.currency || baseCur,
+                providerById.get(a.providerId),
+                snap.settings,
+                ratesData,
+              ).value
+            )
+          }, 0)
           const monthlyBurnBase = activeVps.reduce(
             (sum, item) =>
               sum +
@@ -295,12 +309,7 @@ function DashboardPage() {
             {
               id: 'balance',
               label: 'Баланс API',
-              value: formatInBaseCurrency(
-                stats?.totalBalanceApi ?? 0,
-                baseCur,
-                snap.settings,
-                ratesData,
-              ),
+              value: formatCurrency(balanceBase, baseCur),
               icon: <WalletIcon className="size-4" />,
               iconClassName: 'text-success',
               to: '/accounts',
