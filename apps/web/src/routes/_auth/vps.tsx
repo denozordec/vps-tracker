@@ -683,7 +683,10 @@ function VpsPage() {
             {tableSections.map((section) => (
               <ResourcePage
                 key={section.key}
-                title={section.label ?? undefined}
+                title={section.label ?? 'Инвентарь VPS'}
+                description={
+                  section.label ? undefined : 'Поиск по IP, DNS, проекту, назначению, ОС'
+                }
                 columns={columnDefFromDataGrid(columns)}
                 data={section.items}
                 getRowId={(v) => v.id}
