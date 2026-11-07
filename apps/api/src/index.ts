@@ -3,7 +3,7 @@ import cors from '@fastify/cors'
 import sensible from '@fastify/sensible'
 import staticPlugin from '@fastify/static'
 import rateLimit from '@fastify/rate-limit'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -38,6 +38,11 @@ import { portalUsersRoutes } from './routes/portal-users.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+/** Версия из apps/api/package.json (src/ и dist/ лежат на одном уровне с ним). */
+export const APP_VERSION: string = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }
+).version
+
 export interface BuildAppOptions {
   dbPath?: string
   staticDir?: string
@@ -67,7 +72,7 @@ export async function buildApp(opts: BuildAppOptions = {}) {
   await app.register(authPlugin)
   await app.register(spacePlugin)
 
-  app.get('/health', async () => ({ ok: true }))
+  app.get('/health', async () => ({ ok: true, version: APP_VERSION }))
   await app.register(launcherRoutes)
 
   await app.register(spacesRoutes)

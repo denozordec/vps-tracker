@@ -3,8 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite as TanStackRouterPlugin } from '@tanstack/router-plugin/vite'
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
+
+// Версия релиза одна на monorepo — из корневого package.json.
+const APP_VERSION = (JSON.parse(readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8')) as { version: string }).version
 
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   plugins: [
     TanStackRouterPlugin({ target: 'react', autoCodeSplitting: true }),
     react(),

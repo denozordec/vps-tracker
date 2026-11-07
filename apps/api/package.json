@@ -1,7 +1,7 @@
 {
   "name": "@cfdm/api",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @cfdm/shared build && pnpm --filter @cfdm/db build && tsx watch src/index.ts",

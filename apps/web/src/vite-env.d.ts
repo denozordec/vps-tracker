@@ -10,3 +10,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** Версия релиза (vite define из корневого package.json). */
+declare const __APP_VERSION__: string

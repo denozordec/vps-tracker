@@ -129,6 +129,8 @@ docker stop vps-tracker && docker rm vps-tracker
 
 С Compose: `git pull && docker compose up -d` (`pull_policy: always` подтянет свежий образ).
 
+Версии: каждый релиз — git-тег `vX.Y.Z` и образ `ghcr.io/denozordec/vps-tracker:X.Y.Z` (и `:X.Y`); `latest` — текущий `main`. Чтобы не обновляться неожиданно, закрепите версию: `ghcr.io/denozordec/vps-tracker:1.0.0`. Текущая версия видна в меню пользователя и в ответе `GET /health`.
+
 Другой порт снаружи: `-p 8080:3001` → `http://localhost:8080`. Сменить порт внутри контейнера: `-e PORT=8080 -p 8080:8080`.
 
 ---

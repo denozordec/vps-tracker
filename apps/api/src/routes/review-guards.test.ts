@@ -187,3 +187,17 @@ describe('dashboard stats', () => {
     await app.close()
   })
 })
+
+describe('/health', () => {
+  beforeEach(() => resetTestDb())
+  afterEach(() => closeDb())
+
+  it('returns the release version from package.json', async () => {
+    const { version } = (await import('../../package.json', { with: { type: 'json' } })).default
+    const app = await buildApp()
+    const res = await app.inject({ url: '/health' })
+    expect(res.json()).toEqual({ ok: true, version })
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/)
+    await app.close()
+  })
+})

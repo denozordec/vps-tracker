@@ -221,6 +221,12 @@ export function NavUser() {
                 </DropdownMenuGroup>
               </>
             ) : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-muted-foreground py-1.5 text-xs font-normal tabular-nums">
+                VPS Tracker v{__APP_VERSION__}
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
